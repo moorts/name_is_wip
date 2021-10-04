@@ -44,6 +44,27 @@ enum Instruction {
     RRC,
     RAL,
     RAR,
+    JMP(u16),
+    JC(u16),
+    JNC(u16),
+    JZ(u16),
+    JNZ(u16),
+    JP(u16),
+    JM(u16),
+    JPE(u16),
+    JPO(u16),
+}
+
+enum Param {
+    Addr(u16),
+    Imm(u8),
+    Reg(char),
+}
+
+struct Instr {
+    opcode: String,
+    arg1: Option<Param>,
+    arg2: Option<Param>,
 }
 
 struct Disassembler {
