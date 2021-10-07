@@ -12,7 +12,6 @@ use num::NumCast;
 struct Disassembler {
     bytes: Vec<u8>,
     pc: usize,
-    out: Vec<String>,
 }
 
 impl Disassembler {
@@ -21,7 +20,7 @@ impl Disassembler {
         let mut f = File::open(path)?;
         let mut bytes = Vec::new();
         f.read_to_end(&mut bytes)?;
-        Ok(Disassembler { bytes, pc: 0, out: Vec::new() })
+        Ok(Disassembler { bytes, pc: 0 })
     }
 
     /*
@@ -64,7 +63,7 @@ impl Disassembler {
                 Ok(String::from("NOP"))
             },
             0x01 => {
-                Ok(String::from(format!("LXI B, {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
+                Ok(String::from(format!("LXI B,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
             },
             0x02 => {
                 Ok(String::from("STAX B"))
@@ -79,7 +78,7 @@ impl Disassembler {
                 Ok(String::from("DCR B"))
             },
             0x06 => {
-                Ok(String::from(format!("MVI B, {}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
+                Ok(String::from(format!("MVI B,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
             },
             0x07 => {
                 Ok(String::from("RLC"))
@@ -104,7 +103,7 @@ impl Disassembler {
                 Ok(String::from("DCR C"))
             },
             0x0e => {
-                Ok(String::from(format!("MVI C, {}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
+                Ok(String::from(format!("MVI C,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
             },
             0x0f => {
                 Ok(String::from("RRC"))
@@ -114,7 +113,7 @@ impl Disassembler {
                 Err("Invalid opcode")
             },
             0x11 => {
-                Ok(String::from(format!("LXI D, {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
+                Ok(String::from(format!("LXI D,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
             },
             0x12 => {
                 Ok(String::from("STAX D"))
@@ -129,7 +128,7 @@ impl Disassembler {
                 Ok(String::from("DCR D"))
             },
             0x16 => {
-                Ok(String::from(format!("MVI D, {}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
+                Ok(String::from(format!("MVI D,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
             },
             0x17 => {
                 Ok(String::from("RAL"))
@@ -154,7 +153,7 @@ impl Disassembler {
                 Ok(String::from("DCR E"))
             },
             0x1e => {
-                Ok(String::from(format!("MVI E, {}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
+                Ok(String::from(format!("MVI E,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
             },
             0x1f => {
                 Ok(String::from("RAR"))
@@ -163,7 +162,7 @@ impl Disassembler {
                 Ok(String::from("RIM"))
             },
             0x21 => {
-                Ok(String::from(format!("LXI H, {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
+                Ok(String::from(format!("LXI H,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
             },
             0x22 => {
                 Ok(String::from(format!("SHLD {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
@@ -178,7 +177,7 @@ impl Disassembler {
                 Ok(String::from("DCR H"))
             },
             0x26 => {
-                Ok(String::from(format!("MVI H, {}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
+                Ok(String::from(format!("MVI H,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
             },
             0x27 => {
                 Ok(String::from("DAA"))
@@ -203,7 +202,7 @@ impl Disassembler {
                 Ok(String::from("DCR L"))
             },
             0x2e => {
-                Ok(String::from(format!("MVI L, {}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
+                Ok(String::from(format!("MVI L,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
             },
             0x2f => {
                 Ok(String::from("CMA"))
@@ -212,7 +211,7 @@ impl Disassembler {
                 Ok(String::from("SIM"))
             },
             0x31 => {
-                Ok(String::from(format!("LXI SP, {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
+                Ok(String::from(format!("LXI SP,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
             },
             0x32 => {
                 Ok(String::from(format!("STA {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
@@ -241,19 +240,36 @@ impl Disassembler {
     }
 }
 
-/*
-#[test]
-fn test_mov() -> io::Result<()> {
-    let mut d = Disassembler { bytes: vec![0b11000011, 0xab, 0xcd], pc: 0, out: Vec::new() };
-    d.decode_next();
-    println!("{:?}", d.out);
-    assert_eq!(1, 2);
-    Ok(())
-}
-*/
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_opcodes() -> io::Result<()> {
+        let mut f = File::open("./test_data/test_input")?;
+        let mut contents: String = String::new();
+        f.read_to_string(&mut contents)?;
+        let lines = contents.lines();
+
+        let mut d = Disassembler { bytes: Vec::new(), pc: 0 };
+        let mut outputs = Vec::new();
+        for line in lines {
+            let mut split = line.split(":");
+            let input =  split.next().unwrap();
+            let bytes = input.split(",").map(|x| x.to_string().parse::<u8>().unwrap()).into_iter();
+            d.bytes.extend(bytes);
+            outputs.push(String::from(split.next().unwrap()));
+        }
+        for output in outputs {
+            let disassembly = match d.decode_next() {
+                Ok(x) => x,
+                Err(_) => String::from("-"),
+            };
+            assert_eq!(disassembly, output);
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_fmt_hex() {
