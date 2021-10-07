@@ -211,6 +211,21 @@ impl Disassembler {
             0x30 => {
                 Ok(String::from("SIM"))
             },
+            0x31 => {
+                Ok(String::from(format!("LXI SP, {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
+            },
+            0x32 => {
+                Ok(String::from(format!("STA {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
+            },
+            0x33 => {
+                Ok(String::from("INX SP"))
+            },
+            0x34 => {
+                Ok(String::from("INR M"))
+            },
+            0x35 => {
+                Ok(String::from("DCR M"))
+            },
             _ => {
                 Err("Invalid opcode")
             }
@@ -226,6 +241,7 @@ impl Disassembler {
     }
 }
 
+/*
 #[test]
 fn test_mov() -> io::Result<()> {
     let mut d = Disassembler { bytes: vec![0b11000011, 0xab, 0xcd], pc: 0, out: Vec::new() };
@@ -234,24 +250,29 @@ fn test_mov() -> io::Result<()> {
     assert_eq!(1, 2);
     Ok(())
 }
+*/
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_fmt_hex() {
-    let t1: u16 = 16;
-    let t2: u16 = 15;
-    let t3: u16 = 367;
-    let t4: u16 = 3000;
+    #[test]
+    fn test_fmt_hex() {
+        let t1: u16 = 16;
+        let t2: u16 = 15;
+        let t3: u16 = 367;
+        let t4: u16 = 3000;
 
-    let t5: u8 = 16;
-    let t6: u8 = 15;
-    let t7: u8 = 245;
+        let t5: u8 = 16;
+        let t6: u8 = 15;
+        let t7: u8 = 245;
 
-    assert_eq!(Disassembler::fmt_hex::<u16>(t1), "10H");
-    assert_eq!(Disassembler::fmt_hex::<u16>(t2), "0fH");
-    assert_eq!(Disassembler::fmt_hex::<u16>(t3), "16fH");
-    assert_eq!(Disassembler::fmt_hex::<u16>(t4), "0bb8H");
+        assert_eq!(Disassembler::fmt_hex::<u16>(t1), "10H");
+        assert_eq!(Disassembler::fmt_hex::<u16>(t2), "0fH");
+        assert_eq!(Disassembler::fmt_hex::<u16>(t3), "16fH");
+        assert_eq!(Disassembler::fmt_hex::<u16>(t4), "0bb8H");
 
-    assert_eq!(Disassembler::fmt_hex::<u8>(t5), "10H");
-    assert_eq!(Disassembler::fmt_hex::<u8>(t6), "0fH");
-    assert_eq!(Disassembler::fmt_hex::<u8>(t7), "0f5H");
+        assert_eq!(Disassembler::fmt_hex::<u8>(t5), "10H");
+        assert_eq!(Disassembler::fmt_hex::<u8>(t6), "0fH");
+        assert_eq!(Disassembler::fmt_hex::<u8>(t7), "0f5H");
+    }
 }
