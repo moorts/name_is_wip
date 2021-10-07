@@ -1,21 +1,30 @@
-use std::io;
 use std::fs::File;
+use std::io;
 use std::io::prelude::Read;
 
 use std::fmt::*;
 use std::result::Result;
 
-use num_traits::sign::Unsigned;
 use num::NumCast;
-
+use num_traits::sign::Unsigned;
 
 struct Disassembler {
     bytes: Vec<u8>,
     pc: usize,
 }
 
-impl Disassembler {
+impl Iterator for Disassembler {
+    type Item = Result<String, &'static str>;
 
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pc < self.bytes.len() {
+            return Some(self.decode_next());
+        }
+        None
+    }
+}
+
+impl Disassembler {
     fn load_file(path: &str) -> io::Result<Self> {
         let mut f = File::open(path)?;
         let mut bytes = Vec::new();
@@ -59,175 +68,112 @@ impl Disassembler {
         let instr = self.read_byte();
         // Jump instructions
         match instr {
-            0x00 => {
-                Ok(String::from("NOP"))
-            },
-            0x01 => {
-                Ok(String::from(format!("LXI B,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x02 => {
-                Ok(String::from("STAX B"))
-            },
-            0x03 => {
-                Ok(String::from("INX B"))
-            },
-            0x04 => {
-                Ok(String::from("INR B"))
-            },
-            0x05 => {
-                Ok(String::from("DCR B"))
-            },
-            0x06 => {
-                Ok(String::from(format!("MVI B,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
-            },
-            0x07 => {
-                Ok(String::from("RLC"))
-            },
+            0x00 => Ok(String::from("NOP")),
+            0x01 => Ok(String::from(format!(
+                "LXI B,{}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x02 => Ok(String::from("STAX B")),
+            0x03 => Ok(String::from("INX B")),
+            0x04 => Ok(String::from("INR B")),
+            0x05 => Ok(String::from("DCR B")),
+            0x06 => Ok(String::from(format!(
+                "MVI B,{}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0x07 => Ok(String::from("RLC")),
             0x08 => {
                 // No instruction
                 Err("Invalid opcode")
-            },
-            0x09 => {
-                Ok(String::from("DAD B"))
-            },
-            0x0a => {
-                Ok(String::from("LDAX B"))
-            },
-            0x0b => {
-                Ok(String::from("DCX B"))
-            },
-            0x0c => {
-                Ok(String::from("INR C"))
-            },
-            0x0d => {
-                Ok(String::from("DCR C"))
-            },
-            0x0e => {
-                Ok(String::from(format!("MVI C,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
-            },
-            0x0f => {
-                Ok(String::from("RRC"))
-            },
+            }
+            0x09 => Ok(String::from("DAD B")),
+            0x0a => Ok(String::from("LDAX B")),
+            0x0b => Ok(String::from("DCX B")),
+            0x0c => Ok(String::from("INR C")),
+            0x0d => Ok(String::from("DCR C")),
+            0x0e => Ok(String::from(format!(
+                "MVI C,{}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0x0f => Ok(String::from("RRC")),
             0x10 => {
                 // No instruction
                 Err("Invalid opcode")
-            },
-            0x11 => {
-                Ok(String::from(format!("LXI D,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x12 => {
-                Ok(String::from("STAX D"))
-            },
-            0x13 => {
-                Ok(String::from("INX D"))
-            },
-            0x14 => {
-                Ok(String::from("INR D"))
-            },
-            0x15 => {
-                Ok(String::from("DCR D"))
-            },
-            0x16 => {
-                Ok(String::from(format!("MVI D,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
-            },
-            0x17 => {
-                Ok(String::from("RAL"))
-            },
+            }
+            0x11 => Ok(String::from(format!(
+                "LXI D,{}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x12 => Ok(String::from("STAX D")),
+            0x13 => Ok(String::from("INX D")),
+            0x14 => Ok(String::from("INR D")),
+            0x15 => Ok(String::from("DCR D")),
+            0x16 => Ok(String::from(format!(
+                "MVI D,{}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0x17 => Ok(String::from("RAL")),
             0x18 => {
                 // No instruction
                 Err("Invalid opcode")
-            },
-            0x19 => {
-                Ok(String::from("DAD D"))
-            },
-            0x1a => {
-                Ok(String::from("LDAX D"))
-            },
-            0x1b => {
-                Ok(String::from("DCX D"))
-            },
-            0x1c => {
-                Ok(String::from("INR E"))
-            },
-            0x1d => {
-                Ok(String::from("DCR E"))
-            },
-            0x1e => {
-                Ok(String::from(format!("MVI E,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
-            },
-            0x1f => {
-                Ok(String::from("RAR"))
-            },
-            0x20 => {
-                Ok(String::from("RIM"))
-            },
-            0x21 => {
-                Ok(String::from(format!("LXI H,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x22 => {
-                Ok(String::from(format!("SHLD {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x23 => {
-                Ok(String::from("INX H"))
-            },
-            0x24 => {
-                Ok(String::from("INR H"))
-            },
-            0x25 => {
-                Ok(String::from("DCR H"))
-            },
-            0x26 => {
-                Ok(String::from(format!("MVI H,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
-            },
-            0x27 => {
-                Ok(String::from("DAA"))
-            },
+            }
+            0x19 => Ok(String::from("DAD D")),
+            0x1a => Ok(String::from("LDAX D")),
+            0x1b => Ok(String::from("DCX D")),
+            0x1c => Ok(String::from("INR E")),
+            0x1d => Ok(String::from("DCR E")),
+            0x1e => Ok(String::from(format!(
+                "MVI E,{}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0x1f => Ok(String::from("RAR")),
+            0x20 => Ok(String::from("RIM")),
+            0x21 => Ok(String::from(format!(
+                "LXI H,{}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x22 => Ok(String::from(format!(
+                "SHLD {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x23 => Ok(String::from("INX H")),
+            0x24 => Ok(String::from("INR H")),
+            0x25 => Ok(String::from("DCR H")),
+            0x26 => Ok(String::from(format!(
+                "MVI H,{}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0x27 => Ok(String::from("DAA")),
             0x28 => {
                 // No instruction
                 Err("Invalid opcode")
-            },
-            0x29 => {
-                Ok(String::from("DAD H"))
-            },
-            0x2a => {
-                Ok(String::from(format!("LHLD {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x2b => {
-                Ok(String::from("DCX H"))
-            },
-            0x2c => {
-                Ok(String::from("INR L"))
-            },
-            0x2d => {
-                Ok(String::from("DCR L"))
-            },
-            0x2e => {
-                Ok(String::from(format!("MVI L,{}", Disassembler::fmt_hex::<u8>(self.read_byte()))))
-            },
-            0x2f => {
-                Ok(String::from("CMA"))
-            },
-            0x30 => {
-                Ok(String::from("SIM"))
-            },
-            0x31 => {
-                Ok(String::from(format!("LXI SP,{}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x32 => {
-                Ok(String::from(format!("STA {}", Disassembler::fmt_hex::<u16>(self.read_addr()))))
-            },
-            0x33 => {
-                Ok(String::from("INX SP"))
-            },
-            0x34 => {
-                Ok(String::from("INR M"))
-            },
-            0x35 => {
-                Ok(String::from("DCR M"))
-            },
-            _ => {
-                Err("Invalid opcode")
             }
+            0x29 => Ok(String::from("DAD H")),
+            0x2a => Ok(String::from(format!(
+                "LHLD {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x2b => Ok(String::from("DCX H")),
+            0x2c => Ok(String::from("INR L")),
+            0x2d => Ok(String::from("DCR L")),
+            0x2e => Ok(String::from(format!(
+                "MVI L,{}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0x2f => Ok(String::from("CMA")),
+            0x30 => Ok(String::from("SIM")),
+            0x31 => Ok(String::from(format!(
+                "LXI SP,{}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x32 => Ok(String::from(format!(
+                "STA {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0x33 => Ok(String::from("INX SP")),
+            0x34 => Ok(String::from("INR M")),
+            0x35 => Ok(String::from("DCR M")),
+            _ => Err("Invalid opcode"),
         }
     }
 
@@ -240,29 +186,39 @@ impl Disassembler {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use std::io::BufRead;
+
+    const OPCODE_TEST_DATA: &str = "./test_data/test_input";
+
     #[test]
     fn test_opcodes() -> io::Result<()> {
-        let mut f = File::open("./test_data/test_input")?;
-        let mut contents: String = String::new();
-        f.read_to_string(&mut contents)?;
-        let lines = contents.lines();
+        let f = File::open(OPCODE_TEST_DATA)?;
+        let lines = io::BufReader::new(f).lines();
 
-        let mut d = Disassembler { bytes: Vec::new(), pc: 0 };
+        let mut d = Disassembler {
+            bytes: Vec::new(),
+            pc: 0,
+        };
         let mut outputs = Vec::new();
         for line in lines {
-            let mut split = line.split(":");
-            let input =  split.next().unwrap();
-            let bytes = input.split(",").map(|x| x.to_string().parse::<u8>().unwrap()).into_iter();
-            d.bytes.extend(bytes);
-            outputs.push(String::from(split.next().unwrap()));
+            if let Ok(data) = line {
+                let mut split = data.split(":");
+                let bytes = split
+                    .next()
+                    .unwrap()
+                    .split(",")
+                    .map(|x| x.to_string().parse::<u8>().unwrap())
+                    .into_iter();
+                d.bytes.extend(bytes);
+                outputs.push(String::from(split.next().unwrap()));
+            }
         }
         for output in outputs {
-            let disassembly = match d.decode_next() {
+            let disassembly = match d.next().unwrap() {
                 Ok(x) => x,
                 Err(_) => String::from("-"),
             };
