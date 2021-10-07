@@ -5,8 +5,17 @@
 Opcode table:
 [Opcode Cheatsheet](https://tobiasvl.github.io/optable/intel-8080/classic)
 
+Opcodes 0x00-0xff:
+[Better Cheatsheet](http://www.emulator101.com/reference/8080-by-opcode.html)
+
 Data sheet:
 [Data sheet](https://altairclone.com/downloads/manuals/8080%20Data%20Sheet.pdf)
+
+8080 Programming:
+[Programming Manual](https://altairclone.com/downloads/manuals/8080%20Programmers%20Manual.pdf)
+
+Rust Web-Assembly:
+[Official Tutorial](https://rustwasm.github.io/docs/book/)
 
 ## Idee
 
