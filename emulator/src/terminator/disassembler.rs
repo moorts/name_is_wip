@@ -259,7 +259,233 @@ impl Disassembler {
             0x7d => Ok(String::from("MOV A,L")),
             0x7e => Ok(String::from("MOV A,M")),
             0x7f => Ok(String::from("MOV A,A")),
-            _ => Err("Invalid opcode"),
+            0x80 => Ok(String::from("ADD B")),
+            0x81 => Ok(String::from("ADD C")),
+            0x82 => Ok(String::from("ADD D")),
+            0x83 => Ok(String::from("ADD E")),
+            0x84 => Ok(String::from("ADD H")),
+            0x85 => Ok(String::from("ADD L")),
+            0x86 => Ok(String::from("ADD M")),
+            0x87 => Ok(String::from("ADD A")),
+            0x88 => Ok(String::from("ADC B")),
+            0x89 => Ok(String::from("ADC C")),
+            0x8a => Ok(String::from("ADC D")),
+            0x8b => Ok(String::from("ADC E")),
+            0x8c => Ok(String::from("ADC H")),
+            0x8d => Ok(String::from("ADC L")),
+            0x8e => Ok(String::from("ADC M")),
+            0x8f => Ok(String::from("ADC A")),
+            0x90 => Ok(String::from("SUB B")),
+            0x91 => Ok(String::from("SUB C")),
+            0x92 => Ok(String::from("SUB D")),
+            0x93 => Ok(String::from("SUB E")),
+            0x94 => Ok(String::from("SUB H")),
+            0x95 => Ok(String::from("SUB L")),
+            0x96 => Ok(String::from("SUB M")),
+            0x97 => Ok(String::from("SUB A")),
+            0x98 => Ok(String::from("SBB B")),
+            0x99 => Ok(String::from("SBB C")),
+            0x9a => Ok(String::from("SBB D")),
+            0x9b => Ok(String::from("SBB E")),
+            0x9c => Ok(String::from("SBB H")),
+            0x9d => Ok(String::from("SBB L")),
+            0x9e => Ok(String::from("SBB M")),
+            0x9f => Ok(String::from("SBB A")),
+            0xa0 => Ok(String::from("ANA B")),
+            0xa1 => Ok(String::from("ANA C")),
+            0xa2 => Ok(String::from("ANA D")),
+            0xa3 => Ok(String::from("ANA E")),
+            0xa4 => Ok(String::from("ANA H")),
+            0xa5 => Ok(String::from("ANA L")),
+            0xa6 => Ok(String::from("ANA M")),
+            0xa7 => Ok(String::from("ANA A")),
+            0xa8 => Ok(String::from("XRA B")),
+            0xa9 => Ok(String::from("XRA C")),
+            0xaa => Ok(String::from("XRA D")),
+            0xab => Ok(String::from("XRA E")),
+            0xac => Ok(String::from("XRA H")),
+            0xad => Ok(String::from("XRA L")),
+            0xae => Ok(String::from("XRA M")),
+            0xaf => Ok(String::from("XRA A")),
+            0xb0 => Ok(String::from("ORA B")),
+            0xb1 => Ok(String::from("ORA C")),
+            0xb2 => Ok(String::from("ORA D")),
+            0xb3 => Ok(String::from("ORA E")),
+            0xb4 => Ok(String::from("ORA H")),
+            0xb5 => Ok(String::from("ORA L")),
+            0xb6 => Ok(String::from("ORA M")),
+            0xb7 => Ok(String::from("ORA A")),
+            0xb8 => Ok(String::from("CMP B")),
+            0xb9 => Ok(String::from("CMP C")),
+            0xba => Ok(String::from("CMP D")),
+            0xbb => Ok(String::from("CMP E")),
+            0xbc => Ok(String::from("CMP H")),
+            0xbd => Ok(String::from("CMP L")),
+            0xbe => Ok(String::from("CMP M")),
+            0xbf => Ok(String::from("CMP A")),
+            0xc0 => Ok(String::from("RNZ")),
+            0xc1 => Ok(String::from("POP B")),
+            0xc2 => Ok(String::from(format!(
+                "JNZ {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xc3 => Ok(String::from(format!(
+                "JMP {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xc4 => Ok(String::from(format!(
+                "CNZ {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xc5 => Ok(String::from("PUSH B")),
+            0xc6 => Ok(String::from(format!(
+                "ADI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xc7 => Ok(String::from("RST 0")),
+            0xc8 => Ok(String::from("RZ")),
+            0xc9 => Ok(String::from("RET")),
+            0xca => Ok(String::from(format!(
+                "JZ {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xcb => {
+                // No instruction
+                Err("Invalid opcode")
+            }
+            0xcc => Ok(String::from(format!(
+                "CZ {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xcd => Ok(String::from(format!(
+                "CALL {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xce => Ok(String::from(format!(
+                "ACI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xcf => Ok(String::from("RST 1")),
+            0xd0 => Ok(String::from("RNC")),
+            0xd1 => Ok(String::from("POP D")),
+            0xd2 => Ok(String::from(format!(
+                "JNC {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xd3 => Ok(String::from(format!(
+                "OUT {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xd4 => Ok(String::from(format!(
+                "CNC {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xd5 => Ok(String::from("PUSH D")),
+            0xd6 => Ok(String::from(format!(
+                "SUI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xd7 => Ok(String::from("RST 2")),
+            0xd8 => Ok(String::from("RC")),
+            0xd9 => {
+                // No instruction
+                Err("Invalid opcode")
+            }
+            0xda => Ok(String::from(format!(
+                "JC {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xdb => Ok(String::from(format!(
+                "IN {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xdc => Ok(String::from(format!(
+                "CC {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xdd => {
+                // No instruction
+                Err("Invalid opcode")
+            }
+            0xde => Ok(String::from(format!(
+                "SBI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xdf => Ok(String::from("RST 3")),
+            0xe0 => Ok(String::from("RPO")),
+            0xe1 => Ok(String::from("POP H")),
+            0xe2 => Ok(String::from(format!(
+                "JPO {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xe3 => Ok(String::from("XTHL")),
+            0xe4 => Ok(String::from(format!(
+                "CPO {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xe5 => Ok(String::from("PUSH H")),
+            0xe6 => Ok(String::from(format!(
+                "ANI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xe7 => Ok(String::from("RST 4")),
+            0xe8 => Ok(String::from("RPE")),
+            0xe9 => Ok(String::from("PCHL")),
+            0xea => Ok(String::from(format!(
+                "JPE {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xeb => Ok(String::from("XCHG")),
+            0xec => Ok(String::from(format!(
+                "CPE {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xed => {
+                // No instruction
+                Err("Invalid opcode")
+            }
+            0xee => Ok(String::from(format!(
+                "XRI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xef => Ok(String::from("RST 5")),
+            0xf0 => Ok(String::from("RP")),
+            0xf1 => Ok(String::from("POP PSW")),
+            0xf2 => Ok(String::from(format!(
+                "JP {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xf3 => Ok(String::from("DI")),
+            0xf4 => Ok(String::from(format!(
+                "CP {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xf5 => Ok(String::from("PUSH PSW")),
+            0xf6 => Ok(String::from(format!(
+                "ORI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xf7 => Ok(String::from("RST 6")),
+            0xf8 => Ok(String::from("RM")),
+            0xf9 => Ok(String::from("SPHL")),
+            0xfa => Ok(String::from(format!(
+                "JM {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xfb => Ok(String::from("EI")),
+            0xfc => Ok(String::from(format!(
+                "CM {}",
+                Disassembler::fmt_hex::<u16>(self.read_addr())
+            ))),
+            0xfd => {
+                // No instruction
+                Err("Invalid opcode")
+            }
+            0xfe => Ok(String::from(format!(
+                "CPI {}",
+                Disassembler::fmt_hex::<u8>(self.read_byte())
+            ))),
+            0xff => Ok(String::from("RST 7")),
         }
     }
 
