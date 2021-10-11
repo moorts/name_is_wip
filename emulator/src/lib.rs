@@ -19,8 +19,3 @@ extern "C" {
 pub fn greet() {
     alert("Hello, emulator!");
 }
-
-#[test]
-pub fn test_test() {
-    assert_eq!(1, 1);
-}
