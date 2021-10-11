@@ -35,8 +35,32 @@ impl IndexMut<u16> for RAM {
     }
 }
 
+struct RegisterArray {
+    wz: u16,
+    bc: u16,
+    de: u16,
+    hl: u16,
+}
+
+impl Index<&'static str> for RegisterArray {
+    type Output = u16;
+
+    fn index(&self, index: &'static str) -> &Self::Output {
+        match index {
+            "wz" => &self.wz,
+            "bc" => &self.bc,
+            "de" => &self.de,
+            "hl" => &self.hl,
+            _ => {
+                &self.wz
+            }
+        }
+    }
+}
+
 struct Emulator {
     ram: RAM,
+    reg: RegisterArray,
 }
 
 #[cfg(test)]
