@@ -56,7 +56,12 @@ struct RegisterArray {
 
 impl RegisterArray {
     fn new() -> Self {
-        RegisterArray { wz: Register::new(), bc: Register::new(), de: Register::new(), hl: Register::new() }
+        RegisterArray {
+            wz: Register::new(),
+            bc: Register::new(),
+            de: Register::new(),
+            hl: Register::new(),
+        }
     }
 }
 
@@ -74,7 +79,7 @@ impl Index<char> for RegisterArray {
                 'e' => &self.de.bytes.0,
                 'h' => &self.de.bytes.1,
                 'l' => &self.de.bytes.0,
-                _ => panic!("Invalid register")
+                _ => panic!("Invalid register"),
             }
         }
     }
@@ -92,7 +97,7 @@ impl IndexMut<char> for RegisterArray {
                 'e' => &mut self.de.bytes.0,
                 'h' => &mut self.de.bytes.1,
                 'l' => &mut self.de.bytes.0,
-                _ => panic!("Invalid register")
+                _ => panic!("Invalid register"),
             }
         }
     }
@@ -108,7 +113,7 @@ impl Index<&str> for RegisterArray {
                 "bc" => &self.bc.value,
                 "de" => &self.de.value,
                 "hl" => &self.hl.value,
-                _ => panic!("Invalid register pair")
+                _ => panic!("Invalid register pair"),
             }
         }
     }
@@ -122,20 +127,78 @@ impl IndexMut<&str> for RegisterArray {
                 "bc" => &mut self.bc.value,
                 "de" => &mut self.de.value,
                 "hl" => &mut self.hl.value,
-                _ => panic!("Invalid register pair")
+                _ => panic!("Invalid register pair"),
             }
         }
     }
 }
 
-struct Emulator {
+struct Flags {
+    /*
+     * Represents processor flags
+     * [zero, carry, sign, parity, aux, 0, 0, 0]
+     */
+    flags: u8,
+}
+
+impl Flags {
+    fn new() -> Self {
+        Flags { flags: 0 }
+    }
+
+    fn get(&self, flag: &str) -> bool {
+        match flag {
+            "zero" => (self.flags & 0x80) != 0,
+            "carry" => (self.flags & 0x40) != 0,
+            "sign" => (self.flags & 0x20) != 0,
+            "parity" => (self.flags & 0x10) != 0,
+            "aux" => (self.flags & 0x8) != 0,
+            _ => panic!("Invalid flag"),
+        }
+    }
+
+    fn set(&mut self, flag: &str) {
+        match flag {
+            "zero" => self.flags |= 0x80,
+            "carry" => self.flags |= 0x40,
+            "sign" => self.flags |= 0x20,
+            "parity" => self.flags |= 0x10,
+            "aux" => self.flags |= 0x8,
+            _ => panic!("Invalid flag"),
+        }
+    }
+
+    fn flip(&mut self, flag: &str) {
+        match flag {
+            "zero" => self.flags ^= 0x80,
+            "carry" => self.flags ^= 0x40,
+            "sign" => self.flags ^= 0x20,
+            "parity" => self.flags ^= 0x10,
+            "aux" => self.flags ^= 0x8,
+            _ => panic!("Invalid flag"),
+        }
+    }
+}
+
+pub struct Emulator {
+    pc: u16,
+    sp: u16,
+    acc: u8,
     ram: RAM,
     reg: RegisterArray,
+    flags: Flags,
 }
 
 impl Emulator {
-    fn new() -> Self {
-        Emulator { ram: RAM::new(), reg: RegisterArray::new() }
+    pub fn new() -> Self {
+        Emulator {
+            pc: 0,
+            sp: 0,
+            acc: 0,
+            ram: RAM::new(),
+            reg: RegisterArray::new(),
+            flags: Flags::new(),
+        }
     }
 }
 
@@ -161,6 +224,28 @@ mod tests {
         regs['z'] = 0xaa;
         assert_eq!(regs['z'], 0xaa);
         assert_eq!(regs["wz"], 0xffaa);
+    }
+
+    #[test]
+    fn test_flags() {
+        let mut f = Flags { flags: 0b10011000 };
+        assert!(f.get("zero"));
+        assert!(!f.get("carry"));
+        assert!(!f.get("sign"));
+        assert!(f.get("parity"));
+        assert!(f.get("aux"));
+
+        f.flip("zero");
+        assert!(!f.get("zero"));
+
+        f.flip("carry");
+        assert!(f.get("carry"));
+
+        f.set("sign");
+        assert!(f.get("sign"));
+
+        f.set("parity");
+        assert!(f.get("parity"));
     }
 
     #[test]
