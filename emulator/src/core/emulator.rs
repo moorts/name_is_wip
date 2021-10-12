@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Range};
+use std::io;
+use std::io::*;
+use std::fs::File;
 
 const RAM_SIZE: usize = 0x4000;
 
@@ -19,6 +22,21 @@ impl RAM {
     fn new() -> Self {
         Self { mem: [0; RAM_SIZE] }
     }
+
+    fn load_vec(&mut self, vec: Vec<u8>, start: u16) {
+        let mut idx = start;
+        for byte in vec {
+            self[idx] = byte;
+            idx += 1;
+        }
+    }
+
+    fn load_file(&mut self, path: &str, start: u16) -> io::Result<()> {
+        let mut f = File::open(path)?;
+        let mut bytes = Vec::new();
+        f.read_to_end(&mut bytes)?;
+        Ok(())
+    }
 }
 
 impl Index<u16> for RAM {
@@ -32,6 +50,14 @@ impl Index<u16> for RAM {
 impl IndexMut<u16> for RAM {
     fn index_mut(&mut self, index: u16) -> &mut Self::Output {
         &mut self.mem[(index & 0x3fff) as usize]
+    }
+}
+
+impl Index<Range<usize>> for RAM {
+    type Output = [u8];
+
+    fn index(&self, range: Range<usize>) -> &Self::Output {
+        &self.mem[range]
     }
 }
 
@@ -257,5 +283,9 @@ mod tests {
         assert_eq!(r[0], 1);
         assert_eq!(r[0x4000], 1);
         assert_eq!(r[0x1132], 69);
+
+        r[1] = 2; r[2] = 3; r[3] = 4; r[4] = 5;
+        let slice = &r[0..5];
+        assert_eq!(slice, &[1, 2, 3, 4, 5]);
     }
 }
