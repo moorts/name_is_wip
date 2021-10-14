@@ -19,7 +19,7 @@ Rust Web-Assembly:
 
 ## Idee
 
-Entwicklung eines Intel 8080 Emulators in Rust, kompiliert nach Web-Assembly. Dazu ein Web-Frontend durch das der Emulator verwendet werden kann. Das UI soll leicht verstaendlich sein, sodass die Anwendung als Grundlage fuer Assembly-Kurse verwendet werden kann. Der Emulator laeuft als WASM binary im Browser des Benutzers und wird durch die WASM-Endpunkte gesteuert.
+Entwicklung eines Intel 8080 Emulators in Rust, kompiliert nach Web-Assembly. Dazu ein Web-Frontend durch das der Emulator verwendet werden kann. Das UI soll leicht verständlich sein, sodass die Anwendung als Grundlage fuer Assembly-Kurse verwendet werden kann. Der Emulator läuft als WASM binary im Browser des Benutzers und wird durch die WASM-Endpunkte gesteuert.
 
 ## ToC
 
@@ -49,3 +49,4 @@ Entwicklung eines Intel 8080 Emulators in Rust, kompiliert nach Web-Assembly. Da
   * Benutzbarkeit
   * Vollstaendigkeit
 * Fazit
+

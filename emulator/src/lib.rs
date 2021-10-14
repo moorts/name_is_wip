@@ -1,3 +1,4 @@
+mod core;
 mod terminator;
 mod utils;
 
@@ -17,9 +18,4 @@ extern "C" {
 #[wasm_bindgen]
 pub fn greet() {
     alert("Hello, emulator!");
-}
-
-#[test]
-pub fn test_test() {
-    assert_eq!(1, 1);
 }
