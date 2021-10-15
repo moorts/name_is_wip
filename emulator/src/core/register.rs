@@ -97,3 +97,29 @@ impl IndexMut<&str> for RegisterArray {
         }
     }
 }
+
+#[cfg(test)]
+mod register_tests {
+    use super::*;
+
+    #[test]
+    fn test_registerarray() {
+        let mut regs = RegisterArray::new();
+
+        regs["wz"] = 0xabcd;
+        assert_eq!(regs["wz"], 0xabcd);
+        assert_eq!(regs['w'], 0xab);
+
+        regs['b'] = 0xcd;
+        regs['c'] = 0xab;
+        assert_eq!(regs["bc"], 0xcdab);
+        assert_eq!(regs['b'], 0xcd);
+
+        regs["wz"] = 0xffff;
+        assert_eq!(regs["wz"], 0xffff);
+        regs['z'] = 0xaa;
+        assert_eq!(regs['z'], 0xaa);
+        assert_eq!(regs["wz"], 0xffaa);
+    }
+
+}

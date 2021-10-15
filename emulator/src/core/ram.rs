@@ -60,3 +60,23 @@ impl Index<Range<usize>> for RAM {
         &self.mem[range]
     }
 }
+
+#[cfg(test)]
+mod ram_tests {
+    use super::*;
+
+    #[test]
+    fn test_ram() {
+        let mut r = RAM::new();
+
+        r[0] = 1;
+        r[0x5132] = 69;
+        assert_eq!(r[0], 1);
+        assert_eq!(r[0x4000], 1);
+        assert_eq!(r[0x1132], 69);
+
+        r[1] = 2; r[2] = 3; r[3] = 4; r[4] = 5;
+        let slice = &r[0..5];
+        assert_eq!(slice, &[1, 2, 3, 4, 5]);
+    }
+}

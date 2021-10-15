@@ -45,3 +45,33 @@ impl Flags {
         }
     }
 }
+
+#[cfg(test)]
+mod flags_tests {
+    use super::*;
+
+    #[test]
+    fn test_flags() {
+        let mut f = Flags::new();
+        f.set("zero");
+        f.set("parity");
+        f.set("aux");
+        assert!(f.get("zero"));
+        assert!(!f.get("carry"));
+        assert!(!f.get("sign"));
+        assert!(f.get("parity"));
+        assert!(f.get("aux"));
+
+        f.flip("zero");
+        assert!(!f.get("zero"));
+
+        f.flip("carry");
+        assert!(f.get("carry"));
+
+        f.set("sign");
+        assert!(f.get("sign"));
+
+        f.set("parity");
+        assert!(f.get("parity"));
+    }
+}
