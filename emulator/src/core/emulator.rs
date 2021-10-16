@@ -23,6 +23,16 @@ impl Emulator {
             flags: Flags::new(),
         }
     }
+
+    pub fn run(&mut self) -> Result<(), &'static str> {
+        while self.pc < 0x2000 {
+            let opcode = self.ram[self.pc];
+            match opcode {
+                _ => unimplemented!("Opcode not yet implemented")
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
