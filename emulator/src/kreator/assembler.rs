@@ -25,13 +25,12 @@ fn to_binary(instruction: &String) -> u8 {
 
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut formatted_code = String::from("");
-        for (index, line) in self.code.iter().enumerate() {
-            if index == self.program_counter {
-                formatted_code = format!("{}\n-> {}", formatted_code, &line);
-            } else {
-                formatted_code = format!("{}\n   {}", formatted_code, &line);
-            }
+        if self.code.len() == 0 as usize {
+            return  write!(f, "");
+        }
+        let mut formatted_code = String::from(&self.code[0]);
+        for line in &self.code[1..] {
+            formatted_code = format!("{}\n{}", formatted_code, &line);
         }
         write!(f, "{}", formatted_code)
     }
