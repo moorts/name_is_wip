@@ -2,7 +2,7 @@ use std::fmt;
 
 struct Assembler {
     code: Vec<String>,
-    program_counter: usize,
+    program_counter: u16,
 }
 
 impl Assembler {
@@ -43,8 +43,8 @@ impl Iterator for Assembler {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         self.program_counter += 1;
-        if self.program_counter - 1 < self.code.len() {
-            Some(to_binary(&self.code[self.program_counter - 1]))
+        if self.program_counter - 1 < self.code.len() as u16 {
+            Some(to_binary(&self.code[(self.program_counter - 1) as usize]))
         } else {
             None
         }
