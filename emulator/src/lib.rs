@@ -1,5 +1,6 @@
 mod core;
 mod terminator;
+mod kreator;
 mod utils;
 
 use wasm_bindgen::prelude::*;
