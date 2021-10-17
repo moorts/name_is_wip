@@ -85,8 +85,17 @@ mod tests {
         let code_file = "MOV A B \n INC ACC";
         let mut assembler = Assembler::new(code_file);
 
+
+        // TO-DO: replace Some(0) with the actual statements that should be returned
         assert_eq!(Some(0b000000000), assembler.next());
         assert_eq!(Some(0b000000000), assembler.next());
+        assert_eq!(None, assembler.next());
+    }
+
+    #[test]
+    fn test_empty_iterator() {
+        let mut assembler = Assembler::new("");
+
         assert_eq!(None, assembler.next());
     }
 }
