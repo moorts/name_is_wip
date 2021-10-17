@@ -9,7 +9,7 @@ impl Assembler {
     fn new(input_code: &str) -> Assembler {
         let mut lines = Vec::new();
         for line in input_code.split(" ") {
-            lines.push(String::from(line));
+            lines.push(String::from(line.trim()));
         }
         Assembler { 
             code: lines,
@@ -46,5 +46,16 @@ impl Iterator for Assembler {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Assembler;
+
+    #[test]
+    fn test_display() {
+        let code_file = "MOV A B \n  JMP label \nlabel: INC ACC   ";
+        let ass = Assembler::new(code_file);
     }
 }
