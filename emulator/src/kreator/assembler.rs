@@ -7,9 +7,12 @@ struct Assembler {
 
 impl Assembler {
     fn new(input_code: &str) -> Assembler {
-        let mut lines = Vec::new();
-        for line in input_code.split(" ") {
-            lines.push(String::from(line.trim()));
+        let mut lines: Vec<String> = Vec::new();
+        for line in input_code.split("\n") {
+            let line_parts = line.trim().split(";").collect::<Vec<&str>>();
+            if line_parts[0].len() != 0 {
+                lines.push(String::from(line_parts[0].trim()));
+            }
         }
         Assembler { 
             code: lines,
@@ -40,7 +43,7 @@ impl Iterator for Assembler {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         self.program_counter += 1;
-        if self.program_counter < self.code.len() {
+        if self.program_counter - 1 < self.code.len() {
             Some(to_binary(&self.code[self.program_counter - 1]))
         } else {
             None
@@ -53,8 +56,37 @@ mod tests {
     use super::Assembler;
 
     #[test]
-    fn test_display() {
+    fn test_display_with_code() {
         let code_file = "MOV A B \n  JMP label \nlabel: INC ACC   ";
-        let ass = Assembler::new(code_file);
+        let assembler = Assembler::new(code_file);
+
+        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
+        assert_eq!(expected_text, format!("{}", assembler));
+    }
+
+    #[test]
+    fn test_display_without_code() {
+        let assembler = Assembler::new("");
+
+        assert_eq!("", format!("{}", assembler));
+    }
+
+    #[test]
+    fn test_display_remove_comments() {
+        let code_file = " \n;comment\nMOV A B ;comment";
+        let assembler = Assembler::new(code_file);
+
+        let expected_text = "MOV A B";
+        assert_eq!(expected_text, format!("{}", assembler));
+    }
+
+    #[test]
+    fn test_iterator() {
+        let code_file = "MOV A B \n INC ACC";
+        let mut assembler = Assembler::new(code_file);
+
+        assert_eq!(Some(0b000000000), assembler.next());
+        assert_eq!(Some(0b000000000), assembler.next());
+        assert_eq!(None, assembler.next());
     }
 }
