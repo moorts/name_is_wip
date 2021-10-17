@@ -16,16 +16,7 @@ impl Assembler {
             program_counter: 0,
         }
     }
-
-    fn generate_binary(&self) -> Vec<u8> {
-        let mut binary = Vec::new();
-        for instruction in &self.code {
-            binary.push(to_binary(instruction));
-        }
-        binary
-    }
 }
-
 
 fn to_binary(instruction: &String) -> u8 {
     // TO-DO: return instruction
@@ -34,9 +25,13 @@ fn to_binary(instruction: &String) -> u8 {
 
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut formatted_code = String::from(&self.code[0]);
-        for line in &self.code[1..] {
-            formatted_code = format!("{}\n{}", formatted_code, &line);
+        let mut formatted_code = String::from("");
+        for (index, line) in self.code.iter().enumerate() {
+            if index == self.program_counter {
+                formatted_code = format!("{}\n-> {}", formatted_code, &line);
+            } else {
+                formatted_code = format!("{}\n   {}", formatted_code, &line);
+            }
         }
         write!(f, "{}", formatted_code)
     }
@@ -44,7 +39,6 @@ impl fmt::Display for Assembler {
 
 impl Iterator for Assembler {
     type Item = u8;
-    
     fn next(&mut self) -> Option<Self::Item> {
         self.program_counter += 1;
         if self.program_counter < self.code.len() {
