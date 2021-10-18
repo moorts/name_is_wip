@@ -7,26 +7,26 @@ struct Assembler {
 }
 
 impl Assembler {
-    fn new(input_code: &str) -> Assembler {
-        let mut lines: Vec<String> = Vec::new();
+    fn new(input_code: &str) -> Self {
+        let mut lines = Vec::new();
         let comment_regex = Regex::new(r";.*").unwrap();
 
         for line in input_code.split("\n") {
             let line = comment_regex.replace(line, "");
             let line = line.trim();
-            if line.len() != 0 {
+            if !line.is_empty() {
                 lines.push(String::from(line));
             }
         }
-        Assembler { 
+        Self { 
             code: lines,
         }
     }
 
-    fn get_machine_code(&self) -> Result<Vec<Vec<u8>>, &'static str> {
+    fn get_machine_code(&self) -> Result<Vec<u8>, &'static str> {
         let mut machine_code = Vec::new();
         for line in &self.code {
-            machine_code.push(to_machine_code(line)?);
+            machine_code.extend(to_machine_code(line)?);
         }
         Ok(machine_code)
     }
