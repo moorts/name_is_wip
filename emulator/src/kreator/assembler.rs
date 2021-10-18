@@ -21,9 +21,9 @@ impl Assembler {
     }
 }
 
-fn to_binary(instruction: &String) -> u8 {
+fn to_machine_code(instruction: &String) -> Vec<u8> {
     // TO-DO: return instruction
-    0b00000000
+    Vec::from([0b00000000])
 }
 
 impl fmt::Display for Assembler {
@@ -33,11 +33,11 @@ impl fmt::Display for Assembler {
 }
 
 impl Iterator for Assembler {
-    type Item = u8;
+    type Item = Vec<u8>;
     fn next(&mut self) -> Option<Self::Item> {
         self.pc += 1;
         if self.pc - 1 < self.code.len() {
-            Some(to_binary(&self.code[(self.pc - 1) as usize]))
+            Some(to_machine_code(&self.code[(self.pc - 1) as usize]))
         } else {
             None
         }
@@ -88,8 +88,8 @@ mod tests {
 
 
         // TO-DO: replace Some(0) with the actual statements that should be returned
-        assert_eq!(Some(0b000000000), assembler.next());
-        assert_eq!(Some(0b000000000), assembler.next());
+        assert_eq!(Some(Vec::from([0b000000000])), assembler.next());
+        assert_eq!(Some(Vec::from([0b000000000])), assembler.next());
         assert_eq!(None, assembler.next());
     }
 
