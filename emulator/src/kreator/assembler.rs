@@ -23,7 +23,7 @@ impl Assembler {
         }
     }
 
-    fn get_machine_code(&self) -> Result<Vec<Vec<u8>>, &'static String> {
+    fn get_machine_code(&self) -> Result<Vec<Vec<u8>>, &'static str> {
         let mut machine_code = Vec::new();
         for line in &self.code {
             match to_machine_code(line) {
@@ -35,7 +35,7 @@ impl Assembler {
     }
 }
 
-fn to_machine_code(instruction: &String) -> Result<Vec<u8>, &'static String> {
+fn to_machine_code(instruction: &String) -> Result<Vec<u8>, &'static str> {
     // TO-DO: return instruction
     Ok(Vec::from([0b00000000]))
 }
