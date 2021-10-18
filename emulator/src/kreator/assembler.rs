@@ -2,7 +2,7 @@ use std::fmt;
 
 struct Assembler {
     code: Vec<String>,
-    program_counter: u16,
+    pc: usize,
 }
 
 impl Assembler {
@@ -16,7 +16,7 @@ impl Assembler {
         }
         Assembler { 
             code: lines,
-            program_counter: 0,
+            pc: 0,
         }
     }
 }
@@ -28,23 +28,16 @@ fn to_binary(instruction: &String) -> u8 {
 
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.code.len() == 0 as usize {
-            return  write!(f, "");
-        }
-        let mut formatted_code = String::from(&self.code[0]);
-        for line in &self.code[1..] {
-            formatted_code = format!("{}\n{}", formatted_code, &line);
-        }
-        write!(f, "{}", formatted_code)
+        write!(f, "{}", self.code.join("\n"))
     }
 }
 
 impl Iterator for Assembler {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
-        self.program_counter += 1;
-        if self.program_counter - 1 < self.code.len() as u16 {
-            Some(to_binary(&self.code[(self.program_counter - 1) as usize]))
+        self.pc += 1;
+        if self.pc - 1 < self.code.len() {
+            Some(to_binary(&self.code[(self.pc - 1) as usize]))
         } else {
             None
         }
@@ -58,6 +51,14 @@ mod tests {
     #[test]
     fn test_display_with_code() {
         let code_file = "MOV A B \n  JMP label \nlabel: INC ACC   ";
+        let assembler = Assembler::new(code_file);
+
+        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
+        assert_eq!(expected_text, format!("{}", assembler));
+    }
+
+    fn test_display_windows_newline() {
+        let code_file = "MOV A B \r\n JMP label \r\nlabel: INC ACC  ";
         let assembler = Assembler::new(code_file);
 
         let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
