@@ -1,4 +1,5 @@
 use std::fmt;
+use regex::Regex;
 
 struct Assembler {
     code: Vec<String>,
@@ -8,10 +9,13 @@ struct Assembler {
 impl Assembler {
     fn new(input_code: &str) -> Assembler {
         let mut lines: Vec<String> = Vec::new();
+        let comment_regex = Regex::new(r";.*").unwrap();
+
         for line in input_code.split("\n") {
-            let line_parts = line.trim().split(";").collect::<Vec<&str>>();
-            if line_parts[0].len() != 0 {
-                lines.push(String::from(line_parts[0].trim()));
+            let line = comment_regex.replace(line, "");
+            let line = line.trim();
+            if line.len() != 0 {
+                lines.push(String::from(line));
             }
         }
         Assembler { 
@@ -75,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_display_remove_comments() {
-        let code_file = " \n;comment\nMOV A B ;comment";
+        let code_file = " \n;comment\nMOV A B ;comment\n;";
         let assembler = Assembler::new(code_file);
 
         let expected_text = "MOV A B";
