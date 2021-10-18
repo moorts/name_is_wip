@@ -57,6 +57,7 @@ mod tests {
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
+    #[test]
     fn test_display_windows_newline() {
         let code_file = "MOV A B \r\n JMP label \r\nlabel: INC ACC  ";
         let assembler = Assembler::new(code_file);
