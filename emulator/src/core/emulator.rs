@@ -24,12 +24,11 @@ impl Emulator {
         }
     }
 
-    pub fn run(&mut self) -> Result<(), &'static str> {
-        while self.pc < 0x2000 {
-            let opcode = self.ram[self.pc];
-            match opcode {
-                _ => unimplemented!("Opcode not yet implemented")
-            }
+    pub fn execute_next(&mut self) -> Result<(), &'static str> {
+        let opcode = self.ram[self.pc];
+        self.pc += 1;
+        match opcode {
+            _ => unimplemented!("Opcode not yet implemented")
         }
         Ok(())
     }
