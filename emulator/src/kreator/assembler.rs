@@ -1,9 +1,9 @@
-use std::fmt;
+use core::fmt;
+
 use regex::Regex;
 
 struct Assembler {
     code: Vec<String>,
-    pc: usize,
 }
 
 impl Assembler {
@@ -20,31 +20,29 @@ impl Assembler {
         }
         Assembler { 
             code: lines,
-            pc: 0,
         }
+    }
+
+    fn get_machine_code(&self) -> Result<Vec<Vec<u8>>, &'static String> {
+        let mut machine_code = Vec::new();
+        for line in &self.code {
+            match to_machine_code(line) {
+                Ok(instruction) => machine_code.push(instruction),
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(machine_code)
     }
 }
 
-fn to_machine_code(instruction: &String) -> Vec<u8> {
+fn to_machine_code(instruction: &String) -> Result<Vec<u8>, &'static String> {
     // TO-DO: return instruction
-    Vec::from([0b00000000])
+    Ok(Vec::from([0b00000000]))
 }
 
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.code.join("\n"))
-    }
-}
-
-impl Iterator for Assembler {
-    type Item = Vec<u8>;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.pc += 1;
-        if self.pc - 1 < self.code.len() {
-            Some(to_machine_code(&self.code[(self.pc - 1) as usize]))
-        } else {
-            None
-        }
     }
 }
 
@@ -89,19 +87,15 @@ mod tests {
     #[test]
     fn test_iterator() {
         let code_file = "MOV A B \n INC ACC";
-        let mut assembler = Assembler::new(code_file);
+        let assembler = Assembler::new(code_file);
 
-
-        // TO-DO: replace Some(0) with the actual statements that should be returned
-        assert_eq!(Some(Vec::from([0b000000000])), assembler.next());
-        assert_eq!(Some(Vec::from([0b000000000])), assembler.next());
-        assert_eq!(None, assembler.next());
+        assert_eq!(2, assembler.get_machine_code().unwrap().len());
     }
 
     #[test]
     fn test_empty_iterator() {
-        let mut assembler = Assembler::new("");
+        let assembler = Assembler::new("");
 
-        assert_eq!(None, assembler.next());
+        assert_eq!(0, assembler.get_machine_code().unwrap().len());
     }
 }
