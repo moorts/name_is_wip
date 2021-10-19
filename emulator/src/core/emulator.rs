@@ -1,15 +1,12 @@
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
-use crate::core::flags::Flags;
 
 
 pub struct Emulator {
     pc: u16,
     sp: u16,
-    acc: u8,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
-    flags: Flags,
 }
 
 impl Emulator {
@@ -17,10 +14,8 @@ impl Emulator {
         Emulator {
             pc: 0,
             sp: 0,
-            acc: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
-            flags: Flags::new(),
         }
     }
 
