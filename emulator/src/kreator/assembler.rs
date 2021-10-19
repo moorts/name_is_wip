@@ -32,35 +32,42 @@ impl Assembler {
 }
 
 fn to_machine_code(instruction: &String) -> Result<Vec<u8>, &'static str> {
-    let mut machine_code = Vec::new();
     let label_regex = Regex::new(r"^([a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)").unwrap();
     let mov_regex = Regex::new(r"([A-Z] *, *[A-Z])$").unwrap();
 
     let formatted_instruction = instruction.replace(",", " ");
     let instruction_fields: Vec<&str> = formatted_instruction.split_ascii_whitespace().collect();
 
-    let mut first_index = 0;
+    let mut opcode_index = 0;
     if label_regex.is_match(&instruction) {
-        first_index = 1;
+        opcode_index = 1;
     }
 
-    match instruction_fields[first_index] {
-        "NOP" => machine_code.push(0x0),
+    match instruction_fields[opcode_index] {
+        "NOP" => {
+            if instruction_fields.len() - opcode_index > 1 {
+                return Err("NOP does not take any arguments!");
+            }
+            return Ok(vec![0x0]);
+        },
         "MOV" => {
+            if instruction_fields.len() - opcode_index > 3 {
+                return Err("MOV only takes 2 arguments!");
+            }
             let mov_first_argument_err_message = "Invalid first argument for MOV instruction";
             let mov_second_argument_err_message = "Invalid second argument for MOV instruction";
             if mov_regex.is_match(instruction) {
                 let base_value = 0x40;
                 let registers = "BCDEHLMA";
-                match registers.find(instruction_fields[first_index + 1]) {
+                match registers.find(instruction_fields[opcode_index + 1]) {
                     Some(index) => {
-                        match registers.find(instruction_fields[first_index + 2]) {
+                        match registers.find(instruction_fields[opcode_index + 2]) {
                             Some(second_index) =>  {
                                 if index == 6 && second_index == 6 {
                                     return Err("Invalid arguments for MOV instruction (Can't move M into M)");
                                 }
                                 let instruction_value = base_value + (index as u8 * 8) + second_index as u8;
-                                machine_code.push(instruction_value);
+                                return Ok(vec![instruction_value]);
                             },
                             None => return Err(mov_second_argument_err_message),
                         }
@@ -73,7 +80,6 @@ fn to_machine_code(instruction: &String) -> Result<Vec<u8>, &'static str> {
         },
         _ => return Err("Could not match instruction"),
     }
-    Ok(machine_code)
 }
 
 impl fmt::Display for Assembler {
@@ -160,13 +166,18 @@ mod tests {
 
         let assembler = Assembler::new("MOV M,M");
         assert_eq!(Err("Invalid arguments for MOV instruction (Can't move M into M)"), assembler.get_machine_code());
+
+        let assembler = Assembler::new("MOV A,B,C");
+        assert_eq!(Err("MOV only takes 2 arguments!"), assembler.get_machine_code());
     }
 
     #[test]
     fn test_nop_operation() {
         let assembler = Assembler::new("NOP");
-
         assert_eq!(0x0, assembler.get_machine_code().unwrap()[0]);
+
+        let assembler = Assembler::new("NOP A");
+        assert_eq!(Err("NOP does not take any arguments!"), assembler.get_machine_code());
     }
 
     #[test]
