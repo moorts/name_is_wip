@@ -3,13 +3,24 @@ use std::fs::File;
 use std::io;
 use std::io::*;
 
+
 const RAM_SIZE: usize = 0x4000;
 
-pub struct RAM {
+pub struct DefaultRam {
     mem: [u8; RAM_SIZE],
 }
 
-impl RAM {
+pub trait RAM: Index<u16, Output=u8> + IndexMut<u16, Output=u8> {
+    fn size(&self) -> usize;
+}
+
+impl RAM for DefaultRam {
+    fn size(&self) -> usize {
+        self.mem.len()
+    }
+}
+
+impl DefaultRam {
     /*
      * Struct representing the RAM
      * Can be indexed with u16's but only the 14 LSB's are used
@@ -39,7 +50,7 @@ impl RAM {
     }
 }
 
-impl Index<u16> for RAM {
+impl Index<u16> for DefaultRam {
     type Output = u8;
 
     fn index(&self, index: u16) -> &Self::Output {
@@ -47,13 +58,13 @@ impl Index<u16> for RAM {
     }
 }
 
-impl IndexMut<u16> for RAM {
+impl IndexMut<u16> for DefaultRam {
     fn index_mut(&mut self, index: u16) -> &mut Self::Output {
         &mut self.mem[(index & 0x3fff) as usize]
     }
 }
 
-impl Index<Range<usize>> for RAM {
+impl Index<Range<usize>> for DefaultRam {
     type Output = [u8];
 
     fn index(&self, range: Range<usize>) -> &Self::Output {
@@ -67,7 +78,7 @@ mod ram_tests {
 
     #[test]
     fn test_ram() {
-        let mut r = RAM::new();
+        let mut r = DefaultRam::new();
 
         r[0] = 1;
         r[0x5132] = 69;
