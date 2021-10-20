@@ -1,5 +1,8 @@
 # Some emulator
 
+![build](https://img.shields.io/github/workflow/status/moorts/name_is_wip/Rust/main)
+![GitHub](https://img.shields.io/github/license/moorts/name_is_wip)
+
 ## Resources
 
 Opcode table:
