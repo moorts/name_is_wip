@@ -1,8 +1,10 @@
 use core::fmt;
 use regex::Regex;
+use std::collections::HashMap;
 
 struct Assembler {
     code: Vec<String>,
+    labels: HashMap<String, u16>
 }
 
 impl Assembler {
@@ -12,20 +14,22 @@ impl Assembler {
 
         for line in input_code.split("\n") {
             let line = comment_regex.replace(line, "");
-            let line = line.trim();
-            if !line.is_empty() {
-                lines.push(String::from(line));
-            }
+            let line = line.trim_end();
+            lines.push(String::from(line));
         }
+        
         Self { 
             code: lines,
+            labels: HashMap::new(),
         }
     }
 
-    fn get_machine_code(&self) -> Result<Vec<u8>, &'static str> {
+    fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let mut machine_code = Vec::new();
         for line in &self.code {
-            machine_code.extend(to_machine_code(line)?);
+            if !line.is_empty() {
+                machine_code.extend(to_machine_code(line)?);
+            }
         }
         Ok(machine_code)
     }
@@ -94,10 +98,10 @@ mod tests {
 
     #[test]
     fn test_display_with_code() {
-        let code_file = "MOV A B \n  JMP label \nlabel: INC ACC   ";
+        let code_file = "MOV A B \n JMP label \nlabel: INC ACC   ";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
+        let expected_text = "MOV A B\n JMP label\nlabel: INC ACC";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -106,7 +110,7 @@ mod tests {
         let code_file = "MOV A B \r\n JMP label \r\nlabel: INC ACC  ";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
+        let expected_text = "MOV A B\n JMP label\nlabel: INC ACC";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -122,7 +126,7 @@ mod tests {
         let code_file = " \n;comment\nMOV A B ;comment\n;";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B";
+        let expected_text = "\n\nMOV A B\n";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -130,7 +134,7 @@ mod tests {
     fn test_empty_code_file() {
         let assembler = Assembler::new("");
 
-        assert_eq!(0, assembler.get_machine_code().unwrap().len());
+        assert_eq!(0, assembler.assemble().unwrap().len());
     }
 
     #[test]
@@ -138,7 +142,7 @@ mod tests {
         let code_file = "MOV A, B \n MOV L  ,M\nMOV B,M";
         let assembler = Assembler::new(code_file);
 
-        let machine_code = assembler.get_machine_code().unwrap();
+        let machine_code = assembler.assemble().unwrap();
         assert_eq!(3, machine_code.len());
         assert_eq!(0x78, machine_code[0]);
         assert_eq!(0x6e, machine_code[1]);
@@ -149,7 +153,7 @@ mod tests {
     fn test_mov_edges() {
         let assembler = Assembler::new("MOV B,B \nMOV M,L\nMOV M,A\n MOV A,A");
 
-        let machine_code = assembler.get_machine_code().unwrap();
+        let machine_code = assembler.assemble().unwrap();
         assert_eq!(0x40, machine_code[0]);
         assert_eq!(0x75, machine_code[1]);
         assert_eq!(0x77, machine_code[2]);
@@ -159,31 +163,31 @@ mod tests {
     #[test]
     fn test_mov_errors() {
         let assembler = Assembler::new("MOV A");
-        assert_eq!(Err("Missing argument(s) for MOV instruction"), assembler.get_machine_code());
+        assert_eq!(Err("Missing argument(s) for MOV instruction"), assembler.assemble());
 
         let assembler = Assembler::new("MOV B,Q");
-        assert_eq!(Err("Invalid second argument for MOV instruction"), assembler.get_machine_code());
+        assert_eq!(Err("Invalid second argument for MOV instruction"), assembler.assemble());
 
         let assembler = Assembler::new("MOV M,M");
-        assert_eq!(Err("Invalid arguments for MOV instruction (Can't move M into M)"), assembler.get_machine_code());
+        assert_eq!(Err("Invalid arguments for MOV instruction (Can't move M into M)"), assembler.assemble());
 
         let assembler = Assembler::new("MOV A,B,C");
-        assert_eq!(Err("MOV only takes 2 arguments!"), assembler.get_machine_code());
+        assert_eq!(Err("MOV only takes 2 arguments!"), assembler.assemble());
     }
 
     #[test]
     fn test_nop_operation() {
         let assembler = Assembler::new("NOP");
-        assert_eq!(0x0, assembler.get_machine_code().unwrap()[0]);
+        assert_eq!(0x0, assembler.assemble().unwrap()[0]);
 
         let assembler = Assembler::new("NOP A");
-        assert_eq!(Err("NOP does not take any arguments!"), assembler.get_machine_code());
+        assert_eq!(Err("NOP does not take any arguments!"), assembler.assemble());
     }
 
     #[test]
     fn test_invalid_instructions() {
         let assembler = Assembler::new("TEST");
 
-        assert_eq!(Err("Could not match instruction"), assembler.get_machine_code());
+        assert_eq!(Err("Could not match instruction"), assembler.assemble());
     }
 }
