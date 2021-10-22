@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 struct Assembler {
     code: Vec<String>,
-    labels: HashMap<String, u16>
 }
 
 impl Assembler {
@@ -20,22 +19,60 @@ impl Assembler {
         
         Self { 
             code: lines,
-            labels: HashMap::new(),
         }
     }
 
     fn assemble(&self) -> Result<Vec<u8>, &'static str> {
+        let label_regex = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)").unwrap();
         let mut machine_code = Vec::new();
+
+        
         for line in &self.code {
+            let line = label_regex.replace(line, "").to_string();
+            let line = line.trim();
             if !line.is_empty() {
                 machine_code.extend(to_machine_code(line)?);
             }
         }
         Ok(machine_code)
     }
+
+    fn get_labels(&self) -> Result<HashMap<String, u16>, &'static str> {
+        let label_regex = Regex::new(r"^( *[?a-zA-Z@][?a-zA-Z@0-9]{1,4}:)").unwrap();
+
+        let mut temp_labels = Vec::new();
+        let mut labels = HashMap::new();
+        let mut mem_address = 0;
+        for line in &self.code {
+            if label_regex.is_match(&line) {
+                let split = line.split(":").collect::<Vec<&str>>();
+                temp_labels.push(String::from(split[0].trim_start()));
+                if !split[1].trim().is_empty() {
+                    while let Some(new_label) = temp_labels.pop() {
+                        if labels.contains_key(&new_label) {
+                            return Err("label can't be assigned twice");
+                        } else {
+                            labels.insert(String::from(new_label), mem_address as u16);
+                        }
+                    }
+                    mem_address += 1;
+                }
+            } else {
+                while let Some(new_label) = temp_labels.pop() {
+                    if labels.contains_key(&new_label) {
+                        return Err("label can't be assigned twice");
+                    } else {
+                        labels.insert(String::from(new_label), mem_address as u16);
+                    }
+                }
+                mem_address += 1;
+            }
+        }
+        Ok(labels)
+    }
 }
 
-fn to_machine_code(instruction: &String) -> Result<Vec<u8>, &'static str> {
+fn to_machine_code(instruction: &str) -> Result<Vec<u8>, &'static str> {
     let label_regex = Regex::new(r"^([a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)").unwrap();
     let mov_regex = Regex::new(r"([A-Z] *, *[A-Z])$").unwrap();
 
@@ -95,6 +132,7 @@ impl fmt::Display for Assembler {
 #[cfg(test)]
 mod tests {
     use super::Assembler;
+    use std::collections::HashMap;
 
     #[test]
     fn test_display_with_code() {
@@ -189,5 +227,19 @@ mod tests {
         let assembler = Assembler::new("TEST");
 
         assert_eq!(Err("Could not match instruction"), assembler.assemble());
+    }
+
+    #[test]
+    fn test_remove_label_declarations() {
+        let input_code = "label: \n MOV A,B\n @LAB:\ntest:\nMOV A,B";
+        let assembler = Assembler::new(input_code);
+
+        let mut labels = HashMap::new();
+        labels.insert(String::from("test"), 1);
+        labels.insert(String::from("@LAB"), 1);
+        labels.insert(String::from("label"), 0);
+
+        assert_eq!(labels, assembler.get_labels().unwrap());
+        assert_eq!(vec![0x78, 0x78], assembler.assemble().unwrap());
     }
 }
