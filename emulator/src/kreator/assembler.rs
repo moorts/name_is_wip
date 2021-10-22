@@ -50,7 +50,7 @@ impl Assembler {
                 if !split[1].trim().is_empty() {
                     while let Some(new_label) = temp_labels.pop() {
                         if labels.contains_key(&new_label) {
-                            return Err("label can't be assigned twice");
+                            return Err("label must not be assigned twice");
                         } else {
                             labels.insert(String::from(new_label), mem_address as u16);
                         }
@@ -60,13 +60,16 @@ impl Assembler {
             } else {
                 while let Some(new_label) = temp_labels.pop() {
                     if labels.contains_key(&new_label) {
-                        return Err("label can't be assigned twice");
+                        return Err("label must not be assigned twice!");
                     } else {
                         labels.insert(String::from(new_label), mem_address as u16);
                     }
                 }
                 mem_address += 1;
             }
+        }
+        if !temp_labels.is_empty() {
+            return Err("labels must not point to an empty address!");
         }
         Ok(labels)
     }
@@ -241,5 +244,14 @@ mod tests {
 
         assert_eq!(labels, assembler.get_labels().unwrap());
         assert_eq!(vec![0x78, 0x78], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_duplicate_labels() {
+        let assembler = Assembler::new("label:\nlabel:");
+        assert_eq!(Err("labels must not point to an empty address!"), assembler.get_labels());
+
+        let assembler = Assembler::new("label:\nlabel:\nMOV A,B");
+        assert_eq!(Err("label must not be assigned twice!"), assembler.get_labels());
     }
 }
