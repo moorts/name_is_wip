@@ -1,6 +1,9 @@
 use core::fmt;
 use regex::Regex;
-use std::collections::HashMap;
+use std::{collections::HashMap, str::SplitAsciiWhitespace};
+
+const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)";
+const LABEL_USAGE: &str = r"[a-zA-Z@?][a-zA-Z@?0-9]{1,4}";
 
 struct Assembler {
     code: Vec<String>,
@@ -23,13 +26,13 @@ impl Assembler {
     }
 
     fn assemble(&self) -> Result<Vec<u8>, &'static str> {
-        let label_regex = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)").unwrap();
+        let label_regex = Regex::new(LABEL_DECL).unwrap();
         let mut machine_code = Vec::new();
 
         
         for line in &self.code {
             let line = label_regex.replace(line, "").to_string();
-            let line = line.trim();
+            let line = String::from(line.trim());
             if !line.is_empty() {
                 machine_code.extend(to_machine_code(line)?);
             }
@@ -38,7 +41,7 @@ impl Assembler {
     }
 
     fn get_labels(&self) -> Result<HashMap<String, u16>, &'static str> {
-        let label_regex = Regex::new(r"^( *[?a-zA-Z@][?a-zA-Z@0-9]{1,4}:)").unwrap();
+        let label_regex = Regex::new(LABEL_DECL).unwrap();
 
         let mut temp_labels = Vec::new();
         let mut labels = HashMap::new();
@@ -75,54 +78,61 @@ impl Assembler {
     }
 }
 
-fn to_machine_code(instruction: &str) -> Result<Vec<u8>, &'static str> {
-    let label_regex = Regex::new(r"^([a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)").unwrap();
-    let mov_regex = Regex::new(r"([A-Z] *, *[A-Z])$").unwrap();
+fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
+    let label_regex = Regex::new(LABEL_DECL).unwrap();
 
-    let formatted_instruction = instruction.replace(",", " ");
-    let instruction_fields: Vec<&str> = formatted_instruction.split_ascii_whitespace().collect();
-
-    let mut opcode_index = 0;
-    if label_regex.is_match(&instruction) {
-        opcode_index = 1;
-    }
-
-    match instruction_fields[opcode_index] {
-        "NOP" => {
-            if instruction_fields.len() - opcode_index > 1 {
-                return Err("NOP does not take any arguments!");
-            }
-            return Ok(vec![0x0]);
-        },
-        "MOV" => {
-            if instruction_fields.len() - opcode_index > 3 {
-                return Err("MOV only takes 2 arguments!");
-            }
-            let mov_first_argument_err_message = "Invalid first argument for MOV instruction";
-            let mov_second_argument_err_message = "Invalid second argument for MOV instruction";
-            if mov_regex.is_match(instruction) {
-                let base_value = 0x40;
-                let registers = "BCDEHLMA";
-                match registers.find(instruction_fields[opcode_index + 1]) {
-                    Some(index) => {
-                        match registers.find(instruction_fields[opcode_index + 2]) {
-                            Some(second_index) =>  {
-                                if index == 6 && second_index == 6 {
-                                    return Err("Invalid arguments for MOV instruction (Can't move M into M)");
-                                }
-                                let instruction_value = base_value + (index as u8 * 8) + second_index as u8;
-                                return Ok(vec![instruction_value]);
-                            },
-                            None => return Err(mov_second_argument_err_message),
-                        }
-                    },
-                    None => return Err(mov_first_argument_err_message),
-                }
-            } else {
-                return Err("Missing argument(s) for MOV instruction");
+    let instruction = label_regex.replace(&instruction, "").to_string();
+    match instruction.trim_start().split_once(" ") {
+        Some((opcode, suffix)) => {
+            let arg_binding = suffix.replace(",", " ");
+            let args: Vec<&str>  = arg_binding.split_ascii_whitespace().collect();
+            match opcode {
+                "MOV" => {
+                    return convert_mov(args);
+                },
+                _ => return Err("Could not match instruction"),
             }
         },
-        _ => return Err("Could not match instruction"),
+        None => {
+            match instruction.trim() {
+                "NOP" => {
+                    return Ok(vec![0x0]);
+                },
+                _ => return Err("Could not match instruction"),
+            }
+        }
+    };
+}
+
+fn convert_mov(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    let mov_first_argument_err_message = "Invalid first argument for MOV instruction";
+    let mov_second_argument_err_message = "Invalid second argument for MOV instruction";
+    let mov_missing_argument = "Missing argument(s) for MOV instruction";
+    let mov_too_many_arguments = "MOV only takes 2 arguments!";
+    let base_value = 0x40;
+    let registers = "BCDEHLMA";
+
+    match args.len() {
+        0 => return Err(mov_missing_argument),
+        1 => return Err(mov_missing_argument),
+        2 => { 
+            match registers.find(args[0]) {
+                Some(index) => {
+                    match registers.find(args[1]) {
+                        Some(second_index) =>  {
+                            if index == 6 && second_index == 6 {
+                                return Err("Invalid arguments for MOV instruction (Can't move M into M)");
+                            }
+                            let instruction_value = base_value + (index as u8 * 8) + second_index as u8;
+                            return Ok(vec![instruction_value]);
+                        },
+                        None => return Err(mov_second_argument_err_message),
+                    }
+                },
+                None => return Err(mov_first_argument_err_message),
+            }
+        }
+        _ => return Err(mov_too_many_arguments),
     }
 }
 
@@ -134,7 +144,7 @@ impl fmt::Display for Assembler {
 
 #[cfg(test)]
 mod tests {
-    use super::Assembler;
+    use super::*;
     use std::collections::HashMap;
 
     #[test]
@@ -222,7 +232,7 @@ mod tests {
         assert_eq!(0x0, assembler.assemble().unwrap()[0]);
 
         let assembler = Assembler::new("NOP A");
-        assert_eq!(Err("NOP does not take any arguments!"), assembler.assemble());
+        assert_eq!(Err("Could not match instruction"), assembler.assemble());
     }
 
     #[test]
