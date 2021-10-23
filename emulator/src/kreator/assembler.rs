@@ -88,7 +88,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             let args: Vec<&str>  = arg_binding.split_ascii_whitespace().collect();
             match opcode {
                 "MOV" => {
-                    return convert_mov(args);
+                    return convert_mov_args(args);
                 },
                 _ => return Err("Could not match instruction"),
             }
@@ -107,7 +107,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
     };
 }
 
-fn convert_mov(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+fn convert_mov_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     let mov_first_argument_err_message = "Invalid first argument for MOV instruction";
     let mov_second_argument_err_message = "Invalid second argument for MOV instruction";
     let mov_missing_argument = "Missing argument(s) for MOV instruction";
@@ -198,20 +198,21 @@ mod tests {
     }
 
     #[test]
-    fn test_rlc() {
-        let assembler = Assembler::new("RLC");
+    fn test_lxi_operations() {
+        let instructions = get_bytes_and_args_by_opcode("LXI").unwrap();
 
-        assert_eq!(vec![0x7], assembler.assemble().unwrap());
+        for instruction in instructions {
+            //assert_eq!(bytes, convert_lxi_args().unwrap());
+        }
     }
 
     #[test]
     fn test_mov_operations() -> io::Result<()> {
-        let input_codes = get_instructions_by_opcdoe("MOV").unwrap();
+        let input_codes = get_bytes_and_args_by_opcode("MOV").unwrap();
 
-        for line in input_codes {
-            let line_components: Vec<&str> = line.split(":").collect();
-            let assembler = Assembler::new(line.split(":").collect::<Vec<&str>>()[1]);
-            assert_eq!(line_components[0].parse::<u8>().unwrap(), assembler.assemble().unwrap()[0]);
+        for (bytes, arg_string) in input_codes {
+            let args: Vec<&str> = arg_string.split(",").collect();
+            assert_eq!(bytes, convert_mov_args(args).unwrap());
         }
         Ok(())
     }
@@ -270,7 +271,7 @@ mod tests {
         assert_eq!(Err("label must not be assigned twice!"), assembler.get_labels());
     }
 
-    fn get_instructions_by_opcdoe(opcode: &str) -> io::Result<Vec<String>> {
+    fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
         let f = File::open(OPCODE_TEST_DATA)?;
         let mut lines = io::BufReader::new(f).lines();
         let mut instructions = Vec::new();
@@ -278,10 +279,18 @@ mod tests {
         while let Some(line) = lines.next() {
             let line = line.unwrap();
             if line.contains(opcode) {
-                instructions.push(String::from(line));
+                let mut components: Vec<&str> = line.split(":").collect();
+    
+                let bytes_str: Vec<&str> = components[0].split(",").collect();
+                let args = String::from(components[1].split(" ").skip(1).next().unwrap());
+
+                let mut bytes = Vec::new();
+                for byte in bytes_str {
+                    bytes.push(byte.parse::<u8>().unwrap());
+                }
+                instructions.push((bytes, args));
             }
         }
-
         Ok(instructions)
     }
 }
