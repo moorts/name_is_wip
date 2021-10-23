@@ -144,8 +144,14 @@ impl fmt::Display for Assembler {
 
 #[cfg(test)]
 mod tests {
+    use crate::kreator::assembler;
+
     use super::*;
     use std::collections::HashMap;
+    use std::io::{self, BufRead};
+    use std::fs::File;
+
+    const OPCODE_TEST_DATA: &str = "./test_data/test_input";
 
     #[test]
     fn test_display_with_code() {
@@ -189,26 +195,20 @@ mod tests {
     }
 
     #[test]
-    fn test_mov_operations() {
-        let code_file = "MOV A, B \n MOV L  ,M\nMOV B,M";
-        let assembler = Assembler::new(code_file);
+    fn test_mov_operations() -> io::Result<()> {
+        let f = File::open(OPCODE_TEST_DATA)?;
+        let mut lines = io::BufReader::new(f).lines();
+        
+        while let Some(line) = lines.next() {
+            let line = line.unwrap();
+            let line_components: Vec<&str> = line.split(":").collect();
+            if line.contains("MOV") {
+                let assembler = Assembler::new(line.split(":").collect::<Vec<&str>>()[1]);
+                assert_eq!(line_components[0].parse::<u8>().unwrap(), assembler.assemble().unwrap()[0]);
+            }
+        }
 
-        let machine_code = assembler.assemble().unwrap();
-        assert_eq!(3, machine_code.len());
-        assert_eq!(0x78, machine_code[0]);
-        assert_eq!(0x6e, machine_code[1]);
-        assert_eq!(0x46, machine_code[2]);
-    }
-
-    #[test]
-    fn test_mov_edges() {
-        let assembler = Assembler::new("MOV B,B \nMOV M,L\nMOV M,A\n MOV A,A");
-
-        let machine_code = assembler.assemble().unwrap();
-        assert_eq!(0x40, machine_code[0]);
-        assert_eq!(0x75, machine_code[1]);
-        assert_eq!(0x77, machine_code[2]);
-        assert_eq!(0x7f, machine_code[3]);
+        Ok(())
     }
     
     #[test]
