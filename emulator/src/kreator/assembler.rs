@@ -98,6 +98,9 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "NOP" => {
                     return Ok(vec![0x0]);
                 },
+                "RLC" => {
+                    return Ok(vec![0x7]);
+                }
                 _ => return Err("Could not match instruction"),
             }
         }
@@ -192,6 +195,13 @@ mod tests {
         let assembler = Assembler::new("");
 
         assert_eq!(0, assembler.assemble().unwrap().len());
+    }
+
+    #[test]
+    fn test_rlc() {
+        let assembler = Assembler::new("RLC");
+
+        assert_eq!(vec![0x7], assembler.assemble().unwrap());
     }
 
     #[test]
