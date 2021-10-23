@@ -206,18 +206,13 @@ mod tests {
 
     #[test]
     fn test_mov_operations() -> io::Result<()> {
-        let f = File::open(OPCODE_TEST_DATA)?;
-        let mut lines = io::BufReader::new(f).lines();
-        
-        while let Some(line) = lines.next() {
-            let line = line.unwrap();
-            let line_components: Vec<&str> = line.split(":").collect();
-            if line.contains("MOV") {
-                let assembler = Assembler::new(line.split(":").collect::<Vec<&str>>()[1]);
-                assert_eq!(line_components[0].parse::<u8>().unwrap(), assembler.assemble().unwrap()[0]);
-            }
-        }
+        let input_codes = get_instructions_by_opcdoe("MOV").unwrap();
 
+        for line in input_codes {
+            let line_components: Vec<&str> = line.split(":").collect();
+            let assembler = Assembler::new(line.split(":").collect::<Vec<&str>>()[1]);
+            assert_eq!(line_components[0].parse::<u8>().unwrap(), assembler.assemble().unwrap()[0]);
+        }
         Ok(())
     }
     
@@ -273,5 +268,20 @@ mod tests {
 
         let assembler = Assembler::new("label:\nlabel:\nMOV A,B");
         assert_eq!(Err("label must not be assigned twice!"), assembler.get_labels());
+    }
+
+    fn get_instructions_by_opcdoe(opcode: &str) -> io::Result<Vec<String>> {
+        let f = File::open(OPCODE_TEST_DATA)?;
+        let mut lines = io::BufReader::new(f).lines();
+        let mut instructions = Vec::new();
+        
+        while let Some(line) = lines.next() {
+            let line = line.unwrap();
+            if line.contains(opcode) {
+                instructions.push(String::from(line));
+            }
+        }
+
+        Ok(instructions)
     }
 }
