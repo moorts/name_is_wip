@@ -27,6 +27,8 @@ impl Emulator {
                 // JNZ adr
                 if !self.reg.get_flag("zero") {
                     self.pc = self.read_addr();
+                } else {
+                    self.pc += 2;
                 }
             }
             0xc3 => {
@@ -34,27 +36,88 @@ impl Emulator {
                 self.pc = self.read_addr();
             }
             0xc4 => unimplemented!(),
-            0xc5 => unimplemented!(),
+            0xc5 => {
+                // PUSH B
+                self.push(self.reg["bc"]);
+            }
             0xc6 => unimplemented!(),
-            0xc7 => unimplemented!(),
-            0xc8 => unimplemented!(),
-            0xc9 => unimplemented!(),
+            0xc7 => {
+                // RST 0
+                self.call(0x0);
+            }
+            0xc8 => {
+                // RZ
+                if self.reg.get_flag("zero") {
+                    self.pc = self.pop();
+                }
+            }
+            0xc9 => {
+                // RET
+                self.pc = self.pop();
+            }
             0xca => {
                 // JZ adr
                 if self.reg.get_flag("zero") {
                     self.pc = self.read_addr();
+                } else {
+                    self.pc += 2;
                 }
+            }
+            0xcc => {
+                // CZ addr
+                if self.reg.get_flag("zero") {
+                    let adr = self.read_addr();
+                    self.call(adr);
+                } else {
+                    self.pc += 2;
+                }
+            }
+            0xcd => {
+                // CZ addr
+                let adr = self.read_addr();
+                self.call(adr);
+            }
+            0xce => {
+                unimplemented!()
+            }
+            0xcf => {
+                // RST 1
+                self.call(0x8);
+            }
+            0xd0 => {
+                // RNC
+                if !self.reg.get_flag("carry") {
+                    self.pc = self.pop();
+                }
+            }
+            0xd1 => {
+                // POP D
+                self.reg["de"] = self.pop();
             }
             _ => unimplemented!("Opcode not yet implemented")
         }
         Ok(())
     }
 
+    fn call(&mut self, adr: u16) {
+        self.push(self.pc);
+        self.pc = adr;
+    }
+
     fn push(&mut self, val: u16) {
-        self.sp += 1;
+        self.sp -= 1;
         self.ram[self.sp] = (val >> 8) as u8;
-        self.sp += 1;
+        self.sp -= 1;
         self.ram[self.sp] = val as u8;
+    }
+
+    fn pop(&mut self) -> u16 {
+        let low = self.ram[self.sp] as u16;
+        self.sp += 1;
+        let high = self.ram[self.sp] as u16;
+        self.sp += 1;
+        (high << 8) | low
+
     }
 
     fn read_addr(&mut self) -> u16 {
@@ -67,19 +130,50 @@ impl Emulator {
 }
 
 #[cfg(test)]
-mod tests {
+mod emulator_tests {
     use super::*;
 
     #[test]
-    fn test_jmps() -> Result<(), &'static str> {
+    fn test_push_pop() {
+        let mut e = Emulator::new();
+
+        e.sp = 0x3fff;
+        e.push(0xabcd);
+        assert_eq!(e.sp, 0x3ffd);
+        assert_eq!(0xabcd, e.pop());
+        assert_eq!(e.sp, 0x3fff);
+    }
+
+    #[test]
+    fn test_call_ret() {
+        let mut e = Emulator::new();
+
+        e.sp = 0x3fff;
+        e.ram[0x1234] = 0xc9;
+
+        e.call(0x1234);
+        assert_eq!(e.sp, 0x3fff - 2);
+        assert_eq!(e.pc, 0x1234);
+
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x0);
+    }
+
+    #[test]
+    fn test_jmps() {
         let mut e = Emulator::new();
 
         // Test JMP
-        e.ram[0] = 0xc3;
-        e.ram[1] = 0xcd;
-        e.ram[2] = 0xab;
-        e.execute_next()?;
+        e.ram.load_vec(vec![0xc3, 0xcd, 0xab], 0);
+        e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0xabcd);
-        Ok(())
+
+        // Test JZ
+        e.ram.load_vec(vec![0xca, 0x03, 0x00, 0xca, 0x03, 0x00], 0xabcd);
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0xabd0);
+        e.reg.set_flag("zero");
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x0003);
     }
 }

@@ -12,11 +12,21 @@ pub struct DefaultRam {
 
 pub trait RAM: Index<u16, Output=u8> + IndexMut<u16, Output=u8> {
     fn size(&self) -> usize;
+
+    fn load_vec(&mut self, vec: Vec<u8>, start: u16);
 }
 
 impl RAM for DefaultRam {
     fn size(&self) -> usize {
         self.mem.len()
+    }
+
+    fn load_vec(&mut self, vec: Vec<u8>, start: u16) {
+        let mut idx = start;
+        for byte in vec {
+            self[idx] = byte;
+            idx += 1;
+        }
     }
 }
 
@@ -32,14 +42,6 @@ impl DefaultRam {
      */
     pub fn new() -> Self {
         Self { mem: [0; RAM_SIZE] }
-    }
-
-    pub fn load_vec(&mut self, vec: Vec<u8>, start: u16) {
-        let mut idx = start;
-        for byte in vec {
-            self[idx] = byte;
-            idx += 1;
-        }
     }
 
     pub fn load_file(&mut self, path: &str, start: u16) -> io::Result<()> {
