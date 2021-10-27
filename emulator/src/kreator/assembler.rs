@@ -100,6 +100,12 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "RRC" => return Ok(vec![0x0f]),
                 "RAL" => return Ok(vec![0x17]),
                 "RAR" => return Ok(vec![0x1f]),
+                "CMA" => return Ok(vec![0x2f]),
+                "CMC" => return Ok(vec![0x3f]),
+                "DAA" => return Ok(vec![0x27]),
+                "HLT" => return Ok(vec![0x76]),
+                "RNZ" => return Ok(vec![0xc0]),
+                "STC" => return Ok(vec![0x37]),
                 _ => return Err("Could not match instruction"),
             }
         }
@@ -288,6 +294,48 @@ mod tests {
         let assembler = Assembler::new("RAR");
 
         assert_eq!(vec![0x1f], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_daa() {
+        let assembler = Assembler::new("DAA");
+
+        assert_eq!(vec![0x27], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_cma() {
+        let assembler = Assembler::new("CMA");
+
+        assert_eq!(vec![0x2f], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_stc() {
+        let assembler = Assembler::new("STC");
+
+        assert_eq!(vec![0x37], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_cmc() {
+        let assembler = Assembler::new("CMC");
+
+        assert_eq!(vec![0x3f], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_hlt() {
+        let assembler = Assembler::new("HLT");
+
+        assert_eq!(vec![0x76], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_rnz() {
+        let assembler = Assembler::new("RNZ");
+
+        assert_eq!(vec![0xc0], assembler.assemble().unwrap());
     }
 
     fn get_instructions_by_opcdoe(opcode: &str) -> io::Result<Vec<String>> {
