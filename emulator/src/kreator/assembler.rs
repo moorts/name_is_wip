@@ -98,6 +98,8 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "NOP" => return Ok(vec![0x0]),
                 "RLC" => return Ok(vec![0x7]),
                 "RRC" => return Ok(vec![0x0f]),
+                "RAL" => return Ok(vec![0x17]),
+                "RAR" => return Ok(vec![0x1f]),
                 _ => return Err("Could not match instruction"),
             }
         }
@@ -268,10 +270,24 @@ mod tests {
     }
 
     #[test]
-    fn test_rrc(){
+    fn test_rrc() {
         let assembler = Assembler::new("RRC");
 
         assert_eq!(vec![0x0f], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_ral() {
+        let assembler = Assembler::new("RAL");
+
+        assert_eq!(vec![0x17], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_rar() {
+        let assembler = Assembler::new("RAR");
+
+        assert_eq!(vec![0x1f], assembler.assemble().unwrap());
     }
 
     fn get_instructions_by_opcdoe(opcode: &str) -> io::Result<Vec<String>> {
