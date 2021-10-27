@@ -73,7 +73,7 @@ impl Emulator {
                 }
             }
             0xcd => {
-                // CZ addr
+                // CALL addr
                 let adr = self.read_addr();
                 self.call(adr);
             }
@@ -93,6 +93,18 @@ impl Emulator {
             0xd1 => {
                 // POP D
                 self.reg["de"] = self.pop();
+            }
+            0xd2 => {
+                // JNC adr
+                if !self.reg.get_flag("carry") {
+                    self.pc = self.read_addr();
+                } else {
+                    self.pc += 2;
+                }
+            }
+            0xd3 => {
+                // OUT
+                unimplemented!()
             }
             _ => unimplemented!("Opcode not yet implemented")
         }
@@ -175,5 +187,14 @@ mod emulator_tests {
         e.reg.set_flag("zero");
         e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0x0003);
+
+        // Test JNZ
+        e.ram.load_vec(vec![0xc2, 0x34, 0x12, 0xc2, 0x34, 0x12], 0x3);
+        e.reg.set_flag("zero");
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x6);
+        e.reg.flip_flag("zero");
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x1234);
     }
 }
