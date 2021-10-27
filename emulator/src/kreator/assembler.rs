@@ -95,12 +95,9 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
         },
         None => {
             match instruction.trim() {
-                "NOP" => {
-                    return Ok(vec![0x0]);
-                },
-                "RLC" => {
-                    return Ok(vec![0x7]);
-                }
+                "NOP" => return Ok(vec![0x0]),
+                "RLC" => return Ok(vec![0x7]),
+                "RRC" => return Ok(vec![0x0f]),
                 _ => return Err("Could not match instruction"),
             }
         }
@@ -268,6 +265,13 @@ mod tests {
 
         let assembler = Assembler::new("label:\nlabel:\nMOV A,B");
         assert_eq!(Err("label must not be assigned twice!"), assembler.get_labels());
+    }
+
+    #[test]
+    fn test_rrc(){
+        let assembler = Assembler::new("RRC");
+
+        assert_eq!(vec![0x0f], assembler.assemble().unwrap());
     }
 
     fn get_instructions_by_opcdoe(opcode: &str) -> io::Result<Vec<String>> {
