@@ -25,11 +25,14 @@ impl Emulator {
         match opcode {
             0xc2 => {
                 // JNZ adr
+                /*
                 if !self.reg.get_flag("zero") {
                     self.pc = self.read_addr();
                 } else {
                     self.pc += 2;
                 }
+                */
+                self.jmp_not("zero");
             }
             0xc3 => {
                 // JMP adr
@@ -57,11 +60,15 @@ impl Emulator {
             }
             0xca => {
                 // JZ adr
+                /*
                 if self.reg.get_flag("zero") {
                     self.pc = self.read_addr();
                 } else {
                     self.pc += 2;
                 }
+                */
+                self.jmp_if("zero");
+                
             }
             0xcc => {
                 // CZ addr
@@ -106,9 +113,35 @@ impl Emulator {
                 // OUT
                 unimplemented!()
             }
+            0xd4 => {
+                // CNC adr
+                if !self.reg.get_flag("carry") {
+                    let adr = self.read_addr();
+                    self.call(adr);
+                } else {
+                    self.pc += 2;
+                }
+
+            }
             _ => unimplemented!("Opcode not yet implemented")
         }
         Ok(())
+    }
+
+    fn jmp_not(&mut self, flag: &str) {
+        if !self.reg.get_flag(flag) {
+            self.pc = self.read_addr();
+        } else {
+            self.pc += 2;
+        }
+    }
+
+    fn jmp_if(&mut self, flag: &str) {
+        if self.reg.get_flag(flag) {
+            self.pc = self.read_addr();
+        } else {
+            self.pc += 2;
+        }
     }
 
     fn call(&mut self, adr: u16) {
