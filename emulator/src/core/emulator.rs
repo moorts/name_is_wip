@@ -25,13 +25,6 @@ impl Emulator {
         match opcode {
             0xc2 => {
                 // JNZ adr
-                /*
-                if !self.reg.get_flag("zero") {
-                    self.pc = self.read_addr();
-                } else {
-                    self.pc += 2;
-                }
-                */
                 self.jmp_not("zero");
             }
             0xc3 => {
@@ -60,13 +53,6 @@ impl Emulator {
             }
             0xca => {
                 // JZ adr
-                /*
-                if self.reg.get_flag("zero") {
-                    self.pc = self.read_addr();
-                } else {
-                    self.pc += 2;
-                }
-                */
                 self.jmp_if("zero");
                 
             }
@@ -103,11 +89,7 @@ impl Emulator {
             }
             0xd2 => {
                 // JNC adr
-                if !self.reg.get_flag("carry") {
-                    self.pc = self.read_addr();
-                } else {
-                    self.pc += 2;
-                }
+                self.jmp_not("carry");
             }
             0xd3 => {
                 // OUT
