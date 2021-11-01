@@ -87,9 +87,8 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             let arg_binding = suffix.replace(",", " ");
             let args: Vec<&str>  = arg_binding.split_ascii_whitespace().collect();
             match opcode {
-                "MOV" => {
-                    return convert_mov_args(args);
-                },
+                "MOV" => return convert_mov_args(args),
+                "STAX" => return convert_stax_args(args),
                 _ => return Err("Could not match instruction"),
             }
         },
