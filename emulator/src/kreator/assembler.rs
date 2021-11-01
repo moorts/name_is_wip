@@ -91,6 +91,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "STAX" => return convert_stax_args(args),
                 "INX" => return convert_inx_args(args),
                 "INR" => return convert_inr_args(args),
+                "DCR" => return convert_dcr_args(args),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -180,6 +181,24 @@ fn convert_inr_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
         return Err("wrong arg amount!");
     }
     let base_value = 0x04;
+    match args[0] {
+        "B" => return Ok(vec![base_value]),
+        "C" => return Ok(vec![base_value + 1 * 8]),
+        "D" => return Ok(vec![base_value + 2 * 8]),
+        "E" => return Ok(vec![base_value + 3 * 8]),
+        "H" => return Ok(vec![base_value + 4 * 8]),
+        "L" => return Ok(vec![base_value + 5 * 8]),
+        "M" => return Ok(vec![base_value + 6 * 8]),
+        "A" => return Ok(vec![base_value + 7 * 8]),
+        _ => return Err("wrong register!"),
+    }
+}
+
+fn convert_dcr_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    let base_value = 0x05;
     match args[0] {
         "B" => return Ok(vec![base_value]),
         "C" => return Ok(vec![base_value + 1 * 8]),
@@ -413,6 +432,23 @@ mod tests {
         assert_eq!(Err("wrong register!"), convert_inr_args(vec!["Q"]));
         assert_eq!(Err("wrong arg amount!"), convert_inr_args(vec!["B", "D"]));
         assert_eq!(Err("wrong arg amount!"), convert_inr_args(vec![]));
+    }
+
+    #[test]
+    fn test_dcr() {
+        let inputs = get_bytes_and_args_by_opcode("DCR").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_dcr_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_dcr_errors() {
+        assert_eq!(Err("wrong register!"), convert_dcr_args(vec!["Q"]));
+        assert_eq!(Err("wrong arg amount!"), convert_dcr_args(vec!["B", "D"]));
+        assert_eq!(Err("wrong arg amount!"), convert_dcr_args(vec![]));
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
