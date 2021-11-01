@@ -1,7 +1,6 @@
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
-
 pub struct Emulator {
     pc: u16,
     sp: u16,
@@ -58,17 +57,11 @@ impl Emulator {
             }
             0xcc => {
                 // CZ addr
-                if self.reg.get_flag("zero") {
-                    let adr = self.read_addr();
-                    self.call(adr);
-                } else {
-                    self.pc += 2;
-                }
+                self.call_if("zero");
             }
             0xcd => {
                 // CALL addr
-                let adr = self.read_addr();
-                self.call(adr);
+                self.call_imm();
             }
             0xce => {
                 unimplemented!()
@@ -97,12 +90,7 @@ impl Emulator {
             }
             0xd4 => {
                 // CNC adr
-                if !self.reg.get_flag("carry") {
-                    let adr = self.read_addr();
-                    self.call(adr);
-                } else {
-                    self.pc += 2;
-                }
+                self.call_not("carry");
 
             }
             _ => unimplemented!("Opcode not yet implemented")
@@ -124,6 +112,27 @@ impl Emulator {
         } else {
             self.pc += 2;
         }
+    }
+
+    fn call_not(&mut self, flag: &str) {
+        if !self.reg.get_flag(flag) {
+            self.call_imm();
+        } else {
+            self.pc += 2;
+        }
+    }
+
+    fn call_if(&mut self, flag: &str) {
+        if self.reg.get_flag(flag) {
+            self.call_imm();
+        } else {
+            self.pc += 2;
+        }
+    }
+
+    fn call_imm(&mut self) {
+        self.push(self.pc);
+        self.pc = self.read_addr();
     }
 
     fn call(&mut self, adr: u16) {
