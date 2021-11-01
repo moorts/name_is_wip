@@ -158,6 +158,8 @@ impl fmt::Display for Assembler {
 
 #[cfg(test)]
 mod tests {
+    use crate::kreator::assembler;
+
     use super::*;
     use std::collections::HashMap;
     use std::io::{self, BufRead};
@@ -272,107 +274,50 @@ mod tests {
     }
 
     #[test]
-    fn test_rrc() {
+    fn test_opcodes_without_args() {
         let assembler = Assembler::new("RRC");
-
         assert_eq!(vec![0x0f], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_ral() {
         let assembler = Assembler::new("RAL");
-
         assert_eq!(vec![0x17], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rar() {
         let assembler = Assembler::new("RAR");
-
         assert_eq!(vec![0x1f], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_daa() {
         let assembler = Assembler::new("DAA");
-
         assert_eq!(vec![0x27], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_cma() {
         let assembler = Assembler::new("CMA");
-
         assert_eq!(vec![0x2f], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_stc() {
         let assembler = Assembler::new("STC");
-
         assert_eq!(vec![0x37], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_cmc() {
         let assembler = Assembler::new("CMC");
-
         assert_eq!(vec![0x3f], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_hlt() {
         let assembler = Assembler::new("HLT");
-
         assert_eq!(vec![0x76], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rnz() {
         let assembler = Assembler::new("RNZ");
-
         assert_eq!(vec![0xc0], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rz() {
         let assembler = Assembler::new("RZ");
-
         assert_eq!(vec![0xc8], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_ret() {
         let assembler = Assembler::new("RET");
-
         assert_eq!(vec![0xc9], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rnc() {
         let assembler = Assembler::new("RNC");
-
         assert_eq!(vec![0xd0], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rc() {
         let assembler = Assembler::new("RC");
-
         assert_eq!(vec![0xd8], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rpo() {
         let assembler = Assembler::new("RPO");
-
         assert_eq!(vec![0xe0], assembler.assemble().unwrap());
-    }
 
-    #[test]
-    fn test_rpe() {
         let assembler = Assembler::new("RPE");
-
         assert_eq!(vec![0xe8], assembler.assemble().unwrap());
     }
 
