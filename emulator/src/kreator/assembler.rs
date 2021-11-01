@@ -150,6 +150,17 @@ fn convert_mov_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
+fn convert_stax_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    match args[0] {
+        "B" => return Ok(vec![0x02]),
+        "D" => return Ok(vec![0x12]),
+        _ => return Err("wrong register!"),
+    }
+}
+
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.code.join("\n"))
@@ -319,6 +330,23 @@ mod tests {
 
         let assembler = Assembler::new("RPE");
         assert_eq!(vec![0xe8], assembler.assemble().unwrap());
+    }
+
+    #[test]
+    fn test_stax() {
+        let inputs = get_bytes_and_args_by_opcode("STAX").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_stax_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_stax_errors() {
+        assert_eq!(Err("wrong register!"), convert_stax_args(vec!["L"]));
+        assert_eq!(Err("wrong arg amount!"), convert_stax_args(vec!["L", "A"]));
+        assert_eq!(Err("wrong arg amount!"), convert_stax_args(vec![]));
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
