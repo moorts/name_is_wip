@@ -89,6 +89,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             match opcode {
                 "MOV" => return convert_mov_args(args),
                 "STAX" => return convert_stax_args(args),
+                "INX" => return convert_inx_args(args),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -156,6 +157,19 @@ fn convert_stax_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     match args[0] {
         "B" => return Ok(vec![0x02]),
         "D" => return Ok(vec![0x12]),
+        _ => return Err("wrong register!"),
+    }
+}
+
+fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    match args[0] {
+        "B" => return Ok(vec![0x03]),
+        "D" => return Ok(vec![0x13]),
+        "H" => return Ok(vec![0x23]),
+        "SP" => return Ok(vec![0x33]),
         _ => return Err("wrong register!"),
     }
 }
@@ -346,6 +360,23 @@ mod tests {
         assert_eq!(Err("wrong register!"), convert_stax_args(vec!["L"]));
         assert_eq!(Err("wrong arg amount!"), convert_stax_args(vec!["L", "A"]));
         assert_eq!(Err("wrong arg amount!"), convert_stax_args(vec![]));
+    }
+
+    #[test]
+    fn test_inx() {
+        let inputs = get_bytes_and_args_by_opcode("INX").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_inx_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_inx_errors() {
+        assert_eq!(Err("wrong register!"), convert_inx_args(vec!["A"]));
+        assert_eq!(Err("wrong arg amount!"), convert_inx_args(vec!["B", "D"]));
+        assert_eq!(Err("wrong arg amount!"), convert_inx_args(vec![]));
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
