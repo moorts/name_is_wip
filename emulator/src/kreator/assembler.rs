@@ -1,6 +1,6 @@
 use core::fmt;
 use regex::Regex;
-use std::{collections::HashMap, str::SplitAsciiWhitespace};
+use std::{collections::HashMap};
 
 const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)";
 const LABEL_USAGE: &str = r"[a-zA-Z@?][a-zA-Z@?0-9]{1,4}";
@@ -147,8 +147,6 @@ impl fmt::Display for Assembler {
 
 #[cfg(test)]
 mod tests {
-    use crate::kreator::assembler;
-
     use super::*;
     use std::collections::HashMap;
     use std::io::{self, BufRead};
@@ -195,15 +193,6 @@ mod tests {
         let assembler = Assembler::new("");
 
         assert_eq!(0, assembler.assemble().unwrap().len());
-    }
-
-    #[test]
-    fn test_lxi_operations() {
-        let instructions = get_bytes_and_args_by_opcode("LXI").unwrap();
-
-        for instruction in instructions {
-            //assert_eq!(bytes, convert_lxi_args().unwrap());
-        }
     }
 
     #[test]
@@ -279,8 +268,7 @@ mod tests {
         while let Some(line) = lines.next() {
             let line = line.unwrap();
             if line.contains(opcode) {
-                let mut components: Vec<&str> = line.split(":").collect();
-    
+                let components: Vec<&str> = line.split(":").collect();
                 let bytes_str: Vec<&str> = components[0].split(",").collect();
                 let args = String::from(components[1].split(" ").skip(1).next().unwrap());
 
