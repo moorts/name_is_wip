@@ -117,6 +117,82 @@ impl Emulator {
                 // JC adr
                 self.jmp_if("carry");
             }
+            0xdb => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xdc => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xdd => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xde => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xdf => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe0 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe1 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe2 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe3 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe4 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe5 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe6 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe7 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe8 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xe9 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xea => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xeb => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xec => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xed => {
+                // Unimplemented
+                unimplemented!()
+            }
             _ => unimplemented!("Opcode not yet implemented")
         }
         Ok(())
