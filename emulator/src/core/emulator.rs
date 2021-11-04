@@ -198,11 +198,11 @@ impl Emulator {
 }
 
 #[cfg(test)]
-mod emulator_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn test_push_pop() {
+    fn push_pop() {
         let mut e = Emulator::new();
 
         e.sp = 0x3fff;
@@ -216,7 +216,7 @@ mod emulator_tests {
     }
 
     #[test]
-    fn test_call_ret() {
+    fn call_ret() {
         let mut e = Emulator::new();
 
         e.sp = 0x3fff;
@@ -231,7 +231,7 @@ mod emulator_tests {
     }
 
     #[test]
-    fn test_jmps() {
+    fn jmps() {
         let mut e = Emulator::new();
 
         // Test JMP

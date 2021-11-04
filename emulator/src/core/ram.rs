@@ -75,11 +75,11 @@ impl Index<Range<usize>> for DefaultRam {
 }
 
 #[cfg(test)]
-mod ram_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn test_ram() {
+    fn ram() {
         let mut r = DefaultRam::new();
 
         r[0] = 1;

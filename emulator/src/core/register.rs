@@ -144,11 +144,11 @@ impl IndexMut<&str> for RegisterArray {
 }
 
 #[cfg(test)]
-mod register_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn test_registerarray() {
+    fn registerarray() {
         let mut regs = RegisterArray::new();
 
         regs["wz"] = 0xabcd;
@@ -168,7 +168,7 @@ mod register_tests {
     }
 
     #[test]
-    fn test_flags() {
+    fn flags() {
         let mut regs = RegisterArray::new();
 
         regs.set_flag("zero");
