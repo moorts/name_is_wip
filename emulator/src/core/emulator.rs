@@ -33,7 +33,7 @@ impl Emulator {
             0xc4 => unimplemented!(),
             0xc5 => {
                 // PUSH B
-                self.push(self.reg["bc"]);
+                self.push_reg("bc")?;
             }
             0xc6 => unimplemented!(),
             0xc7 => {
@@ -93,6 +93,30 @@ impl Emulator {
                 self.call_not("carry");
 
             }
+            0xd5 => {
+                // PUSH D
+                self.push_reg("de")?;
+            }
+            0xd6 => {
+                // SUI D8
+                unimplemented!()
+            }
+            0xd7 => {
+                // RST 2
+                unimplemented!()
+            }
+            0xd8 => {
+                // RC
+                unimplemented!()
+            }
+            0xd9 => {
+                // no-op
+                unimplemented!()
+            }
+            0xda => {
+                // JC adr
+                self.jmp_if("carry");
+            }
             _ => unimplemented!("Opcode not yet implemented")
         }
         Ok(())
@@ -140,11 +164,19 @@ impl Emulator {
         self.pc = adr;
     }
 
-    fn push(&mut self, val: u16) {
+    fn push(&mut self, val: u16) -> Result<(), &'static str> {
+        if self.sp < 2 {
+            return Err("No more stack space");
+        }
         self.sp -= 1;
         self.ram[self.sp] = (val >> 8) as u8;
         self.sp -= 1;
         self.ram[self.sp] = val as u8;
+        Ok(())
+    }
+
+    fn push_reg(&mut self, reg: &str) -> Result<(), &'static str> {
+        self.push(self.reg[reg])
     }
 
     fn pop(&mut self) -> u16 {
@@ -174,10 +206,13 @@ mod emulator_tests {
         let mut e = Emulator::new();
 
         e.sp = 0x3fff;
-        e.push(0xabcd);
+        e.push(0xabcd).expect("Push failed");
         assert_eq!(e.sp, 0x3ffd);
         assert_eq!(0xabcd, e.pop());
         assert_eq!(e.sp, 0x3fff);
+
+        e.sp = 0x1;
+        assert_eq!(e.push(0x1234), Err("No more stack space"));
     }
 
     #[test]
@@ -218,6 +253,22 @@ mod emulator_tests {
         e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0x6);
         e.reg.flip_flag("zero");
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x1234);
+
+        // Test JC
+        e.ram.load_vec(vec![0xda, 0x03, 0x00, 0xda, 0x03, 0x00], 0x1234);
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x1237);
+        e.reg.set_flag("carry");
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x0003);
+
+        // Test JNC
+        e.ram.load_vec(vec![0xd2, 0x34, 0x12, 0xd2, 0x34, 0x12], 0x3);
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x6);
+        e.reg.flip_flag("carry");
         e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0x1234);
     }
