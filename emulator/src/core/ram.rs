@@ -18,7 +18,7 @@ pub trait RAM: Index<u16, Output=u8> + IndexMut<u16, Output=u8> {
 
 impl RAM for DefaultRam {
     fn size(&self) -> usize {
-        self.mem.len()
+        RAM_SIZE
     }
 
     fn load_vec(&mut self, vec: Vec<u8>, start: u16) {

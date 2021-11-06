@@ -69,6 +69,10 @@ impl RegisterArray {
             }
         }
     }
+
+    pub fn set_flags(&mut self, flags: u8) {
+        self.psw.bytes.1 = flags;
+    }
 }
 
 impl Index<char> for RegisterArray {

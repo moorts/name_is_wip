@@ -1,6 +1,8 @@
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
+type EResult<T> = Result<T, &'static str>;
+
 pub struct Emulator {
     pc: u16,
     sp: u16,
@@ -18,17 +20,17 @@ impl Emulator {
         }
     }
 
-    pub fn execute_next(&mut self) -> Result<(), &'static str> {
+    pub fn execute_next(&mut self) -> EResult<()> {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         match opcode {
             0xc2 => {
                 // JNZ adr
-                self.jmp_not("zero");
+                self.jmp_not("zero")?;
             }
             0xc3 => {
                 // JMP adr
-                self.pc = self.read_addr();
+                self.pc = self.read_addr()?;
             }
             0xc4 => unimplemented!(),
             0xc5 => {
@@ -38,51 +40,51 @@ impl Emulator {
             0xc6 => unimplemented!(),
             0xc7 => {
                 // RST 0
-                self.call(0x0);
+                self.call(0x0)?;
             }
             0xc8 => {
                 // RZ
                 if self.reg.get_flag("zero") {
-                    self.pc = self.pop();
+                    self.pc = self.pop()?;
                 }
             }
             0xc9 => {
                 // RET
-                self.pc = self.pop();
+                self.pc = self.pop()?;
             }
             0xca => {
                 // JZ adr
-                self.jmp_if("zero");
+                self.jmp_if("zero")?;
                 
             }
             0xcc => {
                 // CZ addr
-                self.call_if("zero");
+                self.call_if("zero")?;
             }
             0xcd => {
                 // CALL addr
-                self.call_imm();
+                self.call_imm()?;
             }
             0xce => {
                 unimplemented!()
             }
             0xcf => {
                 // RST 1
-                self.call(0x8);
+                self.call(0x8)?;
             }
             0xd0 => {
                 // RNC
                 if !self.reg.get_flag("carry") {
-                    self.pc = self.pop();
+                    self.pc = self.pop()?;
                 }
             }
             0xd1 => {
                 // POP D
-                self.reg["de"] = self.pop();
+                self.reg["de"] = self.pop()?;
             }
             0xd2 => {
                 // JNC adr
-                self.jmp_not("carry");
+                self.jmp_not("carry")?;
             }
             0xd3 => {
                 // OUT
@@ -90,7 +92,7 @@ impl Emulator {
             }
             0xd4 => {
                 // CNC adr
-                self.call_not("carry");
+                self.call_not("carry")?;
 
             }
             0xd5 => {
@@ -115,15 +117,15 @@ impl Emulator {
             }
             0xda => {
                 // JC adr
-                self.jmp_if("carry");
+                self.jmp_if("carry")?;
             }
             0xdb => {
                 // Unimplemented
                 unimplemented!()
             }
             0xdc => {
-                // Unimplemented
-                unimplemented!()
+                // CC adr
+                self.call_if("carry")?;
             }
             0xdd => {
                 // Unimplemented
@@ -198,51 +200,63 @@ impl Emulator {
         Ok(())
     }
 
-    fn jmp_not(&mut self, flag: &str) {
+    fn jmp_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
-            self.pc = self.read_addr();
+            self.pc = self.read_addr()?;
         } else {
             self.pc += 2;
         }
+        Ok(())
     }
 
-    fn jmp_if(&mut self, flag: &str) {
+    fn jmp_if(&mut self, flag: &str) -> EResult<()> {
         if self.reg.get_flag(flag) {
-            self.pc = self.read_addr();
+            self.pc = self.read_addr()?;
         } else {
             self.pc += 2;
         }
+        Ok(())
     }
 
-    fn call_not(&mut self, flag: &str) {
+    fn call_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
-            self.call_imm();
+            self.call_imm()?;
         } else {
             self.pc += 2;
         }
+        Ok(())
     }
 
-    fn call_if(&mut self, flag: &str) {
+    fn call_if(&mut self, flag: &str) -> EResult<()> {
         if self.reg.get_flag(flag) {
-            self.call_imm();
+            self.call_imm()?;
         } else {
             self.pc += 2;
         }
+        Ok(())
     }
 
-    fn call_imm(&mut self) {
-        self.push(self.pc);
-        self.pc = self.read_addr();
-    }
-
-    fn call(&mut self, adr: u16) {
-        self.push(self.pc);
+    fn call_imm(&mut self) -> EResult<()> {
+        let adr = self.read_addr()?;
+        self.push(self.pc)?;
         self.pc = adr;
+        Ok(())
     }
 
-    fn push(&mut self, val: u16) -> Result<(), &'static str> {
+    fn call(&mut self, adr: u16) -> EResult<()> {
+        self.push(self.pc)?;
+        self.pc = adr;
+        Ok(())
+    }
+
+    fn ret(&mut self) -> EResult<()> {
+        let return_adress = self.pop();
+        Ok(())
+    }
+
+    fn push(&mut self, val: u16) -> EResult<()> {
         if self.sp < 2 {
-            return Err("No more stack space");
+            return Err("PUSH: No more stack space");
         }
         self.sp -= 1;
         self.ram[self.sp] = (val >> 8) as u8;
@@ -251,25 +265,31 @@ impl Emulator {
         Ok(())
     }
 
-    fn push_reg(&mut self, reg: &str) -> Result<(), &'static str> {
+    fn push_reg(&mut self, reg: &str) -> EResult<()> {
         self.push(self.reg[reg])
     }
 
-    fn pop(&mut self) -> u16 {
+    fn pop(&mut self) -> EResult<u16> {
+        if self.sp + 2 > self.ram.size() as u16 {
+            return Err("POP: No return address on the stack");
+        }
         let low = self.ram[self.sp] as u16;
         self.sp += 1;
         let high = self.ram[self.sp] as u16;
         self.sp += 1;
-        (high << 8) | low
+        Ok((high << 8) | low)
 
     }
 
-    fn read_addr(&mut self) -> u16 {
+    fn read_addr(&mut self) -> EResult<u16> {
+        if self.pc + 2 > self.ram.size() as u16 {
+            return Err("READ_ADDR: Not enough bytes available");
+        }
         let low = self.ram[self.pc] as u16;
         self.pc += 1;
         let high = self.ram[self.pc] as u16;
         self.pc += 1;
-        (high << 8) | low
+        Ok((high << 8) | low)
     }
 }
 
@@ -284,11 +304,12 @@ mod tests {
         e.sp = 0x3fff;
         e.push(0xabcd).expect("Push failed");
         assert_eq!(e.sp, 0x3ffd);
-        assert_eq!(0xabcd, e.pop());
+        assert_eq!(0xabcd, e.pop().expect("Fuck"));
         assert_eq!(e.sp, 0x3fff);
+        assert_eq!(e.pop(), Err("POP: No return address on the stack"));
 
         e.sp = 0x1;
-        assert_eq!(e.push(0x1234), Err("No more stack space"));
+        assert_eq!(e.push(0x1234), Err("PUSH: No more stack space"));
     }
 
     #[test]
@@ -298,7 +319,7 @@ mod tests {
         e.sp = 0x3fff;
         e.ram[0x1234] = 0xc9;
 
-        e.call(0x1234);
+        e.call(0x1234).expect("Fuck");
         assert_eq!(e.sp, 0x3fff - 2);
         assert_eq!(e.pc, 0x1234);
 
@@ -347,5 +368,22 @@ mod tests {
         e.reg.flip_flag("carry");
         e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0x1234);
+    }
+
+    #[test]
+    fn calls() {
+        let mut e = Emulator::new();
+
+        e.sp = 0x3fff;
+
+        assert_eq!(e.pc, 0x0);
+        e.call_if("carry").expect("Fuck");
+        assert_eq!(e.pc, 0x2);
+        e.reg.set_flag("carry");
+        e.ram.load_vec(vec![0x34, 0x12], 2);
+        e.call_if("carry").expect("Fuck");
+        assert_eq!(e.pc, 0x1234);
+        
+
     }
 }
