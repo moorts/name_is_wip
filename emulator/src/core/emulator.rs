@@ -250,7 +250,7 @@ impl Emulator {
     }
 
     fn ret(&mut self) -> EResult<()> {
-        let return_adress = self.pop();
+        self.pc = self.pop()?;
         Ok(())
     }
 
@@ -332,14 +332,14 @@ mod tests {
         let mut e = Emulator::new();
 
         // Test JMP
-        e.ram.load_vec(vec![0xc3, 0xcd, 0xab], 0);
+        e.ram.load_vec(vec![0xc3, 0x34, 0x12], 0);
         e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0xabcd);
+        assert_eq!(e.pc, 0x1234);
 
         // Test JZ
-        e.ram.load_vec(vec![0xca, 0x03, 0x00, 0xca, 0x03, 0x00], 0xabcd);
+        e.ram.load_vec(vec![0xca, 0x03, 0x00, 0xca, 0x03, 0x00], 0x1234);
         e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0xabd0);
+        assert_eq!(e.pc, 0x1237);
         e.reg.set_flag("zero");
         e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0x0003);
@@ -371,7 +371,7 @@ mod tests {
     }
 
     #[test]
-    fn calls() {
+    fn call() {
         let mut e = Emulator::new();
 
         e.sp = 0x3fff;
@@ -385,5 +385,30 @@ mod tests {
         assert_eq!(e.pc, 0x1234);
         
 
+    }
+
+    #[test]
+    fn calls() {
+        let mut e = Emulator::new();
+
+        e.sp = 0x3fff;
+        e.pc = 0x1111;
+
+        // Test CALL
+        e.ram.load_vec(vec![0xcd, 0x34, 0x12], e.pc);
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x1234);
+        e.ret().expect("Fuck");
+        assert_eq!(e.pc, 0x1114);
+
+        // Test CZ
+        e.ram.load_vec(vec![0xcc, 0x03, 0x00, 0xcc, 0x03, 0x00], 0x1114);
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x1117);
+        e.reg.set_flag("zero");
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.pc, 0x0003);
+        e.ret().expect("Fuck");
+        assert_eq!(e.pc, 0x111a);
     }
 }
