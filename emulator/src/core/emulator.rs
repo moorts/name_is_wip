@@ -148,16 +148,16 @@ impl Emulator {
                 unimplemented!()
             }
             0xe2 => {
-                // Unimplemented
-                unimplemented!()
+                // JPO adr
+                self.jmp_not("parity")?;
             }
             0xe3 => {
                 // Unimplemented
                 unimplemented!()
             }
             0xe4 => {
-                // Unimplemented
-                unimplemented!()
+                // CPO adr
+                self.call_not("parity")?;
             }
             0xe5 => {
                 // Unimplemented
@@ -180,18 +180,90 @@ impl Emulator {
                 unimplemented!()
             }
             0xea => {
-                // Unimplemented
-                unimplemented!()
+                // JPE adr
+                self.jmp_if("parity")?;
             }
             0xeb => {
                 // Unimplemented
                 unimplemented!()
             }
             0xec => {
+                // CPE
+                self.call_if("parity")?;
+            }
+            0xed => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xed => {
+            0xee => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xef => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf0 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf1 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf2 => {
+                // JP adr
+                self.jmp_not("sign")?;
+            }
+            0xf3 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf4 => {
+                // CP adr
+                self.call_not("sign")?;
+            }
+            0xf5 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf6 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf7 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf8 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xf9 => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xfa => {
+                // JM adr
+                self.jmp_if("sign")?;
+            }
+            0xfb => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xfc => {
+                // CM adr
+                self.call_if("sign")?;
+            }
+            0xfd => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xfe => {
+                // Unimplemented
+                unimplemented!()
+            }
+            0xff => {
                 // Unimplemented
                 unimplemented!()
             }
@@ -325,6 +397,43 @@ mod tests {
 
         e.execute_next().expect("Fuck");
         assert_eq!(e.pc, 0x0);
+    }
+
+    #[test]
+    fn jmp_if() {
+        let mut e = Emulator::new();
+
+        e.ram.load_vec(vec![0x04, 0x00, 0x00, 0x00], 0);
+
+        // Performs
+        // a) one failing jmp (-> pc = 2)
+        // b) one succeeding jmp (pc = ram[pc] = ram[2] -> 0)
+        // c) Back in starting position
+        // -> Repeat for each flag
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
+            e.jmp_if(flag).expect("");
+            assert_eq!(e.pc, 2);
+            e.reg.set_flag(flag);
+            e.jmp_if(flag).expect("");
+            assert_eq!(e.pc, 0);
+        }
+    }
+
+    #[test]
+    fn jmp_not() {
+        let mut e = Emulator::new();
+
+        e.ram.load_vec(vec![0x04, 0x00, 0x00, 0x00], 0);
+        e.reg.set_flags(0xff);
+
+        // same as tests::jmp_if
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
+            e.jmp_not(flag).expect("");
+            assert_eq!(e.pc, 2);
+            e.reg.flip_flag(flag);
+            e.jmp_not(flag).expect("");
+            assert_eq!(e.pc, 0);
+        }
     }
 
     #[test]
