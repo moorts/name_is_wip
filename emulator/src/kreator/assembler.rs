@@ -93,9 +93,13 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "INR" => return convert_opcodes_using_registers(args, 0x04, 8),
                 "DCR" => return convert_opcodes_using_registers(args, 0x05, 8),
                 "ADD" => return convert_opcodes_using_registers(args, 0x80, 1),
-                "ADC" => return convert_opcodes_using_registers(args, 0x80, 1),
-                "SUB" => return convert_opcodes_using_registers(args, 0x80, 1),
-                "SBB" => return convert_opcodes_using_registers(args, 0x80, 1),
+                "ADC" => return convert_opcodes_using_registers(args, 0x88, 1),
+                "SUB" => return convert_opcodes_using_registers(args, 0x90, 1),
+                "SBB" => return convert_opcodes_using_registers(args, 0x98, 1),
+                "ANA" => return convert_opcodes_using_registers(args, 0xa0, 1),
+                "XRA" => return convert_opcodes_using_registers(args, 0xa8, 1),
+                "ORA" => return convert_opcodes_using_registers(args, 0xb0, 1),
+                "CMP" => return convert_opcodes_using_registers(args, 0xb8, 1),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -421,7 +425,7 @@ mod tests {
     #[test]
     fn test_opcodes_using_registers_with_growth_1() {
         let add_value = 0x80;
-        let opcodes = vec!["ADD", "ADC", "SUB", "SBB", "ANA"];
+        let opcodes = vec!["ADD", "ADC", "SUB", "SBB", "ANA", "XRA", "ORA", "CMP"];
 
         for (index, &opcode) in opcodes.iter().enumerate() {
             let inputs = get_bytes_and_args_by_opcode(opcode).unwrap();
