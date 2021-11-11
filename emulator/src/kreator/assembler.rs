@@ -288,6 +288,24 @@ fn convert_sbb_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
+fn convert_ana_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    let base_value = 0xa0;
+    match args[0] {
+        "B" => return Ok(vec![base_value]),
+        "C" => return Ok(vec![base_value + 1]),
+        "D" => return Ok(vec![base_value + 2]),
+        "E" => return Ok(vec![base_value + 3]),
+        "H" => return Ok(vec![base_value + 4]),
+        "L" => return Ok(vec![base_value + 5]),
+        "M" => return Ok(vec![base_value + 6]),
+        "A" => return Ok(vec![base_value + 7]),
+        _ => return Err("wrong register!"),
+    }
+}
+
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.code.join("\n"))
@@ -593,6 +611,23 @@ mod tests {
         assert_eq!(Err("wrong register!"), convert_sbb_args(vec!["Q"]));
         assert_eq!(Err("wrong arg amount!"), convert_sbb_args(vec!["B", "D"]));
         assert_eq!(Err("wrong arg amount!"), convert_sbb_args(vec![]));
+    }
+
+    #[test]
+    fn test_ana() {
+        let inputs = get_bytes_and_args_by_opcode("ANA").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_ana_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_ana_errors() {
+        assert_eq!(Err("wrong register!"), convert_ana_args(vec!["Q"]));
+        assert_eq!(Err("wrong arg amount!"), convert_ana_args(vec!["B", "D"]));
+        assert_eq!(Err("wrong arg amount!"), convert_ana_args(vec![]));
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
