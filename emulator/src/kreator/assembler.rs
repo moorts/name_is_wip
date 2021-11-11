@@ -90,12 +90,12 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "MOV" => return convert_mov_args(args),
                 "STAX" => return convert_stax_args(args),
                 "INX" => return convert_inx_args(args),
-                "INR" => return convert_inr_args(args),
-                "DCR" => return convert_dcr_args(args),
-                "ADD" => return convert_add_args(args),
-                "ADC" => return convert_adc_args(args),
-                "SUB" => return convert_sub_args(args),
-                "SBB" => return convert_sbb_args(args),
+                "INR" => return convert_opcodes_using_registers(args, 0x04, 8),
+                "DCR" => return convert_opcodes_using_registers(args, 0x05, 8),
+                "ADD" => return convert_opcodes_using_registers(args, 0x80, 1),
+                "ADC" => return convert_opcodes_using_registers(args, 0x80, 1),
+                "SUB" => return convert_opcodes_using_registers(args, 0x80, 1),
+                "SBB" => return convert_opcodes_using_registers(args, 0x80, 1),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -180,128 +180,19 @@ fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
-fn convert_inr_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+fn convert_opcodes_using_registers(args: Vec<&str>, base_value: u8, growth: u8) -> Result<Vec<u8>, &'static str> {
     if args.len() != 1 {
         return Err("wrong arg amount!");
     }
-    let base_value = 0x04;
     match args[0] {
         "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1 * 8]),
-        "D" => return Ok(vec![base_value + 2 * 8]),
-        "E" => return Ok(vec![base_value + 3 * 8]),
-        "H" => return Ok(vec![base_value + 4 * 8]),
-        "L" => return Ok(vec![base_value + 5 * 8]),
-        "M" => return Ok(vec![base_value + 6 * 8]),
-        "A" => return Ok(vec![base_value + 7 * 8]),
-        _ => return Err("wrong register!"),
-    }
-}
-
-fn convert_dcr_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    if args.len() != 1 {
-        return Err("wrong arg amount!");
-    }
-    let base_value = 0x05;
-    match args[0] {
-        "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1 * 8]),
-        "D" => return Ok(vec![base_value + 2 * 8]),
-        "E" => return Ok(vec![base_value + 3 * 8]),
-        "H" => return Ok(vec![base_value + 4 * 8]),
-        "L" => return Ok(vec![base_value + 5 * 8]),
-        "M" => return Ok(vec![base_value + 6 * 8]),
-        "A" => return Ok(vec![base_value + 7 * 8]),
-        _ => return Err("wrong register!"),
-    }
-}
-
-fn convert_add_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    if args.len() != 1 {
-        return Err("wrong arg amount!");
-    }
-    let base_value = 0x80;
-    match args[0] {
-        "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1]),
-        "D" => return Ok(vec![base_value + 2]),
-        "E" => return Ok(vec![base_value + 3]),
-        "H" => return Ok(vec![base_value + 4]),
-        "L" => return Ok(vec![base_value + 5]),
-        "M" => return Ok(vec![base_value + 6]),
-        "A" => return Ok(vec![base_value + 7]),
-        _ => return Err("wrong register!"),
-    }
-}
-
-fn convert_adc_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    if args.len() != 1 {
-        return Err("wrong arg amount!");
-    }
-    let base_value = 0x88;
-    match args[0] {
-        "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1]),
-        "D" => return Ok(vec![base_value + 2]),
-        "E" => return Ok(vec![base_value + 3]),
-        "H" => return Ok(vec![base_value + 4]),
-        "L" => return Ok(vec![base_value + 5]),
-        "M" => return Ok(vec![base_value + 6]),
-        "A" => return Ok(vec![base_value + 7]),
-        _ => return Err("wrong register!"),
-    }
-}
-
-fn convert_sub_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    if args.len() != 1 {
-        return Err("wrong arg amount!");
-    }
-    let base_value = 0x90;
-    match args[0] {
-        "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1]),
-        "D" => return Ok(vec![base_value + 2]),
-        "E" => return Ok(vec![base_value + 3]),
-        "H" => return Ok(vec![base_value + 4]),
-        "L" => return Ok(vec![base_value + 5]),
-        "M" => return Ok(vec![base_value + 6]),
-        "A" => return Ok(vec![base_value + 7]),
-        _ => return Err("wrong register!"),
-    }
-}
-
-fn convert_sbb_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    if args.len() != 1 {
-        return Err("wrong arg amount!");
-    }
-    let base_value = 0x98;
-    match args[0] {
-        "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1]),
-        "D" => return Ok(vec![base_value + 2]),
-        "E" => return Ok(vec![base_value + 3]),
-        "H" => return Ok(vec![base_value + 4]),
-        "L" => return Ok(vec![base_value + 5]),
-        "M" => return Ok(vec![base_value + 6]),
-        "A" => return Ok(vec![base_value + 7]),
-        _ => return Err("wrong register!"),
-    }
-}
-
-fn convert_ana_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    if args.len() != 1 {
-        return Err("wrong arg amount!");
-    }
-    let base_value = 0xa0;
-    match args[0] {
-        "B" => return Ok(vec![base_value]),
-        "C" => return Ok(vec![base_value + 1]),
-        "D" => return Ok(vec![base_value + 2]),
-        "E" => return Ok(vec![base_value + 3]),
-        "H" => return Ok(vec![base_value + 4]),
-        "L" => return Ok(vec![base_value + 5]),
-        "M" => return Ok(vec![base_value + 6]),
-        "A" => return Ok(vec![base_value + 7]),
+        "C" => return Ok(vec![base_value + (1 * growth)]),
+        "D" => return Ok(vec![base_value + (2 * growth)]),
+        "E" => return Ok(vec![base_value + (3 * growth)]),
+        "H" => return Ok(vec![base_value + (4 * growth)]),
+        "L" => return Ok(vec![base_value + (5 * growth)]),
+        "M" => return Ok(vec![base_value + (6 * growth)]),
+        "A" => return Ok(vec![base_value + (7 * growth)]),
         _ => return Err("wrong register!"),
     }
 }
@@ -511,123 +402,40 @@ mod tests {
         assert_eq!(Err("wrong arg amount!"), convert_inx_args(vec![]));
     }
 
+
     #[test]
-    fn test_inr() {
+    fn test_opcodes_using_registers_with_growth_8() {
         let inputs = get_bytes_and_args_by_opcode("INR").unwrap();
-
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_inr_args(args).unwrap());
+            assert_eq!(input.0, convert_opcodes_using_registers(args, 4, 8).unwrap());
         }
-    }
 
-    #[test]
-    fn test_inr_errors() {
-        assert_eq!(Err("wrong register!"), convert_inr_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_inr_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_inr_args(vec![]));
-    }
-
-    #[test]
-    fn test_dcr() {
         let inputs = get_bytes_and_args_by_opcode("DCR").unwrap();
-
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_dcr_args(args).unwrap());
+            assert_eq!(input.0, convert_opcodes_using_registers(args, 5, 8).unwrap());
         }
     }
 
     #[test]
-    fn test_dcr_errors() {
-        assert_eq!(Err("wrong register!"), convert_dcr_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_dcr_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_dcr_args(vec![]));
-    }
+    fn test_opcodes_using_registers_with_growth_1() {
+        let add_value = 0x80;
+        let opcodes = vec!["ADD", "ADC", "SUB", "SBB", "ANA"];
 
-    #[test]
-    fn test_add() {
-        let inputs = get_bytes_and_args_by_opcode("ADD").unwrap();
-
-        for input in inputs {
-            let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_add_args(args).unwrap());
+        for (index, &opcode) in opcodes.iter().enumerate() {
+            let inputs = get_bytes_and_args_by_opcode(opcode).unwrap();
+            for input in inputs {
+                let args: Vec<&str> = input.1.split(",").collect();
+                assert_eq!(input.0, convert_opcodes_using_registers(args, add_value + 8 * index as u8, 1).unwrap());
+            }
         }
     }
 
     #[test]
-    fn test_add_errors() {
-        assert_eq!(Err("wrong register!"), convert_add_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_add_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_add_args(vec![]));
-    }
-
-    #[test]
-    fn test_adc() {
-        let inputs = get_bytes_and_args_by_opcode("ADC").unwrap();
-
-        for input in inputs {
-            let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_adc_args(args).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_adc_errors() {
-        assert_eq!(Err("wrong register!"), convert_adc_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_adc_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_adc_args(vec![]));
-    }
-
-    #[test]
-    fn test_sub() {
-        let inputs = get_bytes_and_args_by_opcode("SUB").unwrap();
-
-        for input in inputs {
-            let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_sub_args(args).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_sub_errors() {
-        assert_eq!(Err("wrong register!"), convert_sub_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_sub_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_sub_args(vec![]));
-    }
-
-    #[test]
-    fn test_sbb() {
-        let inputs = get_bytes_and_args_by_opcode("SBB").unwrap();
-
-        for input in inputs {
-            let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_sbb_args(args).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_sbb_errors() {
-        assert_eq!(Err("wrong register!"), convert_sbb_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_sbb_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_sbb_args(vec![]));
-    }
-
-    #[test]
-    fn test_ana() {
-        let inputs = get_bytes_and_args_by_opcode("ANA").unwrap();
-
-        for input in inputs {
-            let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_ana_args(args).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_ana_errors() {
-        assert_eq!(Err("wrong register!"), convert_ana_args(vec!["Q"]));
-        assert_eq!(Err("wrong arg amount!"), convert_ana_args(vec!["B", "D"]));
-        assert_eq!(Err("wrong arg amount!"), convert_ana_args(vec![]));
+    fn test_opcodes_using_registers_errors() {
+        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_registers(vec!["B", "D"], 1, 1));
+        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_registers(vec![], 1, 1));
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
