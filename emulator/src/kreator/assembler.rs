@@ -90,16 +90,16 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "MOV" => return convert_mov_args(args),
                 "STAX" => return convert_stax_args(args),
                 "INX" => return convert_inx_args(args),
-                "INR" => return convert_opcodes_using_registers(args, 0x04, 8),
-                "DCR" => return convert_opcodes_using_registers(args, 0x05, 8),
-                "ADD" => return convert_opcodes_using_registers(args, 0x80, 1),
-                "ADC" => return convert_opcodes_using_registers(args, 0x88, 1),
-                "SUB" => return convert_opcodes_using_registers(args, 0x90, 1),
-                "SBB" => return convert_opcodes_using_registers(args, 0x98, 1),
-                "ANA" => return convert_opcodes_using_registers(args, 0xa0, 1),
-                "XRA" => return convert_opcodes_using_registers(args, 0xa8, 1),
-                "ORA" => return convert_opcodes_using_registers(args, 0xb0, 1),
-                "CMP" => return convert_opcodes_using_registers(args, 0xb8, 1),
+                "INR" => return convert_opcodes_using_all_registers(args, 0x04, 8),
+                "DCR" => return convert_opcodes_using_all_registers(args, 0x05, 8),
+                "ADD" => return convert_opcodes_using_all_registers(args, 0x80, 1),
+                "ADC" => return convert_opcodes_using_all_registers(args, 0x88, 1),
+                "SUB" => return convert_opcodes_using_all_registers(args, 0x90, 1),
+                "SBB" => return convert_opcodes_using_all_registers(args, 0x98, 1),
+                "ANA" => return convert_opcodes_using_all_registers(args, 0xa0, 1),
+                "XRA" => return convert_opcodes_using_all_registers(args, 0xa8, 1),
+                "ORA" => return convert_opcodes_using_all_registers(args, 0xb0, 1),
+                "CMP" => return convert_opcodes_using_all_registers(args, 0xb8, 1),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -122,6 +122,13 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "RC" => return Ok(vec![0xd8]),
                 "RPE" => return Ok(vec![0xe8]),
                 "RPO" => return Ok(vec![0xe0]),
+                "EI" => return Ok(vec![0xfb]),
+                "RM" => return Ok(vec![0xf8]),
+                "SPHL" => return Ok(vec![0xf9]),
+                "DI" => return Ok(vec![0xf3]),
+                "RP" => return Ok(vec![0xf0]),
+                "XCHG" => return Ok(vec![0xeb]),
+                "PCHL" => return Ok(vec![0xe9]),
                 _ => return Err("Could not match instruction"),
             }
         }
@@ -184,7 +191,7 @@ fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
-fn convert_opcodes_using_registers(args: Vec<&str>, base_value: u8, growth: u8) -> Result<Vec<u8>, &'static str> {
+fn convert_opcodes_using_all_registers(args: Vec<&str>, base_value: u8, growth: u8) -> Result<Vec<u8>, &'static str> {
     if args.len() != 1 {
         return Err("wrong arg amount!");
     }
@@ -370,6 +377,27 @@ mod tests {
 
         let assembler = Assembler::new("RPE");
         assert_eq!(vec![0xe8], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("EI");
+        assert_eq!(vec![0xfb], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("RM");
+        assert_eq!(vec![0xf8], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("SPHL");
+        assert_eq!(vec![0xf9], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("DI");
+        assert_eq!(vec![0xf3], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("RP");
+        assert_eq!(vec![0xf0], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("XCHG");
+        assert_eq!(vec![0xeb], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("PCHL");
+        assert_eq!(vec![0xe9], assembler.assemble().unwrap());
     }
 
     #[test]
@@ -412,13 +440,13 @@ mod tests {
         let inputs = get_bytes_and_args_by_opcode("INR").unwrap();
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_opcodes_using_registers(args, 4, 8).unwrap());
+            assert_eq!(input.0, convert_opcodes_using_all_registers(args, 4, 8).unwrap());
         }
 
         let inputs = get_bytes_and_args_by_opcode("DCR").unwrap();
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_opcodes_using_registers(args, 5, 8).unwrap());
+            assert_eq!(input.0, convert_opcodes_using_all_registers(args, 5, 8).unwrap());
         }
     }
 
@@ -431,15 +459,15 @@ mod tests {
             let inputs = get_bytes_and_args_by_opcode(opcode).unwrap();
             for input in inputs {
                 let args: Vec<&str> = input.1.split(",").collect();
-                assert_eq!(input.0, convert_opcodes_using_registers(args, add_value + 8 * index as u8, 1).unwrap());
+                assert_eq!(input.0, convert_opcodes_using_all_registers(args, add_value + 8 * index as u8, 1).unwrap());
             }
         }
     }
 
     #[test]
     fn test_opcodes_using_registers_errors() {
-        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_registers(vec!["B", "D"], 1, 1));
-        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_registers(vec![], 1, 1));
+        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_all_registers(vec!["B", "D"], 1, 1));
+        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_all_registers(vec![], 1, 1));
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
