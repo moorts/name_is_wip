@@ -40,6 +40,27 @@ impl Assembler {
         Ok(machine_code)
     }
 
+    fn get_preprocessed_code(&self) -> Vec<String> {
+        let decl_regex = Regex::new(LABEL_DECL).unwrap();
+        let mut processed_code: Vec<String> = Vec::new();
+        let labels = self.get_labels().unwrap();
+
+        let pc = 0;
+        for line in &self.code {
+            let mut new_line = String::from(line);
+            while let Some(_) = decl_regex.find(&new_line) {
+                new_line = decl_regex.replace(&new_line, "").to_string();
+            }
+            for (key, value) in &labels {
+                new_line = new_line.replace(key, &value.to_string());
+            }
+            if !new_line.is_empty() {
+                processed_code.push(String::from(new_line.trim()));
+            }
+        }
+        processed_code
+    }
+
     fn get_labels(&self) -> Result<HashMap<String, u16>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
 
@@ -468,6 +489,18 @@ mod tests {
     fn test_opcodes_using_registers_errors() {
         assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_all_registers(vec!["B", "D"], 1, 1));
         assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_all_registers(vec![], 1, 1));
+    }
+
+    #[test]
+    fn test_preprocessing_labels() {
+        let assembler = Assembler::new("test:\nlabel: MOV A,B");
+        assert_eq!(vec!["MOV A,B"], assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("label: MOV A,label");
+        assert_eq!(vec!["MOV A,0"], assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2");
+        assert_eq!(vec!["A", "B", "C", "JMP 2"], assembler.get_preprocessed_code());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
