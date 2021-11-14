@@ -45,17 +45,22 @@ impl Assembler {
         let mut processed_code: Vec<String> = Vec::new();
         let labels = self.get_labels().unwrap();
 
-        let pc = 0;
+        let mut pc = 0;
         for line in &self.code {
             let mut new_line = String::from(line);
+            new_line = new_line.replace("$", &pc.to_string());
             while let Some(_) = decl_regex.find(&new_line) {
                 new_line = decl_regex.replace(&new_line, "").to_string();
             }
             for (key, value) in &labels {
                 new_line = new_line.replace(key, &value.to_string());
             }
+            pc += 1;
+
             if !new_line.is_empty() {
                 processed_code.push(String::from(new_line.trim()));
+            } else {
+                pc -= 1;
             }
         }
         processed_code
@@ -501,6 +506,18 @@ mod tests {
 
         let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2");
         assert_eq!(vec!["A", "B", "C", "JMP 2"], assembler.get_preprocessed_code());
+    }
+
+    #[test]
+    fn test_preprocessing_pc() {
+        let assembler = Assembler::new("MOV A,B\n JMP $");
+        assert_eq!(vec!["MOV A,B", "JMP 1"], assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("A\nB\nC\nD\n JMP $");
+        assert_eq!(vec!["A", "B", "C", "D", "JMP 4"], assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("label:\nNOP\n JMP $");
+        assert_eq!(vec!["NOP", "JMP 1"], assembler.get_preprocessed_code());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
