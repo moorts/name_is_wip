@@ -105,7 +105,7 @@ impl Emulator {
             }
             0xd7 => {
                 // RST 2
-                unimplemented!()
+                self.call(0x10)?;
             }
             0xd8 => {
                 // RC
@@ -136,8 +136,8 @@ impl Emulator {
                 unimplemented!()
             }
             0xdf => {
-                // Unimplemented
-                unimplemented!()
+                // RST 3
+                self.call(0x18)?;
             }
             0xe0 => {
                 // Unimplemented
@@ -168,8 +168,8 @@ impl Emulator {
                 unimplemented!()
             }
             0xe7 => {
-                // Unimplemented
-                unimplemented!()
+                // RST 4
+                self.call(0x20)?;
             }
             0xe8 => {
                 // Unimplemented
@@ -200,8 +200,8 @@ impl Emulator {
                 unimplemented!()
             }
             0xef => {
-                // Unimplemented
-                unimplemented!()
+                // RST 5
+                self.call(0x28)?;
             }
             0xf0 => {
                 // Unimplemented
@@ -232,8 +232,8 @@ impl Emulator {
                 unimplemented!()
             }
             0xf7 => {
-                // Unimplemented
-                unimplemented!()
+                // RST 6
+                self.call(0x30)?;
             }
             0xf8 => {
                 // Unimplemented
@@ -264,8 +264,8 @@ impl Emulator {
                 unimplemented!()
             }
             0xff => {
-                // Unimplemented
-                unimplemented!()
+                // RST 7
+                self.call(0x38)?;
             }
             _ => unimplemented!("Opcode not yet implemented")
         }
@@ -437,6 +437,26 @@ mod tests {
     }
 
     #[test]
+    fn call_if() {
+        let mut e = Emulator::new();
+
+        e.sp = 0x3fff;
+
+        e.ram.load_vec(vec![0x00, 0x00, 0x11, 0x11], 0);
+
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
+            e.call_if(flag).expect("");
+            assert_eq!(e.pc, 2);
+            e.reg.set_flag(flag);
+            e.call_if(flag).expect("");
+            assert_eq!(e.pc, 0x1111);
+            e.ret().expect("");
+            assert_eq!(e.pc, 4);
+            e.pc = 0;
+        }
+    }
+
+    #[test]
     fn jmps() {
         let mut e = Emulator::new();
 
@@ -519,5 +539,21 @@ mod tests {
         assert_eq!(e.pc, 0x0003);
         e.ret().expect("Fuck");
         assert_eq!(e.pc, 0x111a);
+    }
+
+    #[test]
+    fn rst() {
+        let mut e = Emulator::new();
+
+        e.pc = 0x1111;
+        e.sp = 0x3fff;
+
+        e.ram.load_vec(vec![0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff], e.pc);
+        for i in 0x1111..0x1119 {
+            e.pc = i as u16;
+            e.execute_next().expect("Fuck");
+            assert_eq!(e.pc, (i - 0x1111) * 8);
+        }
+
     }
 }
