@@ -24,6 +24,14 @@ impl Emulator {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         match opcode {
+            0xc0 => {
+                // RNZ
+                self.ret_not("zero")?;
+            }
+            0xc1 => {
+                // Unimplemented
+                unimplemented!();
+            }
             0xc2 => {
                 // JNZ adr
                 self.jmp_not("zero")?;
@@ -44,13 +52,11 @@ impl Emulator {
             }
             0xc8 => {
                 // RZ
-                if self.reg.get_flag("zero") {
-                    self.pc = self.pop()?;
-                }
+                self.ret_if("zero")?;
             }
             0xc9 => {
                 // RET
-                self.pc = self.pop()?;
+                self.ret()?;
             }
             0xca => {
                 // JZ adr
@@ -74,9 +80,7 @@ impl Emulator {
             }
             0xd0 => {
                 // RNC
-                if !self.reg.get_flag("carry") {
-                    self.pc = self.pop()?;
-                }
+                self.ret_not("carry")?;
             }
             0xd1 => {
                 // POP D
@@ -109,7 +113,7 @@ impl Emulator {
             }
             0xd8 => {
                 // RC
-                unimplemented!()
+                self.ret_if("carry")?;
             }
             0xd9 => {
                 // no-op
@@ -140,8 +144,8 @@ impl Emulator {
                 self.call(0x18)?;
             }
             0xe0 => {
-                // Unimplemented
-                unimplemented!()
+                // RPO
+                self.ret_not("parity")?;
             }
             0xe1 => {
                 // Unimplemented
@@ -172,8 +176,8 @@ impl Emulator {
                 self.call(0x20)?;
             }
             0xe8 => {
-                // Unimplemented
-                unimplemented!()
+                // RPE
+                self.ret_if("parity")?;
             }
             0xe9 => {
                 // Unimplemented
@@ -204,8 +208,8 @@ impl Emulator {
                 self.call(0x28)?;
             }
             0xf0 => {
-                // Unimplemented
-                unimplemented!()
+                // RP
+                self.ret_not("sign")?;
             }
             0xf1 => {
                 // Unimplemented
@@ -236,8 +240,8 @@ impl Emulator {
                 self.call(0x30)?;
             }
             0xf8 => {
-                // Unimplemented
-                unimplemented!()
+                // RM
+                self.ret_if("sign")?;
             }
             0xf9 => {
                 // Unimplemented
@@ -318,6 +322,20 @@ impl Emulator {
     fn call(&mut self, adr: u16) -> EResult<()> {
         self.push(self.pc)?;
         self.pc = adr;
+        Ok(())
+    }
+
+    fn ret_if(&mut self, flag: &str) -> EResult<()> {
+        if self.reg.get_flag(flag) {
+            self.ret()?;
+        }
+        Ok(())
+    }
+
+    fn ret_not(&mut self, flag: &str) -> EResult<()> {
+        if !self.reg.get_flag(flag) {
+            self.ret()?;
+        }
         Ok(())
     }
 
