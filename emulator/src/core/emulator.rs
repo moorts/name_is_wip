@@ -40,12 +40,18 @@ impl Emulator {
                 // JMP adr
                 self.pc = self.read_addr()?;
             }
-            0xc4 => unimplemented!(),
+            0xc4 => {
+                // Unimplemented
+                unimplemented!();
+            }
             0xc5 => {
                 // PUSH B
                 self.push_reg("bc")?;
             }
-            0xc6 => unimplemented!(),
+            0xc6 => {
+                // Unimplemented
+                unimplemented!();
+            }
             0xc7 => {
                 // RST 0
                 self.call(0x0)?;
@@ -61,7 +67,6 @@ impl Emulator {
             0xca => {
                 // JZ adr
                 self.jmp_if("zero")?;
-                
             }
             0xcc => {
                 // CZ addr
@@ -72,6 +77,7 @@ impl Emulator {
                 self.call_imm()?;
             }
             0xce => {
+                // Unimplemented
                 unimplemented!()
             }
             0xcf => {
@@ -97,7 +103,6 @@ impl Emulator {
             0xd4 => {
                 // CNC adr
                 self.call_not("carry")?;
-
             }
             0xd5 => {
                 // PUSH D
@@ -475,46 +480,24 @@ mod tests {
     }
 
     #[test]
-    fn jmps() {
+    fn call_not() {
         let mut e = Emulator::new();
 
-        // Test JMP
-        e.ram.load_vec(vec![0xc3, 0x34, 0x12], 0);
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1234);
+        e.sp = 0x3fff;
 
-        // Test JZ
-        e.ram.load_vec(vec![0xca, 0x03, 0x00, 0xca, 0x03, 0x00], 0x1234);
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1237);
-        e.reg.set_flag("zero");
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x0003);
+        e.ram.load_vec(vec![0x00, 0x00, 0x11, 0x11], 0);
+        e.reg.set_flags(0xff);
 
-        // Test JNZ
-        e.ram.load_vec(vec![0xc2, 0x34, 0x12, 0xc2, 0x34, 0x12], 0x3);
-        e.reg.set_flag("zero");
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x6);
-        e.reg.flip_flag("zero");
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1234);
-
-        // Test JC
-        e.ram.load_vec(vec![0xda, 0x03, 0x00, 0xda, 0x03, 0x00], 0x1234);
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1237);
-        e.reg.set_flag("carry");
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x0003);
-
-        // Test JNC
-        e.ram.load_vec(vec![0xd2, 0x34, 0x12, 0xd2, 0x34, 0x12], 0x3);
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x6);
-        e.reg.flip_flag("carry");
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1234);
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
+            e.call_not(flag).expect("");
+            assert_eq!(e.pc, 2);
+            e.reg.flip_flag(flag);
+            e.call_not(flag).expect("");
+            assert_eq!(e.pc, 0x1111);
+            e.ret().expect("");
+            assert_eq!(e.pc, 4);
+            e.pc = 0;
+        }
     }
 
     #[test]
@@ -530,33 +513,6 @@ mod tests {
         e.ram.load_vec(vec![0x34, 0x12], 2);
         e.call_if("carry").expect("Fuck");
         assert_eq!(e.pc, 0x1234);
-        
-
-    }
-
-    #[test]
-    fn calls() {
-        let mut e = Emulator::new();
-
-        e.sp = 0x3fff;
-        e.pc = 0x1111;
-
-        // Test CALL
-        e.ram.load_vec(vec![0xcd, 0x34, 0x12], e.pc);
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1234);
-        e.ret().expect("Fuck");
-        assert_eq!(e.pc, 0x1114);
-
-        // Test CZ
-        e.ram.load_vec(vec![0xcc, 0x03, 0x00, 0xcc, 0x03, 0x00], 0x1114);
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x1117);
-        e.reg.set_flag("zero");
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.pc, 0x0003);
-        e.ret().expect("Fuck");
-        assert_eq!(e.pc, 0x111a);
     }
 
     #[test]
