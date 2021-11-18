@@ -129,6 +129,14 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "CMP" => return convert_opcodes_using_all_registers(args, 0xb8, 1),
                 "LXI" => return convert_lxi_args(args),
                 "MVI" => return convert_mvi_args(args),
+                "DAD" => return convert_dad_args(args),
+                "LDAX" => {
+                    match args[0] {
+                        "B" => return Ok(vec![0x0a]),
+                        "D" => return Ok(vec![0x1a]),
+                        _ => return Err("wrong register!"),
+                    }
+                }
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -265,6 +273,19 @@ fn convert_mvi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
         "L" => return Ok(vec![0x2e, immediate_value]),
         "M" => return Ok(vec![0x36, immediate_value]),
         "A" => return Ok(vec![0x3e, immediate_value]),
+        _ => return Err("wrong register!"),
+    }
+}
+
+fn convert_dad_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    match args[0] {
+        "B" => return Ok(vec![0x09]),
+        "D" => return Ok(vec![0x19]),
+        "H" => return Ok(vec![0x29]),
+        "SP" => return Ok(vec![0x39]),
         _ => return Err("wrong register!"),
     }
 }
@@ -572,6 +593,26 @@ mod tests {
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(input.0, convert_mvi_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_convert_dad() {
+        let inputs = get_bytes_and_args_by_opcode("DAD").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_dad_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_ldax() {
+        let inputs = get_bytes_and_args_by_opcode("LDAX").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("LDAX {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
         }
     }
 
