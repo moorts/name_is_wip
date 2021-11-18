@@ -148,6 +148,18 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "LDA" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0x3a, adr as u8, (adr >> 8) as u8]);
+                },
+                "JMP" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xc3, adr as u8, (adr >> 8) as u8]);
+                },
+                "JNZ" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xc2, adr as u8, (adr >> 8) as u8]);
+                },
+                "CNZ" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xc4, adr as u8, (adr >> 8) as u8]);
                 }
                 _ => return Err("Could not match instruction"),
             }
@@ -745,6 +757,36 @@ mod tests {
 
         for input in inputs {
             let assembler = Assembler::new(&format!("LDA {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_jmp() {
+        let inputs = get_bytes_and_args_by_opcode("JMP").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("JMP {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_jnz() {
+        let inputs = get_bytes_and_args_by_opcode("JNZ").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("JNZ {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_cnz() {
+        let inputs = get_bytes_and_args_by_opcode("CNZ").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("CNZ {}", &input.1));
             assert_eq!(input.0, assembler.assemble().unwrap());
         }
     }
