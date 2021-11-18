@@ -128,6 +128,8 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "MVI" => return convert_mvi_args(args),
                 "DAD" => return convert_dad_args(args),
                 "DCX" => return convert_dcx_args(args),
+                "POP" => return convert_pop_args(args),
+                "PUSH" => return convert_pop_args(args),
                 "LDAX" => match args[0] {
                     "B" => return Ok(vec![0x0a]),
                     "D" => return Ok(vec![0x1a]),
@@ -348,6 +350,33 @@ fn convert_dcx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
         _ => return Err("wrong register!"),
     }
 }
+
+fn convert_pop_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    match args[0] {
+        "B" => return Ok(vec![0xc1]),
+        "D" => return Ok(vec![0xd1]),
+        "H" => return Ok(vec![0xe1]),
+        "PSW" => return Ok(vec![0xf1]),
+        _ => return Err("wrong register!"),
+    }
+}
+
+fn convert_push_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    match args[0] {
+        "B" => return Ok(vec![0xc5]),
+        "D" => return Ok(vec![0xd5]),
+        "H" => return Ok(vec![0xe5]),
+        "PSW" => return Ok(vec![0xf5]),
+        _ => return Err("wrong register!"),
+    }
+}
+
 
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -778,6 +807,26 @@ mod tests {
         for input in inputs {
             let assembler = Assembler::new(&format!("JNZ {}", &input.1));
             assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_convert_pop() {
+        let inputs = get_bytes_and_args_by_opcode("POP").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_pop_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_convert_push() {
+        let inputs = get_bytes_and_args_by_opcode("PUSH").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_push_args(args).unwrap());
         }
     }
 
