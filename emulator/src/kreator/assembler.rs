@@ -128,6 +128,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "ORA" => return convert_opcodes_using_all_registers(args, 0xb0, 1),
                 "CMP" => return convert_opcodes_using_all_registers(args, 0xb8, 1),
                 "LXI" => return convert_lxi_args(args),
+                "MVI" => return convert_mvi_args(args),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -246,6 +247,24 @@ fn convert_lxi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
         "D" => return Ok(vec![0x11, immediate_value as u8, (immediate_value >> 8) as u8]),
         "H" => return Ok(vec![0x21, immediate_value as u8, (immediate_value >> 8) as u8]),
         "SP" => return Ok(vec![0x31, immediate_value as u8, (immediate_value >> 8) as u8]),
+        _ => return Err("wrong register!"),
+    }
+}
+
+fn convert_mvi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 2 {
+        return Err("wrong arg amount!");
+    }
+    let immediate_value = to_expression_tree(tokenize(String::from(args[1]))).evaluate() as u8;
+    match args[0] {
+        "B" => return Ok(vec![0x06, immediate_value]),
+        "C" => return Ok(vec![0x0e, immediate_value]),
+        "D" => return Ok(vec![0x16, immediate_value]),
+        "E" => return Ok(vec![0x1e, immediate_value]),
+        "H" => return Ok(vec![0x26, immediate_value]),
+        "L" => return Ok(vec![0x2e, immediate_value]),
+        "M" => return Ok(vec![0x36, immediate_value]),
+        "A" => return Ok(vec![0x3e, immediate_value]),
         _ => return Err("wrong register!"),
     }
 }
@@ -543,6 +562,16 @@ mod tests {
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(input.0, convert_lxi_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_convert_mvi() {
+        let inputs = get_bytes_and_args_by_opcode("MVI").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_mvi_args(args).unwrap());
         }
     }
 
