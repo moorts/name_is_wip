@@ -138,39 +138,39 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "SHLD" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0x22, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "LHLD" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0x2a, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "STA" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0x32, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "LDA" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0x3a, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "JMP" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xc3, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "JNZ" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xc2, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "CNZ" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xc4, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "ADI" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xc6, adr as u8]);
-                },
+                }
                 "JZ" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xca, adr as u8, (adr >> 8) as u8]);
-                },
+                }
                 "CZ" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xcc, adr as u8, (adr >> 8) as u8]);
@@ -399,7 +399,6 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
     Err("wrong register!")
 }
-
 
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -754,82 +753,12 @@ mod tests {
     }
 
     #[test]
-    fn test_ldax() {
-        let inputs = get_bytes_and_args_by_opcode("LDAX").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("LDAX {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
     fn test_convert_dcx() {
         let inputs = get_bytes_and_args_by_opcode("DCX").unwrap();
 
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(input.0, convert_dcx_args(args).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_shld() {
-        let inputs = get_bytes_and_args_by_opcode("SHLD").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("SHLD {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_lhld() {
-        let inputs = get_bytes_and_args_by_opcode("LHLD").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("LHLD {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_sta() {
-        let inputs = get_bytes_and_args_by_opcode("STA").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("STA {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_lda() {
-        let inputs = get_bytes_and_args_by_opcode("LDA").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("LDA {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_jmp() {
-        let inputs = get_bytes_and_args_by_opcode("JMP").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("JMP {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_jnz() {
-        let inputs = get_bytes_and_args_by_opcode("JNZ").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("JNZ {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
         }
     }
 
@@ -854,49 +783,25 @@ mod tests {
     }
 
     #[test]
-    fn test_cnz() {
-        let inputs = get_bytes_and_args_by_opcode("CNZ").unwrap();
+    fn test_opcodes_without_method() {
+        let opcodes = vec![
+            "CZ", "JZ", "ADI", "CNZ", "JNZ", "JMP", "LDA", "STA", "LHLD", "SHLD", "LDAX",
+        ];
 
-        for input in inputs {
-            let assembler = Assembler::new(&format!("CNZ {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
+        for opc in opcodes {
+            let inputs = get_bytes_and_args_by_opcode(opc).unwrap();
 
-    #[test]
-    fn test_adi() {
-        let inputs = get_bytes_and_args_by_opcode("ADI").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("ADI {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_jz() {
-        let inputs = get_bytes_and_args_by_opcode("JZ").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("JZ {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
-        }
-    }
-
-    #[test]
-    fn test_cz() {
-        let inputs = get_bytes_and_args_by_opcode("CZ").unwrap();
-
-        for input in inputs {
-            let assembler = Assembler::new(&format!("CZ {}", &input.1));
-            assert_eq!(input.0, assembler.assemble().unwrap());
+            for input in inputs {
+                let assembler = Assembler::new(&format!("{} {}", opc, &input.1));
+                assert_eq!(input.0, assembler.assemble().unwrap());
+            }
         }
     }
 
     #[test]
     fn test_convert_rst() {
         let inputs = get_bytes_and_args_by_opcode("RST").unwrap();
-        
+
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(input.0, convert_rst_args(args).unwrap());
