@@ -136,6 +136,18 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "SHLD" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0x22, adr as u8, (adr >> 8) as u8]);
+                },
+                "LHLD" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0x2a, adr as u8, (adr >> 8) as u8]);
+                },
+                "STA" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0x32, adr as u8, (adr >> 8) as u8]);
+                },
+                "LDA" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0x3a, adr as u8, (adr >> 8) as u8]);
                 }
                 _ => return Err("Could not match instruction"),
             }
@@ -698,11 +710,41 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_shld() {
+    fn test_shld() {
         let inputs = get_bytes_and_args_by_opcode("SHLD").unwrap();
 
         for input in inputs {
             let assembler = Assembler::new(&format!("SHLD {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_lhld() {
+        let inputs = get_bytes_and_args_by_opcode("LHLD").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("LHLD {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_sta() {
+        let inputs = get_bytes_and_args_by_opcode("STA").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("STA {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_lda() {
+        let inputs = get_bytes_and_args_by_opcode("LDA").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("LDA {}", &input.1));
             assert_eq!(input.0, assembler.assemble().unwrap());
         }
     }
@@ -714,7 +756,7 @@ mod tests {
 
         while let Some(line) = lines.next() {
             let line = line.unwrap();
-            if line.contains(opcode) {
+            if line.contains(&format!("{} ", opcode)) {
                 let components: Vec<&str> = line.split(":").collect();
                 let bytes_str: Vec<&str> = components[0].split(",").collect();
                 let args = String::from(components[1].split(" ").skip(1).next().unwrap());
