@@ -1,7 +1,7 @@
+use super::parser::*;
 use core::fmt;
 use regex::Regex;
-use std::{collections::HashMap};
-use super::parser::*;
+use std::collections::HashMap;
 
 const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)";
 const LABEL_USAGE: &str = r"[a-zA-Z@?][a-zA-Z@?0-9]{1,4}";
@@ -20,17 +20,14 @@ impl Assembler {
             let line = line.trim_end();
             lines.push(String::from(line));
         }
-        
-        Self { 
-            code: lines,
-        }
+
+        Self { code: lines }
     }
 
     fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let mut machine_code = Vec::new();
 
-        
         for line in &self.get_preprocessed_code() {
             let line = label_regex.replace(line, "").to_string();
             let line = String::from(line.trim());
@@ -112,7 +109,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
     match instruction.trim_start().split_once(" ") {
         Some((opcode, suffix)) => {
             let arg_binding = suffix.replace(",", " ");
-            let args: Vec<&str>  = arg_binding.split_ascii_whitespace().collect();
+            let args: Vec<&str> = arg_binding.split_ascii_whitespace().collect();
             match opcode {
                 "MOV" => return convert_mov_args(args),
                 "STAX" => return convert_stax_args(args),
@@ -130,45 +127,46 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "LXI" => return convert_lxi_args(args),
                 "MVI" => return convert_mvi_args(args),
                 "DAD" => return convert_dad_args(args),
-                "LDAX" => {
-                    match args[0] {
-                        "B" => return Ok(vec![0x0a]),
-                        "D" => return Ok(vec![0x1a]),
-                        _ => return Err("wrong register!"),
-                    }
+                "DCX" => return convert_dcx_args(args),
+                "LDAX" => match args[0] {
+                    "B" => return Ok(vec![0x0a]),
+                    "D" => return Ok(vec![0x1a]),
+                    _ => return Err("wrong register!"),
+                },
+                "SHLD" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0x22, adr as u8, (adr >> 8) as u8]);
                 }
                 _ => return Err("Could not match instruction"),
             }
-        },
-        None => {
-            match instruction.trim() {
-                "NOP" => return Ok(vec![0x0]),
-                "RLC" => return Ok(vec![0x7]),
-                "RRC" => return Ok(vec![0x0f]),
-                "RAL" => return Ok(vec![0x17]),
-                "RAR" => return Ok(vec![0x1f]),
-                "CMA" => return Ok(vec![0x2f]),
-                "CMC" => return Ok(vec![0x3f]),
-                "DAA" => return Ok(vec![0x27]),
-                "HLT" => return Ok(vec![0x76]),
-                "RNZ" => return Ok(vec![0xc0]),
-                "STC" => return Ok(vec![0x37]),
-                "RET" => return Ok(vec![0xc9]),
-                "RNC" => return Ok(vec![0xd0]),
-                "RZ" => return Ok(vec![0xc8]),
-                "RC" => return Ok(vec![0xd8]),
-                "RPE" => return Ok(vec![0xe8]),
-                "RPO" => return Ok(vec![0xe0]),
-                "EI" => return Ok(vec![0xfb]),
-                "RM" => return Ok(vec![0xf8]),
-                "SPHL" => return Ok(vec![0xf9]),
-                "DI" => return Ok(vec![0xf3]),
-                "RP" => return Ok(vec![0xf0]),
-                "XCHG" => return Ok(vec![0xeb]),
-                "PCHL" => return Ok(vec![0xe9]),
-                _ => return Err("Could not match instruction"),
-            }
         }
+        None => match instruction.trim() {
+            "NOP" => return Ok(vec![0x0]),
+            "RLC" => return Ok(vec![0x7]),
+            "RRC" => return Ok(vec![0x0f]),
+            "RAL" => return Ok(vec![0x17]),
+            "RAR" => return Ok(vec![0x1f]),
+            "CMA" => return Ok(vec![0x2f]),
+            "CMC" => return Ok(vec![0x3f]),
+            "DAA" => return Ok(vec![0x27]),
+            "HLT" => return Ok(vec![0x76]),
+            "RNZ" => return Ok(vec![0xc0]),
+            "STC" => return Ok(vec![0x37]),
+            "RET" => return Ok(vec![0xc9]),
+            "RNC" => return Ok(vec![0xd0]),
+            "RZ" => return Ok(vec![0xc8]),
+            "RC" => return Ok(vec![0xd8]),
+            "RPE" => return Ok(vec![0xe8]),
+            "RPO" => return Ok(vec![0xe0]),
+            "EI" => return Ok(vec![0xfb]),
+            "RM" => return Ok(vec![0xf8]),
+            "SPHL" => return Ok(vec![0xf9]),
+            "DI" => return Ok(vec![0xf3]),
+            "RP" => return Ok(vec![0xf0]),
+            "XCHG" => return Ok(vec![0xeb]),
+            "PCHL" => return Ok(vec![0xe9]),
+            _ => return Err("Could not match instruction"),
+        },
     };
 }
 
@@ -183,23 +181,19 @@ fn convert_mov_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     match args.len() {
         0 => return Err(mov_missing_argument),
         1 => return Err(mov_missing_argument),
-        2 => { 
-            match registers.find(args[0]) {
-                Some(index) => {
-                    match registers.find(args[1]) {
-                        Some(second_index) =>  {
-                            if index == 6 && second_index == 6 {
-                                return Err("Invalid arguments for MOV instruction (Can't move M into M)");
-                            }
-                            let instruction_value = base_value + (index as u8 * 8) + second_index as u8;
-                            return Ok(vec![instruction_value]);
-                        },
-                        None => return Err(mov_second_argument_err_message),
+        2 => match registers.find(args[0]) {
+            Some(index) => match registers.find(args[1]) {
+                Some(second_index) => {
+                    if index == 6 && second_index == 6 {
+                        return Err("Invalid arguments for MOV instruction (Can't move M into M)");
                     }
-                },
-                None => return Err(mov_first_argument_err_message),
-            }
-        }
+                    let instruction_value = base_value + (index as u8 * 8) + second_index as u8;
+                    return Ok(vec![instruction_value]);
+                }
+                None => return Err(mov_second_argument_err_message),
+            },
+            None => return Err(mov_first_argument_err_message),
+        },
         _ => return Err(mov_too_many_arguments),
     }
 }
@@ -228,7 +222,11 @@ fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
-fn convert_opcodes_using_all_registers(args: Vec<&str>, base_value: u8, growth: u8) -> Result<Vec<u8>, &'static str> {
+fn convert_opcodes_using_all_registers(
+    args: Vec<&str>,
+    base_value: u8,
+    growth: u8,
+) -> Result<Vec<u8>, &'static str> {
     if args.len() != 1 {
         return Err("wrong arg amount!");
     }
@@ -251,10 +249,34 @@ fn convert_lxi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
     let immediate_value = to_expression_tree(tokenize(String::from(args[1]))).evaluate() as u16;
     match args[0] {
-        "B" => return Ok(vec![0x01, immediate_value as u8, (immediate_value >> 8) as u8]),
-        "D" => return Ok(vec![0x11, immediate_value as u8, (immediate_value >> 8) as u8]),
-        "H" => return Ok(vec![0x21, immediate_value as u8, (immediate_value >> 8) as u8]),
-        "SP" => return Ok(vec![0x31, immediate_value as u8, (immediate_value >> 8) as u8]),
+        "B" => {
+            return Ok(vec![
+                0x01,
+                immediate_value as u8,
+                (immediate_value >> 8) as u8,
+            ])
+        }
+        "D" => {
+            return Ok(vec![
+                0x11,
+                immediate_value as u8,
+                (immediate_value >> 8) as u8,
+            ])
+        }
+        "H" => {
+            return Ok(vec![
+                0x21,
+                immediate_value as u8,
+                (immediate_value >> 8) as u8,
+            ])
+        }
+        "SP" => {
+            return Ok(vec![
+                0x31,
+                immediate_value as u8,
+                (immediate_value >> 8) as u8,
+            ])
+        }
         _ => return Err("wrong register!"),
     }
 }
@@ -290,6 +312,19 @@ fn convert_dad_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
+fn convert_dcx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 1 {
+        return Err("wrong arg amount!");
+    }
+    match args[0] {
+        "B" => return Ok(vec![0x0b]),
+        "D" => return Ok(vec![0x1b]),
+        "H" => return Ok(vec![0x2b]),
+        "SP" => return Ok(vec![0x3b]),
+        _ => return Err("wrong register!"),
+    }
+}
+
 impl fmt::Display for Assembler {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.code.join("\n"))
@@ -302,8 +337,8 @@ mod tests {
 
     use super::*;
     use std::collections::HashMap;
-    use std::io::{self, BufRead};
     use std::fs::File;
+    use std::io::{self, BufRead};
 
     const OPCODE_TEST_DATA: &str = "./test_data/test_input";
 
@@ -358,17 +393,26 @@ mod tests {
         }
         Ok(())
     }
-    
+
     #[test]
     fn test_mov_errors() {
         let assembler = Assembler::new("MOV A");
-        assert_eq!(Err("Missing argument(s) for MOV instruction"), assembler.assemble());
+        assert_eq!(
+            Err("Missing argument(s) for MOV instruction"),
+            assembler.assemble()
+        );
 
         let assembler = Assembler::new("MOV B,Q");
-        assert_eq!(Err("Invalid second argument for MOV instruction"), assembler.assemble());
+        assert_eq!(
+            Err("Invalid second argument for MOV instruction"),
+            assembler.assemble()
+        );
 
         let assembler = Assembler::new("MOV M,M");
-        assert_eq!(Err("Invalid arguments for MOV instruction (Can't move M into M)"), assembler.assemble());
+        assert_eq!(
+            Err("Invalid arguments for MOV instruction (Can't move M into M)"),
+            assembler.assemble()
+        );
 
         let assembler = Assembler::new("MOV A,B,C");
         assert_eq!(Err("MOV only takes 2 arguments!"), assembler.assemble());
@@ -407,10 +451,16 @@ mod tests {
     #[test]
     fn test_duplicate_labels() {
         let assembler = Assembler::new("label:\nlabel:");
-        assert_eq!(Err("labels must not point to an empty address!"), assembler.get_labels());
+        assert_eq!(
+            Err("labels must not point to an empty address!"),
+            assembler.get_labels()
+        );
 
         let assembler = Assembler::new("label:\nlabel:\nMOV A,B");
-        assert_eq!(Err("label must not be assigned twice!"), assembler.get_labels());
+        assert_eq!(
+            Err("label must not be assigned twice!"),
+            assembler.get_labels()
+        );
     }
 
     #[test]
@@ -516,19 +566,24 @@ mod tests {
         assert_eq!(Err("wrong arg amount!"), convert_inx_args(vec![]));
     }
 
-
     #[test]
     fn test_opcodes_using_registers_with_growth_8() {
         let inputs = get_bytes_and_args_by_opcode("INR").unwrap();
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_opcodes_using_all_registers(args, 4, 8).unwrap());
+            assert_eq!(
+                input.0,
+                convert_opcodes_using_all_registers(args, 4, 8).unwrap()
+            );
         }
 
         let inputs = get_bytes_and_args_by_opcode("DCR").unwrap();
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_opcodes_using_all_registers(args, 5, 8).unwrap());
+            assert_eq!(
+                input.0,
+                convert_opcodes_using_all_registers(args, 5, 8).unwrap()
+            );
         }
     }
 
@@ -541,15 +596,25 @@ mod tests {
             let inputs = get_bytes_and_args_by_opcode(opcode).unwrap();
             for input in inputs {
                 let args: Vec<&str> = input.1.split(",").collect();
-                assert_eq!(input.0, convert_opcodes_using_all_registers(args, add_value + 8 * index as u8, 1).unwrap());
+                assert_eq!(
+                    input.0,
+                    convert_opcodes_using_all_registers(args, add_value + 8 * index as u8, 1)
+                        .unwrap()
+                );
             }
         }
     }
 
     #[test]
     fn test_opcodes_using_registers_errors() {
-        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_all_registers(vec!["B", "D"], 1, 1));
-        assert_eq!(Err("wrong arg amount!"), convert_opcodes_using_all_registers(vec![], 1, 1));
+        assert_eq!(
+            Err("wrong arg amount!"),
+            convert_opcodes_using_all_registers(vec!["B", "D"], 1, 1)
+        );
+        assert_eq!(
+            Err("wrong arg amount!"),
+            convert_opcodes_using_all_registers(vec![], 1, 1)
+        );
     }
 
     #[test]
@@ -561,7 +626,10 @@ mod tests {
         assert_eq!(vec!["MOV A,0"], assembler.get_preprocessed_code());
 
         let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2");
-        assert_eq!(vec!["A", "B", "C", "JMP 2"], assembler.get_preprocessed_code());
+        assert_eq!(
+            vec!["A", "B", "C", "JMP 2"],
+            assembler.get_preprocessed_code()
+        );
     }
 
     #[test]
@@ -570,7 +638,10 @@ mod tests {
         assert_eq!(vec!["MOV A,B", "JMP 1"], assembler.get_preprocessed_code());
 
         let assembler = Assembler::new("A\nB\nC\nD\n JMP $");
-        assert_eq!(vec!["A", "B", "C", "D", "JMP 4"], assembler.get_preprocessed_code());
+        assert_eq!(
+            vec!["A", "B", "C", "D", "JMP 4"],
+            assembler.get_preprocessed_code()
+        );
 
         let assembler = Assembler::new("label:\nNOP\n JMP $");
         assert_eq!(vec!["NOP", "JMP 1"], assembler.get_preprocessed_code());
@@ -616,11 +687,31 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_convert_dcx() {
+        let inputs = get_bytes_and_args_by_opcode("DCX").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_dcx_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_convert_shld() {
+        let inputs = get_bytes_and_args_by_opcode("SHLD").unwrap();
+
+        for input in inputs {
+            let assembler = Assembler::new(&format!("SHLD {}", &input.1));
+            assert_eq!(input.0, assembler.assemble().unwrap());
+        }
+    }
+
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
         let f = File::open(OPCODE_TEST_DATA)?;
         let mut lines = io::BufReader::new(f).lines();
         let mut instructions = Vec::new();
-        
+
         while let Some(line) = lines.next() {
             let line = line.unwrap();
             if line.contains(opcode) {
