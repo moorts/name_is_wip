@@ -1,6 +1,7 @@
 use core::fmt;
 use regex::Regex;
 use std::{collections::HashMap};
+use super::parser::*;
 
 const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)";
 const LABEL_USAGE: &str = r"[a-zA-Z@?][a-zA-Z@?0-9]{1,4}";
@@ -30,7 +31,7 @@ impl Assembler {
         let mut machine_code = Vec::new();
 
         
-        for line in &self.code {
+        for line in &self.get_preprocessed_code() {
             let line = label_regex.replace(line, "").to_string();
             let line = String::from(line.trim());
             if !line.is_empty() {
@@ -44,8 +45,8 @@ impl Assembler {
         let decl_regex = Regex::new(LABEL_DECL).unwrap();
         let mut processed_code: Vec<String> = Vec::new();
         let labels = self.get_labels().unwrap();
-
         let mut pc = 0;
+
         for line in &self.code {
             let mut new_line = String::from(line);
             new_line = new_line.replace("$", &pc.to_string());
@@ -126,6 +127,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "XRA" => return convert_opcodes_using_all_registers(args, 0xa8, 1),
                 "ORA" => return convert_opcodes_using_all_registers(args, 0xb0, 1),
                 "CMP" => return convert_opcodes_using_all_registers(args, 0xb8, 1),
+                "LXI" => return convert_lxi_args(args),
                 _ => return Err("Could not match instruction"),
             }
         },
@@ -230,6 +232,20 @@ fn convert_opcodes_using_all_registers(args: Vec<&str>, base_value: u8, growth: 
         "L" => return Ok(vec![base_value + (5 * growth)]),
         "M" => return Ok(vec![base_value + (6 * growth)]),
         "A" => return Ok(vec![base_value + (7 * growth)]),
+        _ => return Err("wrong register!"),
+    }
+}
+
+fn convert_lxi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
+    if args.len() != 2 {
+        return Err("wrong arg amount!");
+    }
+    let immediate_value = to_expression_tree(tokenize(String::from(args[1]))).evaluate() as u16;
+    match args[0] {
+        "B" => return Ok(vec![0x01, immediate_value as u8, (immediate_value >> 8) as u8]),
+        "D" => return Ok(vec![0x11, immediate_value as u8, (immediate_value >> 8) as u8]),
+        "H" => return Ok(vec![0x21, immediate_value as u8, (immediate_value >> 8) as u8]),
+        "SP" => return Ok(vec![0x31, immediate_value as u8, (immediate_value >> 8) as u8]),
         _ => return Err("wrong register!"),
     }
 }
@@ -518,6 +534,16 @@ mod tests {
 
         let assembler = Assembler::new("label:\nNOP\n JMP $");
         assert_eq!(vec!["NOP", "JMP 1"], assembler.get_preprocessed_code());
+    }
+
+    #[test]
+    fn test_convert_lxi() {
+        let inputs = get_bytes_and_args_by_opcode("LXI").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_lxi_args(args).unwrap());
+        }
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
