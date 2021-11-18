@@ -164,8 +164,8 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                     return Ok(vec![0xc4, adr as u8, (adr >> 8) as u8]);
                 }
                 "ADI" => {
-                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
-                    return Ok(vec![0xc6, adr as u8]);
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xc6, adr]);
                 }
                 "JZ" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
@@ -174,6 +174,26 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "CZ" => {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xcc, adr as u8, (adr >> 8) as u8]);
+                }
+                "CALL" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xcd, adr as u8, (adr >> 8) as u8]);
+                }
+                "ACI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xce, adr]);
+                }
+                "JNC" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xd2, adr as u8, (adr >> 8) as u8]);
+                }
+                "OUT" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xd3, adr]);
+                }
+                "CNC" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xd4, adr as u8, (adr >> 8) as u8]);
                 }
                 _ => return Err("Could not match instruction"),
             }
@@ -785,7 +805,7 @@ mod tests {
     #[test]
     fn test_opcodes_without_method() {
         let opcodes = vec![
-            "CZ", "JZ", "ADI", "CNZ", "JNZ", "JMP", "LDA", "STA", "LHLD", "SHLD", "LDAX",
+            "CZ", "JZ", "ADI", "CNZ", "JNZ", "JMP", "LDA", "STA", "LHLD", "SHLD", "LDAX", "CALL", "ACI", "JNC", "OUT", "CNC"
         ];
 
         for opc in opcodes {
