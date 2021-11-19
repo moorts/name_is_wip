@@ -195,6 +195,74 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                     let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
                     return Ok(vec![0xd4, adr as u8, (adr >> 8) as u8]);
                 }
+                "SUI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xd6, adr]);
+                }
+                "JC" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xda, adr as u8, (adr >> 8) as u8]);
+                }
+                "IN" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xdb, adr]);
+                }
+                "CC" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xdc, adr as u8, (adr >> 8) as u8]);
+                }
+                "SBI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xde, adr]);
+                }
+                "JPO" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xe2, adr as u8, (adr >> 8) as u8]);
+                }
+                "CPO" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xe4, adr as u8, (adr >> 8) as u8]);
+                }
+                "ANI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xe6, adr]);
+                }
+                "JPE" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xea, adr as u8, (adr >> 8) as u8]);
+                }
+                "CPE" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xec, adr as u8, (adr >> 8) as u8]);
+                }
+                "XRI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xee, adr]);
+                }
+                "JP" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xf2, adr as u8, (adr >> 8) as u8]);
+                }
+                "CP" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xf4, adr as u8, (adr >> 8) as u8]);
+                }
+                "ORI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xf6, adr]);
+                }
+                "JM" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xfa, adr as u8, (adr >> 8) as u8]);
+                }
+                "CM" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u16;
+                    return Ok(vec![0xfc, adr as u8, (adr >> 8) as u8]);
+                }
+                "CPI" => {
+                    let adr = to_expression_tree(tokenize(String::from(args[0]))).evaluate() as u8;
+                    return Ok(vec![0xfe, adr]);
+                }
                 _ => return Err("Could not match instruction"),
             }
         }
@@ -223,6 +291,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             "RP" => return Ok(vec![0xf0]),
             "XCHG" => return Ok(vec![0xeb]),
             "PCHL" => return Ok(vec![0xe9]),
+            "XTHL" => return Ok(vec![0xe2]),
             _ => return Err("Could not match instruction"),
         },
     };
@@ -625,6 +694,9 @@ mod tests {
 
         let assembler = Assembler::new("PCHL");
         assert_eq!(vec![0xe9], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("XTHL");
+        assert_eq!(vec![0xe2], assembler.assemble().unwrap());
     }
 
     #[test]
@@ -805,7 +877,9 @@ mod tests {
     #[test]
     fn test_opcodes_without_method() {
         let opcodes = vec![
-            "CZ", "JZ", "ADI", "CNZ", "JNZ", "JMP", "LDA", "STA", "LHLD", "SHLD", "LDAX", "CALL", "ACI", "JNC", "OUT", "CNC"
+            "CZ", "JZ", "ADI", "CNZ", "JNZ", "JMP", "LDA", "STA", "LHLD", "SHLD", "LDAX", "CALL",
+            "ACI", "JNC", "OUT", "CNC", "SUI", "JC", "IN", "CC", "SBI", "JPO", "CPO", "ANI", "JPE",
+            "CPE", "XRI", "JP", "CP", "ORI", "JM", "CM", "CPI",
         ];
 
         for opc in opcodes {
