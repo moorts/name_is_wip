@@ -4,7 +4,6 @@ use regex::Regex;
 use std::collections::HashMap;
 
 const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)";
-const LABEL_USAGE: &str = r"[a-zA-Z@?][a-zA-Z@?0-9]{1,4}";
 
 struct Assembler {
     code: Vec<String>,
@@ -486,7 +485,7 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
         return Err("wrong arg amount!");
     }
     let value = args[0].parse::<u8>().unwrap();
-    if 0 <= value && value <= 7 {
+    if value <= 7 {
         return Ok(vec![0xc7 + value * 8]);
     }
     Err("wrong register!")
@@ -500,8 +499,6 @@ impl fmt::Display for Assembler {
 
 #[cfg(test)]
 mod tests {
-    use crate::kreator::assembler;
-
     use super::*;
     use std::collections::HashMap;
     use std::fs::File;
@@ -921,10 +918,6 @@ mod tests {
                 bytes.push(byte.parse::<u8>().unwrap());
             }
             let operation = components[1];
-
-            if operation.contains("JPO") {
-                let a = 5;
-            }
             let assembler = Assembler::new(operation);
             assert_eq!(bytes, assembler.assemble().unwrap());
         }
