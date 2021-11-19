@@ -129,7 +129,8 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "DAD" => return convert_dad_args(args),
                 "DCX" => return convert_dcx_args(args),
                 "POP" => return convert_pop_args(args),
-                "PUSH" => return convert_pop_args(args),
+                "RST" => return convert_rst_args(args),
+                "PUSH" => return convert_push_args(args),
                 "LDAX" => match args[0] {
                     "B" => return Ok(vec![0x0a]),
                     "D" => return Ok(vec![0x1a]),
@@ -273,6 +274,8 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             "RAL" => return Ok(vec![0x17]),
             "RAR" => return Ok(vec![0x1f]),
             "CMA" => return Ok(vec![0x2f]),
+            "RIM" => return Ok(vec![0x20]),
+            "SIM" => return Ok(vec![0x30]),
             "CMC" => return Ok(vec![0x3f]),
             "DAA" => return Ok(vec![0x27]),
             "HLT" => return Ok(vec![0x76]),
@@ -291,7 +294,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             "RP" => return Ok(vec![0xf0]),
             "XCHG" => return Ok(vec![0xeb]),
             "PCHL" => return Ok(vec![0xe9]),
-            "XTHL" => return Ok(vec![0xe2]),
+            "XTHL" => return Ok(vec![0xe3]),
             _ => return Err("Could not match instruction"),
         },
     };
@@ -696,7 +699,7 @@ mod tests {
         assert_eq!(vec![0xe9], assembler.assemble().unwrap());
 
         let assembler = Assembler::new("XTHL");
-        assert_eq!(vec![0xe2], assembler.assemble().unwrap());
+        assert_eq!(vec![0xe3], assembler.assemble().unwrap());
     }
 
     #[test]
@@ -899,6 +902,31 @@ mod tests {
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(input.0, convert_rst_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_all_opcodes() {
+        let f = File::open(OPCODE_TEST_DATA).unwrap();
+        let mut lines = io::BufReader::new(f).lines();
+
+        while let Some(line) = lines.next() {
+            let component_binding = line.unwrap();
+            if component_binding.contains("-") {
+                continue;
+            }
+            let components: Vec<&str> = component_binding.split(":").collect();
+            let mut bytes = Vec::new();
+            for byte in components[0].split(",") {
+                bytes.push(byte.parse::<u8>().unwrap());
+            }
+            let operation = components[1];
+
+            if operation.contains("JPO") {
+                let a = 5;
+            }
+            let assembler = Assembler::new(operation);
+            assert_eq!(bytes, assembler.assemble().unwrap());
         }
     }
 
