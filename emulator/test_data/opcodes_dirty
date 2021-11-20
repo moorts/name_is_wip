@@ -30,7 +30,7 @@
 0x1d	DCR E	1	Z, S, P, AC	E <- E-1
 0x1e	MVI E,D8	2		E <- byte 2
 0x1f	RAR	1	CY	A = A >> 1; bit 7 = prev bit 7; CY = prev bit 0
-0x20	RIM	1		special
+0x20	-
 0x21	LXI H,D16	3		H <- byte 3, L <- byte 2
 0x22	SHLD adr	3		(adr) <-L; (adr+1)<-H
 0x23	INX H	1		HL <- HL + 1
@@ -46,7 +46,7 @@
 0x2d	DCR L	1	Z, S, P, AC	L <- L-1
 0x2e	MVI L,D8	2		L <- byte 2
 0x2f	CMA	1		A <- !A
-0x30	SIM	1		special
+0x30	-
 0x31	LXI SP,D16	3		SP.hi <- byte 3, SP.lo <- byte 2
 0x32	STA adr	3		(adr) <- A
 0x33	INX SP	1		SP = SP + 1

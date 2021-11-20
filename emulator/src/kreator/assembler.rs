@@ -273,8 +273,6 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             "RAL" => return Ok(vec![0x17]),
             "RAR" => return Ok(vec![0x1f]),
             "CMA" => return Ok(vec![0x2f]),
-            "RIM" => return Ok(vec![0x20]),
-            "SIM" => return Ok(vec![0x30]),
             "CMC" => return Ok(vec![0x3f]),
             "DAA" => return Ok(vec![0x27]),
             "HLT" => return Ok(vec![0x76]),
