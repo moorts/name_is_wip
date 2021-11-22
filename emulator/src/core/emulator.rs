@@ -470,10 +470,12 @@ mod tests {
         for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.call_if(flag).expect("");
             assert_eq!(e.pc, 2);
+            e.ret_if(flag).expect("");
+            assert_eq!(e.pc, 2);
             e.reg.set_flag(flag);
             e.call_if(flag).expect("");
             assert_eq!(e.pc, 0x1111);
-            e.ret().expect("");
+            e.ret_if(flag).expect("");
             assert_eq!(e.pc, 4);
             e.pc = 0;
         }
@@ -491,10 +493,12 @@ mod tests {
         for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.call_not(flag).expect("");
             assert_eq!(e.pc, 2);
+            e.ret_not(flag).expect("");
+            assert_eq!(e.pc, 2);
             e.reg.flip_flag(flag);
             e.call_not(flag).expect("");
             assert_eq!(e.pc, 0x1111);
-            e.ret().expect("");
+            e.ret_not(flag).expect("");
             assert_eq!(e.pc, 4);
             e.pc = 0;
         }
