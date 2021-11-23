@@ -9,6 +9,12 @@ struct Assembler {
     code: Vec<String>,
 }
 
+impl fmt::Display for Assembler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.code.join("\n"))
+    }
+}
+
 impl Assembler {
     fn new(input_code: &str) -> Self {
         let mut lines = Vec::new();
@@ -113,16 +119,16 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
                 "MOV" => return convert_mov_args(args),
                 "STAX" => return convert_stax_args(args),
                 "INX" => return convert_inx_args(args),
-                "INR" => return convert_opcodes_using_all_registers(args, 0x04, 8),
-                "DCR" => return convert_opcodes_using_all_registers(args, 0x05, 8),
-                "ADD" => return convert_opcodes_using_all_registers(args, 0x80, 1),
-                "ADC" => return convert_opcodes_using_all_registers(args, 0x88, 1),
-                "SUB" => return convert_opcodes_using_all_registers(args, 0x90, 1),
-                "SBB" => return convert_opcodes_using_all_registers(args, 0x98, 1),
-                "ANA" => return convert_opcodes_using_all_registers(args, 0xa0, 1),
-                "XRA" => return convert_opcodes_using_all_registers(args, 0xa8, 1),
-                "ORA" => return convert_opcodes_using_all_registers(args, 0xb0, 1),
-                "CMP" => return convert_opcodes_using_all_registers(args, 0xb8, 1),
+                "INR" => return convert_opcodes_using_all_registers(args, 0x04, true),
+                "DCR" => return convert_opcodes_using_all_registers(args, 0x05, true),
+                "ADD" => return convert_opcodes_using_all_registers(args, 0x80, false),
+                "ADC" => return convert_opcodes_using_all_registers(args, 0x88, false),
+                "SUB" => return convert_opcodes_using_all_registers(args, 0x90, false),
+                "SBB" => return convert_opcodes_using_all_registers(args, 0x98, false),
+                "ANA" => return convert_opcodes_using_all_registers(args, 0xa0, false),
+                "XRA" => return convert_opcodes_using_all_registers(args, 0xa8, false),
+                "ORA" => return convert_opcodes_using_all_registers(args, 0xb0, false),
+                "CMP" => return convert_opcodes_using_all_registers(args, 0xb8, false),
                 "LXI" => return convert_lxi_args(args),
                 "MVI" => return convert_mvi_args(args),
                 "DAD" => return convert_dad_args(args),
@@ -354,14 +360,15 @@ fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
-fn convert_opcodes_using_all_registers(
-    args: Vec<&str>,
-    base_value: u8,
-    growth: u8,
-) -> Result<Vec<u8>, &'static str> {
+fn convert_opcodes_using_all_registers(args: Vec<&str>, base_value: u8, use_eight_reg: bool) -> Result<Vec<u8>, &'static str> {
     if args.len() != 1 {
         return Err("wrong arg amount!");
     }
+    let growth = if use_eight_reg {
+        8
+    } else {
+        1
+    };
     match args[0] {
         "B" => return Ok(vec![base_value]),
         "C" => return Ok(vec![base_value + (1 * growth)]),
@@ -379,7 +386,7 @@ fn convert_lxi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     if args.len() != 2 {
         return Err("wrong arg amount!");
     }
-    let immediate_value = to_expression_tree(tokenize(String::from(args[1]))).evaluate() as u16;
+    let immediate_value = evaluate_str(args[1]);
     match args[0] {
         "B" => {
             return Ok(vec![
@@ -494,12 +501,6 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     Err("wrong register!")
 }
 
-impl fmt::Display for Assembler {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.code.join("\n"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -510,7 +511,7 @@ mod tests {
     const OPCODE_TEST_DATA: &str = "./test_data/test_input";
 
     #[test]
-    fn test_display_with_code() {
+    fn display_with_code() {
         let code_file = "MOV A B \n JMP label \nlabel: INC ACC   ";
         let assembler = Assembler::new(code_file);
 
@@ -519,7 +520,7 @@ mod tests {
     }
 
     #[test]
-    fn test_display_windows_newline() {
+    fn display_windows_newline() {
         let code_file = "MOV A B \r\n JMP label \r\nlabel: INC ACC  ";
         let assembler = Assembler::new(code_file);
 
@@ -528,14 +529,14 @@ mod tests {
     }
 
     #[test]
-    fn test_display_without_code() {
+    fn display_without_code() {
         let assembler = Assembler::new("");
 
         assert_eq!("", format!("{}", assembler));
     }
 
     #[test]
-    fn test_display_remove_comments() {
+    fn display_remove_comments() {
         let code_file = " \n;comment\nMOV A B ;comment\n;";
         let assembler = Assembler::new(code_file);
 
@@ -544,14 +545,14 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_code_file() {
+    fn empty_code_file() {
         let assembler = Assembler::new("");
 
         assert_eq!(0, assembler.assemble().unwrap().len());
     }
 
     #[test]
-    fn test_mov_operations() -> io::Result<()> {
+    fn mov_operations() -> io::Result<()> {
         let input_codes = get_bytes_and_args_by_opcode("MOV").unwrap();
 
         for (bytes, arg_string) in input_codes {
@@ -562,7 +563,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mov_errors() {
+    fn mov_errors() {
         let assembler = Assembler::new("MOV A");
         assert_eq!(
             Err("Missing argument(s) for MOV instruction"),
@@ -586,7 +587,7 @@ mod tests {
     }
 
     #[test]
-    fn test_nop_operation() {
+    fn nop_operation() {
         let assembler = Assembler::new("NOP");
         assert_eq!(0x0, assembler.assemble().unwrap()[0]);
 
@@ -595,14 +596,14 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_instructions() {
+    fn invalid_instructions() {
         let assembler = Assembler::new("TEST");
 
         assert_eq!(Err("Could not match instruction"), assembler.assemble());
     }
 
     #[test]
-    fn test_remove_label_declarations() {
+    fn remove_label_declarations() {
         let input_code = "label: \n MOV A,B\n @LAB:\ntest:\nMOV A,B";
         let assembler = Assembler::new(input_code);
 
@@ -616,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn test_duplicate_labels() {
+    fn duplicate_labels() {
         let assembler = Assembler::new("label:\nlabel:");
         assert_eq!(
             Err("labels must not point to an empty address!"),
@@ -631,7 +632,7 @@ mod tests {
     }
 
     #[test]
-    fn test_opcodes_without_args() {
+    fn opcodes_without_args() {
         let assembler = Assembler::new("RRC");
         assert_eq!(vec![0x0f], assembler.assemble().unwrap());
 
@@ -703,7 +704,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stax() {
+    fn convert_stax() {
         let inputs = get_bytes_and_args_by_opcode("STAX").unwrap();
 
         for input in inputs {
@@ -713,14 +714,14 @@ mod tests {
     }
 
     #[test]
-    fn test_stax_errors() {
+    fn stax_errors() {
         assert_eq!(Err("wrong register!"), convert_stax_args(vec!["L"]));
         assert_eq!(Err("wrong arg amount!"), convert_stax_args(vec!["L", "A"]));
         assert_eq!(Err("wrong arg amount!"), convert_stax_args(vec![]));
     }
 
     #[test]
-    fn test_inx() {
+    fn inx() {
         let inputs = get_bytes_and_args_by_opcode("INX").unwrap();
 
         for input in inputs {
@@ -730,20 +731,20 @@ mod tests {
     }
 
     #[test]
-    fn test_inx_errors() {
+    fn inx_errors() {
         assert_eq!(Err("wrong register!"), convert_inx_args(vec!["A"]));
         assert_eq!(Err("wrong arg amount!"), convert_inx_args(vec!["B", "D"]));
         assert_eq!(Err("wrong arg amount!"), convert_inx_args(vec![]));
     }
 
     #[test]
-    fn test_opcodes_using_registers_with_growth_8() {
+    fn opcodes_using_registersteps_of_8() {
         let inputs = get_bytes_and_args_by_opcode("INR").unwrap();
         for input in inputs {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(
                 input.0,
-                convert_opcodes_using_all_registers(args, 4, 8).unwrap()
+                convert_opcodes_using_all_registers(args, 4, true).unwrap()
             );
         }
 
@@ -752,13 +753,13 @@ mod tests {
             let args: Vec<&str> = input.1.split(",").collect();
             assert_eq!(
                 input.0,
-                convert_opcodes_using_all_registers(args, 5, 8).unwrap()
+                convert_opcodes_using_all_registers(args, 5, true).unwrap()
             );
         }
     }
 
     #[test]
-    fn test_opcodes_using_registers_with_growth_1() {
+    fn opcodes_using_registers() {
         let add_value = 0x80;
         let opcodes = vec!["ADD", "ADC", "SUB", "SBB", "ANA", "XRA", "ORA", "CMP"];
 
@@ -768,7 +769,7 @@ mod tests {
                 let args: Vec<&str> = input.1.split(",").collect();
                 assert_eq!(
                     input.0,
-                    convert_opcodes_using_all_registers(args, add_value + 8 * index as u8, 1)
+                    convert_opcodes_using_all_registers(args, add_value + 8 * index as u8, false)
                         .unwrap()
                 );
             }
@@ -776,19 +777,19 @@ mod tests {
     }
 
     #[test]
-    fn test_opcodes_using_registers_errors() {
+    fn opcodes_using_registers_errors() {
         assert_eq!(
             Err("wrong arg amount!"),
-            convert_opcodes_using_all_registers(vec!["B", "D"], 1, 1)
+            convert_opcodes_using_all_registers(vec!["B", "D"], 1, false)
         );
         assert_eq!(
             Err("wrong arg amount!"),
-            convert_opcodes_using_all_registers(vec![], 1, 1)
+            convert_opcodes_using_all_registers(vec![], 1, false)
         );
     }
 
     #[test]
-    fn test_preprocessing_labels() {
+    fn preprocessing_labels() {
         let assembler = Assembler::new("test:\nlabel: MOV A,B");
         assert_eq!(vec!["MOV A,B"], assembler.get_preprocessed_code());
 
@@ -803,7 +804,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preprocessing_pc() {
+    fn preprocessing_pc() {
         let assembler = Assembler::new("MOV A,B\n JMP $");
         assert_eq!(vec!["MOV A,B", "JMP 1"], assembler.get_preprocessed_code());
 
@@ -818,7 +819,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_lxi() {
+    fn convert_lxi() {
         let inputs = get_bytes_and_args_by_opcode("LXI").unwrap();
 
         for input in inputs {
@@ -828,7 +829,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_mvi() {
+    fn convert_mvi() {
         let inputs = get_bytes_and_args_by_opcode("MVI").unwrap();
 
         for input in inputs {
@@ -838,7 +839,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_dad() {
+    fn convert_dad() {
         let inputs = get_bytes_and_args_by_opcode("DAD").unwrap();
 
         for input in inputs {
@@ -848,7 +849,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_dcx() {
+    fn convert_dcx() {
         let inputs = get_bytes_and_args_by_opcode("DCX").unwrap();
 
         for input in inputs {
@@ -858,7 +859,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_pop() {
+    fn convert_pop() {
         let inputs = get_bytes_and_args_by_opcode("POP").unwrap();
 
         for input in inputs {
@@ -868,7 +869,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_push() {
+    fn convert_push() {
         let inputs = get_bytes_and_args_by_opcode("PUSH").unwrap();
 
         for input in inputs {
@@ -878,7 +879,17 @@ mod tests {
     }
 
     #[test]
-    fn test_opcodes_without_method() {
+    fn convert_rst() {
+        let inputs = get_bytes_and_args_by_opcode("RST").unwrap();
+
+        for input in inputs {
+            let args: Vec<&str> = input.1.split(",").collect();
+            assert_eq!(input.0, convert_rst_args(args).unwrap());
+        }
+    }
+
+    #[test]
+    fn opcodes_in_assemble() {
         let opcodes = vec![
             "CZ", "JZ", "ADI", "CNZ", "JNZ", "JMP", "LDA", "STA", "LHLD", "SHLD", "LDAX", "CALL",
             "ACI", "JNC", "OUT", "CNC", "SUI", "JC", "IN", "CC", "SBI", "JPO", "CPO", "ANI", "JPE",
@@ -896,17 +907,7 @@ mod tests {
     }
 
     #[test]
-    fn test_convert_rst() {
-        let inputs = get_bytes_and_args_by_opcode("RST").unwrap();
-
-        for input in inputs {
-            let args: Vec<&str> = input.1.split(",").collect();
-            assert_eq!(input.0, convert_rst_args(args).unwrap());
-        }
-    }
-
-    #[test]
-    fn test_all_opcodes() {
+    fn all_opcodes() {
         let f = File::open(OPCODE_TEST_DATA).unwrap();
         let mut lines = io::BufReader::new(f).lines();
 
