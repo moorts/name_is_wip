@@ -3,7 +3,7 @@ use core::fmt;
 use regex::Regex;
 use std::collections::HashMap;
 
-const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{1,4}:)";
+const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
 
 struct Assembler {
     code: Vec<String>,
@@ -33,7 +33,7 @@ impl Assembler {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let mut machine_code = Vec::new();
 
-        for line in &self.get_preprocessed_code() {
+        for line in &self.get_preprocessed_code().unwrap() {
             let line = label_regex.replace(line, "").to_string();
             let line = String::from(line.trim());
             if !line.is_empty() {
@@ -43,10 +43,14 @@ impl Assembler {
         Ok(machine_code)
     }
 
-    fn get_preprocessed_code(&self) -> Vec<String> {
+    fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
         let decl_regex = Regex::new(LABEL_DECL).unwrap();
         let mut processed_code: Vec<String> = Vec::new();
-        let labels = self.get_labels().unwrap();
+        let label_wrap = self.get_labels();
+        if label_wrap.is_err() {
+            return Err(label_wrap.unwrap_err());
+        }
+        let labels = label_wrap.unwrap();
         let mut pc = 0;
 
         for line in &self.code {
@@ -66,19 +70,33 @@ impl Assembler {
                 pc -= 1;
             }
         }
-        processed_code
+        Ok(processed_code)
     }
 
     fn get_labels(&self) -> Result<HashMap<String, u16>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
-
+        let reserved_names = vec![
+            "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
+            "SUB", "SBB", "ANA", "XRA", "ORA", "CMP", "RLC", "RRC", "RAL", "RAR", "PUSH", "POP",
+            "DAD", "INX", "DCX", "XCHG", "XTHL", "SPHL", "LXI", "MVI", "ADI", "ACI", "SUI", "SBI",
+            "ANI", "XRI", "ORI", "CPI", "STA", "LDA", "SHLD", "LHLD", "PCHL", "JMP", "JC", "JNC",
+            "JZ", "JNZ", "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM",
+            "CPE", "CPO", "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI",
+            "DI", "IN", "OUT", "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM",
+            "B", "C", "D", "H", "L", "A", "SP", "PSW",
+        ];
         let mut temp_labels = Vec::new();
         let mut labels = HashMap::new();
         let mut mem_address = 0;
+
         for line in &self.code {
             if label_regex.is_match(&line) {
                 let split = line.split(":").collect::<Vec<&str>>();
-                temp_labels.push(String::from(split[0].trim_start()));
+                let label = split[0].trim_start().to_string();
+                if reserved_names.iter().any(|&name| name == label) {
+                    return Err("illegal label name");
+                }
+                temp_labels.push(label);
                 if !split[1].trim().is_empty() {
                     while let Some(new_label) = temp_labels.pop() {
                         if labels.contains_key(&new_label) {
@@ -360,15 +378,15 @@ fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     }
 }
 
-fn convert_opcodes_using_all_registers(args: Vec<&str>, base_value: u8, use_eight_reg: bool) -> Result<Vec<u8>, &'static str> {
+fn convert_opcodes_using_all_registers(
+    args: Vec<&str>,
+    base_value: u8,
+    use_eight_reg: bool,
+) -> Result<Vec<u8>, &'static str> {
     if args.len() != 1 {
         return Err("wrong arg amount!");
     }
-    let growth = if use_eight_reg {
-        8
-    } else {
-        1
-    };
+    let growth = if use_eight_reg { 8 } else { 1 };
     match args[0] {
         "B" => return Ok(vec![base_value]),
         "C" => return Ok(vec![base_value + (1 * growth)]),
@@ -552,14 +570,13 @@ mod tests {
     }
 
     #[test]
-    fn mov_operations() -> io::Result<()> {
+    fn mov_operations() {
         let input_codes = get_bytes_and_args_by_opcode("MOV").unwrap();
 
         for (bytes, arg_string) in input_codes {
             let args: Vec<&str> = arg_string.split(",").collect();
             assert_eq!(bytes, convert_mov_args(args).unwrap());
         }
-        Ok(())
     }
 
     #[test]
@@ -791,31 +808,40 @@ mod tests {
     #[test]
     fn preprocessing_labels() {
         let assembler = Assembler::new("test:\nlabel: MOV A,B");
-        assert_eq!(vec!["MOV A,B"], assembler.get_preprocessed_code());
+        assert_eq!(vec!["MOV A,B"], assembler.get_preprocessed_code().unwrap());
 
         let assembler = Assembler::new("label: MOV A,label");
-        assert_eq!(vec!["MOV A,0"], assembler.get_preprocessed_code());
+        assert_eq!(vec!["MOV A,0"], assembler.get_preprocessed_code().unwrap());
 
         let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2");
         assert_eq!(
             vec!["A", "B", "C", "JMP 2"],
-            assembler.get_preprocessed_code()
+            assembler.get_preprocessed_code().unwrap()
         );
+
+        let assembler = Assembler::new("A: MOV A,B");
+        assert_eq!(Err("illegal label name"), assembler.get_preprocessed_code());
     }
 
     #[test]
     fn preprocessing_pc() {
         let assembler = Assembler::new("MOV A,B\n JMP $");
-        assert_eq!(vec!["MOV A,B", "JMP 1"], assembler.get_preprocessed_code());
+        assert_eq!(
+            vec!["MOV A,B", "JMP 1"],
+            assembler.get_preprocessed_code().unwrap()
+        );
 
         let assembler = Assembler::new("A\nB\nC\nD\n JMP $");
         assert_eq!(
             vec!["A", "B", "C", "D", "JMP 4"],
-            assembler.get_preprocessed_code()
+            assembler.get_preprocessed_code().unwrap()
         );
 
         let assembler = Assembler::new("label:\nNOP\n JMP $");
-        assert_eq!(vec!["NOP", "JMP 1"], assembler.get_preprocessed_code());
+        assert_eq!(
+            vec!["NOP", "JMP 1"],
+            assembler.get_preprocessed_code().unwrap()
+        );
     }
 
     #[test]
