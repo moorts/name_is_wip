@@ -330,16 +330,11 @@ fn evaluate_str(str: &str) -> u16 {
 }
 
 fn convert_mov_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
-    let mov_first_argument_err_message = "Invalid first argument for MOV instruction";
-    let mov_second_argument_err_message = "Invalid second argument for MOV instruction";
-    let mov_missing_argument = "Missing argument(s) for MOV instruction";
-    let mov_too_many_arguments = "MOV only takes 2 arguments!";
     let base_value = 0x40;
     let registers = "BCDEHLMA";
 
     match args.len() {
-        0 => return Err(mov_missing_argument),
-        1 => return Err(mov_missing_argument),
+        0 | 1 => return Err("Missing argument(s) for MOV instruction"),
         2 => match registers.find(args[0]) {
             Some(index) => match registers.find(args[1]) {
                 Some(second_index) => {
@@ -349,11 +344,11 @@ fn convert_mov_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
                     let instruction_value = base_value + (index as u8 * 8) + second_index as u8;
                     return Ok(vec![instruction_value]);
                 }
-                None => return Err(mov_second_argument_err_message),
+                None => return Err("Invalid second argument for MOV instruction"),
             },
-            None => return Err(mov_first_argument_err_message),
+            None => return Err("Invalid first argument for MOV instruction"),
         },
-        _ => return Err(mov_too_many_arguments),
+        _ => return Err("MOV only takes 2 arguments!"),
     }
 }
 
