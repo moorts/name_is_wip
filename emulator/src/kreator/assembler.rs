@@ -650,74 +650,34 @@ mod tests {
 
     #[test]
     fn opcodes_without_args() {
-        let assembler = Assembler::new("RRC");
-        assert_eq!(vec![0x0f], assembler.assemble().unwrap());
+        let mut opcodes = HashMap::new();
+        opcodes.insert("RRC", 0x0f);
+        opcodes.insert("RAL", 0x17);
+        opcodes.insert("RAR", 0x1f);
+        opcodes.insert("DAA", 0x27);
+        opcodes.insert("CMA", 0x2f);
+        opcodes.insert("CMC", 0x3f);
+        opcodes.insert("HLT", 0x76);
+        opcodes.insert("RNZ", 0xc0);
+        opcodes.insert("RZ", 0xc8);
+        opcodes.insert("RET", 0xc9);
+        opcodes.insert("RNC", 0xd0);
+        opcodes.insert("RC", 0xd8);
+        opcodes.insert("RPO", 0xe0);
+        opcodes.insert("RPE", 0xe8);
+        opcodes.insert("EI", 0xfb);
+        opcodes.insert("RM", 0xf8);
+        opcodes.insert("SPHL", 0xf9);
+        opcodes.insert("DI", 0xf3);
+        opcodes.insert("RP", 0xf0);
+        opcodes.insert("XCHG", 0xeb);
+        opcodes.insert("PCHL", 0xe9);
+        opcodes.insert("XTHL", 0xe3);
 
-        let assembler = Assembler::new("RAL");
-        assert_eq!(vec![0x17], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RAR");
-        assert_eq!(vec![0x1f], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("DAA");
-        assert_eq!(vec![0x27], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("CMA");
-        assert_eq!(vec![0x2f], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("STC");
-        assert_eq!(vec![0x37], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("CMC");
-        assert_eq!(vec![0x3f], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("HLT");
-        assert_eq!(vec![0x76], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RNZ");
-        assert_eq!(vec![0xc0], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RZ");
-        assert_eq!(vec![0xc8], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RET");
-        assert_eq!(vec![0xc9], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RNC");
-        assert_eq!(vec![0xd0], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RC");
-        assert_eq!(vec![0xd8], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RPO");
-        assert_eq!(vec![0xe0], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RPE");
-        assert_eq!(vec![0xe8], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("EI");
-        assert_eq!(vec![0xfb], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RM");
-        assert_eq!(vec![0xf8], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("SPHL");
-        assert_eq!(vec![0xf9], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("DI");
-        assert_eq!(vec![0xf3], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RP");
-        assert_eq!(vec![0xf0], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("XCHG");
-        assert_eq!(vec![0xeb], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("PCHL");
-        assert_eq!(vec![0xe9], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("XTHL");
-        assert_eq!(vec![0xe3], assembler.assemble().unwrap());
+        for (instruction, opc) in opcodes {
+            let assembler = Assembler::new(instruction);
+            assert_eq!(Ok(vec![opc]), assembler.assemble());
+        }
     }
 
     #[test]
