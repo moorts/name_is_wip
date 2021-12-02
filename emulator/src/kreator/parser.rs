@@ -94,7 +94,7 @@ impl BinaryExpressionTree {
 pub fn tokenize(expr: String) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = expr.chars().peekable();
-    while let Some(c) = chars.next() {
+    'outer: while let Some(c) = chars.next() {
         match c {
             '+' => tokens.push(Token::Operator(Op::Add)),
             '-' => {
@@ -135,24 +135,25 @@ pub fn tokenize(expr: String) -> Vec<Token> {
                         'H' => {
                             tokens.push(Token::Number(i32::from_str_radix(&num_str, 16).unwrap()));
                             chars.next();
-                            break;
+                            continue 'outer;
                         }
                         'B' => {
                             tokens.push(Token::Number(i32::from_str_radix(&num_str, 2).unwrap()));
                             chars.next();
-                            break;
+                            continue 'outer;
                         }
                         'O' => {
                             tokens.push(Token::Number(i32::from_str_radix(&num_str, 8).unwrap()));
                             chars.next();
-                            break;
+                            continue 'outer;
                         }
                         _ => {
                             tokens.push(Token::Number(num_str.parse::<i32>().unwrap()));
-                            break;
+                            continue 'outer;
                         }
                     }
                 }
+                tokens.push(Token::Number(num_str.parse::<i32>().unwrap()));
             }
             _ => (),
         }
@@ -346,7 +347,7 @@ mod tests {
     fn test_eval() {
         // Just a bunch of expressions I hope it covers enough cases
         let expressions = vec![
-            //("3", 3),
+            ("3", 3),
             ("3 + 4", 7),
             ("3 - 4", -1),
             ("3 * 4", 12),

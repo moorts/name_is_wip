@@ -44,28 +44,28 @@ impl Assembler {
     }
 
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
-        let decl_regex = Regex::new(LABEL_DECL).unwrap();
-        let mut processed_code: Vec<String> = Vec::new();
         let label_wrap = self.get_labels();
         if label_wrap.is_err() {
             return Err(label_wrap.unwrap_err());
         }
         let labels = label_wrap.unwrap();
+        let decl_regex = Regex::new(LABEL_DECL).unwrap();
+        let mut processed_code: Vec<String> = Vec::new();
         let mut pc = 0;
 
         for line in &self.code {
-            let mut new_line = String::from(line);
-            new_line = new_line.replace("$", &pc.to_string());
-            while let Some(_) = decl_regex.find(&new_line) {
-                new_line = decl_regex.replace(&new_line, "").to_string();
+            let mut processed_line = String::from(line);
+            processed_line = processed_line.replace("$", &pc.to_string());
+            while let Some(_) = decl_regex.find(&processed_line) {
+                processed_line = decl_regex.replace(&processed_line, "").to_string();
             }
             for (key, value) in &labels {
-                new_line = new_line.replace(key, &value.to_string());
+                processed_line = processed_line.replace(key, &value.to_string());
             }
             pc += 1;
 
-            if !new_line.is_empty() {
-                processed_code.push(String::from(new_line.trim()));
+            if !processed_line.is_empty() {
+                processed_code.push(String::from(processed_line.trim()));
             } else {
                 pc -= 1;
             }
@@ -127,12 +127,15 @@ impl Assembler {
 
 fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
-
     let instruction = label_regex.replace(&instruction, "").to_string();
+    let mut args: Vec<&str> = Vec::new();
+
     match instruction.trim_start().split_once(" ") {
         Some((opcode, suffix)) => {
-            let arg_binding = suffix.replace(",", " ");
-            let args: Vec<&str> = arg_binding.split_ascii_whitespace().collect();
+            let dirty_args: Vec<&str> = suffix.split(",").collect();
+            for arg in dirty_args {
+                args.push(arg.trim());
+            }
             match opcode {
                 "MOV" => return convert_mov_args(args),
                 "STAX" => return convert_stax_args(args),
@@ -404,36 +407,12 @@ fn convert_lxi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     if args.len() != 2 {
         return Err("wrong arg amount!");
     }
-    let immediate_value = evaluate_str(args[1]);
+    let imm_val = evaluate_str(args[1]);
     match args[0] {
-        "B" => {
-            return Ok(vec![
-                0x01,
-                immediate_value as u8,
-                (immediate_value >> 8) as u8,
-            ])
-        }
-        "D" => {
-            return Ok(vec![
-                0x11,
-                immediate_value as u8,
-                (immediate_value >> 8) as u8,
-            ])
-        }
-        "H" => {
-            return Ok(vec![
-                0x21,
-                immediate_value as u8,
-                (immediate_value >> 8) as u8,
-            ])
-        }
-        "SP" => {
-            return Ok(vec![
-                0x31,
-                immediate_value as u8,
-                (immediate_value >> 8) as u8,
-            ])
-        }
+        "B" => return Ok(vec![0x01, imm_val as u8, (imm_val >> 8) as u8]),
+        "D" => return Ok(vec![0x11, imm_val as u8, (imm_val >> 8) as u8]),
+        "H" => return Ok(vec![0x21, imm_val as u8, (imm_val >> 8) as u8]),
+        "SP" => return Ok(vec![0x31, imm_val as u8, (imm_val >> 8) as u8]),
         _ => return Err("wrong register!"),
     }
 }
@@ -646,6 +625,12 @@ mod tests {
             Err("label must not be assigned twice!"),
             assembler.get_labels()
         );
+    }
+
+    #[test]
+    fn same_label() {
+        let assembler = Assembler::new("lab:\n LXI B, lab + lab");
+        assert_eq!(vec![0x01, 0x0, 0x0], assembler.assemble().unwrap());
     }
 
     #[test]
