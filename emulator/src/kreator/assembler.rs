@@ -379,12 +379,12 @@ fn convert_inx_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
 fn convert_opcodes_using_all_registers(
     args: Vec<&str>,
     base_value: u8,
-    use_eight_reg: bool,
+    use_every_eigth_opc: bool,
 ) -> Result<Vec<u8>, &'static str> {
     if args.len() != 1 {
         return Err("wrong arg amount!");
     }
-    let growth = if use_eight_reg { 8 } else { 1 };
+    let growth = if use_every_eigth_opc { 8 } else { 1 };
     match args[0] {
         "B" => return Ok(vec![base_value]),
         "C" => return Ok(vec![base_value + (1 * growth)]),
