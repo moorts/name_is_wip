@@ -127,7 +127,10 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x1f => Ok(String::from("RAR")),
-            0x20 => Ok(String::from("RIM")),
+            0x20 => {
+                // No instruction
+                Err("Invalid opcode")
+            }
             0x21 => Ok(format!(
                 "LXI H,{}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
@@ -161,7 +164,10 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x2f => Ok(String::from("CMA")),
-            0x30 => Ok(String::from("SIM")),
+            0x30 => {
+                // No instruction
+                Err("Invalid opcode")
+            }
             0x31 => Ok(format!(
                 "LXI SP,{}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
