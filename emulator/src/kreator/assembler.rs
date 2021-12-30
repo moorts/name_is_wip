@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
 
-struct Assembler {
+pub struct Assembler {
     code: Vec<String>,
 }
 
@@ -16,7 +16,7 @@ impl fmt::Display for Assembler {
 }
 
 impl Assembler {
-    fn new(input_code: &str) -> Self {
+    pub fn new(input_code: &str) -> Self {
         let mut lines = Vec::new();
         let comment_regex = Regex::new(r";.*").unwrap();
 
@@ -29,7 +29,7 @@ impl Assembler {
         Self { code: lines }
     }
 
-    fn assemble(&self) -> Result<Vec<u8>, &'static str> {
+    pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let mut machine_code = Vec::new();
 
