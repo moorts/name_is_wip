@@ -43,15 +43,21 @@ impl Assembler {
         Ok(machine_code)
     }
 
-    pub fn get_first_memory_address(&self) -> u16 {
+    pub fn get_origins(&self) -> Vec<(u16, u16)> {
+        let label_regex = Regex::new(LABEL_DECL).unwrap();
+        let mut origins: Vec<(u16, u16)> = Vec::new();
+        let mut executed_bytes = 0;
+
         for line in &self.get_preprocessed_code().unwrap() {
             if line.contains("ORG") {
                 let split = line.split_once(" ").unwrap();
-                return evaluate_str(split.1);
+                origins.push((executed_bytes, evaluate_str(split.1)));
+            } else {
+                let line = label_regex.replace(line, "").to_string();
+                executed_bytes = executed_bytes + to_machine_code(line).unwrap().len() as u16;
             }
         }
-
-        0
+        origins
     }
 
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
@@ -907,13 +913,21 @@ mod tests {
     #[test]
     fn org_first_address() {
         let assembler = Assembler::new("RNC \n ORG 20H");
-        assert_eq!(32, assembler.get_first_memory_address());
+        assert_eq!(vec![(1, 32)], assembler.get_origins());
 
         let assembler = Assembler::new("RNC");
-        assert_eq!(0, assembler.get_first_memory_address());
+        assert_eq!(Vec::<(u16, u16)>::new(), assembler.get_origins());
 
         let assembler = Assembler::new("ORG 5 + 1 \nRNC");
-        assert_eq!(6, assembler.get_first_memory_address());
+        assert_eq!(vec![(0, 6)], assembler.get_origins());
+    }
+
+    #[test]
+    fn multiple_orgs() {
+        let assembler = Assembler::new("ORG 1000H \n MOV A,C \n ADI 2\n JMP NEXT \n HERE:ORG 1050H \n NEXT: XRA A");
+        let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
+        
+        assert_eq!(jumps, assembler.get_origins());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
