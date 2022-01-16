@@ -43,6 +43,17 @@ impl Assembler {
         Ok(machine_code)
     }
 
+    pub fn get_first_memory_address(&self) -> u16 {
+        for line in &self.get_preprocessed_code().unwrap() {
+            if line.contains("ORG") {
+                let split = line.split_once(" ").unwrap();
+                return evaluate_str(split.1);
+            }
+        }
+
+        0
+    }
+
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
         let label_wrap = self.get_labels();
         if label_wrap.is_err() {
@@ -891,6 +902,18 @@ mod tests {
             let assembler = Assembler::new(operation);
             assert_eq!(bytes, assembler.assemble().unwrap());
         }
+    }
+
+    #[test]
+    fn org_first_address() {
+        let assembler = Assembler::new("RNC \n ORG 20H");
+        assert_eq!(32, assembler.get_first_memory_address());
+
+        let assembler = Assembler::new("RNC");
+        assert_eq!(0, assembler.get_first_memory_address());
+
+        let assembler = Assembler::new("ORG 5 + 1 \nRNC");
+        assert_eq!(6, assembler.get_first_memory_address());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
