@@ -110,8 +110,6 @@ impl Assembler {
                 set_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
             }
 
-            println!("{:?}", set_assignments);
-
             // replace values of variables declared by SET
             for (key, value) in &set_assignments {
                 processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
@@ -978,10 +976,10 @@ mod tests {
         );
 
         let assembler = Assembler::new("test EQU 10H + 20 \n\n\n JMP test");
-        assert_eq!(
-            vec!["test EQU 10H + 20".to_string(), "JMP 10H + 20".to_string()],
-            assembler.get_preprocessed_code().unwrap()
-        );
+        assert_eq!(vec!["test EQU 10H + 20".to_string(), "JMP 10H + 20".to_string()], assembler.get_preprocessed_code().unwrap());
+
+        let assembler = Assembler::new("test EQU 5 \n\n\n test EQU 6");
+        assert_eq!(Err("Can't assign a variable more than once using EQU!"), assembler.get_preprocessed_code());
     }
 
     #[test]
