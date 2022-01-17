@@ -61,6 +61,7 @@ impl Assembler {
     }
 
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
+        let mut equate_assignments: HashMap<String, String> = HashMap::new();
         let label_wrap = self.get_labels();
         if label_wrap.is_err() {
             return Err(label_wrap.unwrap_err());
@@ -72,15 +73,36 @@ impl Assembler {
 
         for line in &self.code {
             let mut processed_line = String::from(line);
+
+            // replace program counter references
             processed_line = processed_line.replace("$", &pc.to_string());
+
+            // remove declaration of labels (labels have been determined already)
             while let Some(_) = decl_regex.find(&processed_line) {
                 processed_line = decl_regex.replace(&processed_line, "").to_string();
             }
+
+            // replace labels with according values
             for (key, value) in &labels {
                 processed_line = processed_line.replace(key, &value.to_string());
             }
-            pc += 1;
 
+            // determine if a variable is being declared by EQU
+            if processed_line.contains("EQU") {
+                let split_name = processed_line.split_once(" ").unwrap();
+                let split_expr = split_name.1.split_once(" ").unwrap();
+                if equate_assignments.contains_key(split_name.0) {
+                    return Err("Can't assign a variable more than once using EQU!");
+                }
+                equate_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
+            }
+
+            // replace values of variables declared by EQU
+            for (key, value) in &equate_assignments {
+                processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
+            }
+
+            pc += 1;
             if !processed_line.is_empty() {
                 processed_code.push(String::from(processed_line.trim()));
             } else {
@@ -928,6 +950,15 @@ mod tests {
         let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
         
         assert_eq!(jumps, assembler.get_origins());
+    }
+
+    #[test]
+    fn equate() {
+        let assembler = Assembler::new("PTO EQU 8 \n\n\n OUT PTO");
+        assert_eq!(vec!["PTO EQU 8".to_string(), "OUT 8".to_string()], assembler.get_preprocessed_code().unwrap());
+
+        let assembler = Assembler::new("test EQU 10h + 20 \n\n\n JMP test");
+        assert_eq!(vec!["test EQU 10h + 20".to_string(), "JMP 10h + 20".to_string()], assembler.get_preprocessed_code().unwrap());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
