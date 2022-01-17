@@ -62,6 +62,7 @@ impl Assembler {
 
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
         let mut equate_assignments: HashMap<String, String> = HashMap::new();
+        let mut set_assignments: HashMap<String, String> = HashMap::new();
         let label_wrap = self.get_labels();
         if label_wrap.is_err() {
             return Err(label_wrap.unwrap_err());
@@ -72,7 +73,7 @@ impl Assembler {
         let mut pc = 0;
 
         for line in &self.code {
-            let mut processed_line = String::from(line);
+            let mut processed_line = String::from(line.trim());
 
             // replace program counter references
             processed_line = processed_line.replace("$", &pc.to_string());
@@ -99,6 +100,20 @@ impl Assembler {
 
             // replace values of variables declared by EQU
             for (key, value) in &equate_assignments {
+                processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
+            }
+
+            // determine if a variable is being declared by SET
+            if processed_line.contains("SET") {
+                let split_name = processed_line.split_once(" ").unwrap();
+                let split_expr = split_name.1.split_once(" ").unwrap();
+                set_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
+            }
+
+            println!("{:?}", set_assignments);
+
+            // replace values of variables declared by SET
+            for (key, value) in &set_assignments {
                 processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
             }
 
@@ -946,19 +961,41 @@ mod tests {
 
     #[test]
     fn multiple_orgs() {
-        let assembler = Assembler::new("ORG 1000H \n MOV A,C \n ADI 2\n JMP NEXT \n HERE:ORG 1050H \n NEXT: XRA A");
+        let assembler = Assembler::new(
+            "ORG 1000H \n MOV A,C \n ADI 2\n JMP NEXT \n HERE:ORG 1050H \n NEXT: XRA A",
+        );
         let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
-        
+
         assert_eq!(jumps, assembler.get_origins());
     }
 
     #[test]
     fn equate() {
         let assembler = Assembler::new("PTO EQU 8 \n\n\n OUT PTO");
-        assert_eq!(vec!["PTO EQU 8".to_string(), "OUT 8".to_string()], assembler.get_preprocessed_code().unwrap());
+        assert_eq!(
+            vec!["PTO EQU 8".to_string(), "OUT 8".to_string()],
+            assembler.get_preprocessed_code().unwrap()
+        );
 
-        let assembler = Assembler::new("test EQU 10h + 20 \n\n\n JMP test");
-        assert_eq!(vec!["test EQU 10h + 20".to_string(), "JMP 10h + 20".to_string()], assembler.get_preprocessed_code().unwrap());
+        let assembler = Assembler::new("test EQU 10H + 20 \n\n\n JMP test");
+        assert_eq!(
+            vec!["test EQU 10H + 20".to_string(), "JMP 10H + 20".to_string()],
+            assembler.get_preprocessed_code().unwrap()
+        );
+    }
+
+    #[test]
+    fn set() {
+        let assembler = Assembler::new("IMMED SET 5 \n ADI IMMED\n IMMED SET 10H-6\n ADI IMMED");
+        assert_eq!(
+            vec![
+                "IMMED SET 5".to_string(),
+                "ADI 5".to_string(),
+                "IMMED SET 10H-6".to_string(),
+                "ADI 10H-6".to_string()
+            ],
+            assembler.get_preprocessed_code().unwrap()
+        );
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
