@@ -33,8 +33,14 @@ impl Assembler {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let mut machine_code = Vec::new();
 
-        for line in &self.get_preprocessed_code().unwrap() {
-            let line = label_regex.replace(line, "").to_string();
+        let code_wrap = &self.get_preprocessed_code();
+        if code_wrap.is_err() {
+            return Err(code_wrap.as_ref().unwrap_err());
+        }
+        let preprocessed_code = code_wrap.as_ref().unwrap();
+
+        for line in preprocessed_code {
+            let line = label_regex.replace(&line, "").to_string();
             let line = String::from(line.trim());
             if !line.is_empty() {
                 machine_code.extend(to_machine_code(line)?);
@@ -63,6 +69,7 @@ impl Assembler {
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
         let mut equate_assignments: HashMap<String, String> = HashMap::new();
         let mut set_assignments: HashMap<String, String> = HashMap::new();
+        let mut has_end = false;
         let label_wrap = self.get_labels();
         if label_wrap.is_err() {
             return Err(label_wrap.unwrap_err());
@@ -74,6 +81,11 @@ impl Assembler {
 
         for line in &self.code {
             let mut processed_line = String::from(line.trim());
+
+            // check if an END has been reached already
+            if has_end {
+                return Err("Cannot declare lines after END statement");
+            }
 
             // replace program counter references
             processed_line = processed_line.replace("$", &pc.to_string());
@@ -115,6 +127,15 @@ impl Assembler {
                 processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
             }
 
+            // check lines for END statement
+            while processed_line.contains("END") {
+                if has_end {
+                    return Err("Using more than one END in a program is forbidden");
+                }
+                has_end = true;
+                processed_line = processed_line.replacen("END", "", 1);
+            }
+
             pc += 1;
             if !processed_line.is_empty() {
                 processed_code.push(String::from(processed_line.trim()));
@@ -122,6 +143,10 @@ impl Assembler {
                 pc -= 1;
             }
         }
+        if !has_end {
+            return Err("Missing 'END' at the end of the code!");
+        }
+
         Ok(processed_code)
     }
 
@@ -590,7 +615,7 @@ mod tests {
 
     #[test]
     fn empty_code_file() {
-        let assembler = Assembler::new("");
+        let assembler = Assembler::new("END");
 
         assert_eq!(0, assembler.assemble().unwrap().len());
     }
@@ -607,47 +632,47 @@ mod tests {
 
     #[test]
     fn mov_errors() {
-        let assembler = Assembler::new("MOV A");
+        let assembler = Assembler::new("MOV A\nEND");
         assert_eq!(
             Err("Missing argument(s) for MOV instruction"),
             assembler.assemble()
         );
 
-        let assembler = Assembler::new("MOV B,Q");
+        let assembler = Assembler::new("MOV B,Q\nEND");
         assert_eq!(
             Err("Invalid second argument for MOV instruction"),
             assembler.assemble()
         );
 
-        let assembler = Assembler::new("MOV M,M");
+        let assembler = Assembler::new("MOV M,M\nEND");
         assert_eq!(
             Err("Invalid arguments for MOV instruction (Can't move M into M)"),
             assembler.assemble()
         );
 
-        let assembler = Assembler::new("MOV A,B,C");
+        let assembler = Assembler::new("MOV A,B,C\nEND");
         assert_eq!(Err("MOV only takes 2 arguments!"), assembler.assemble());
     }
 
     #[test]
     fn nop_operation() {
-        let assembler = Assembler::new("NOP");
+        let assembler = Assembler::new("NOP\nEND");
         assert_eq!(0x0, assembler.assemble().unwrap()[0]);
 
-        let assembler = Assembler::new("NOP A");
+        let assembler = Assembler::new("NOP A\nEND");
         assert_eq!(Err("Could not match instruction"), assembler.assemble());
     }
 
     #[test]
     fn invalid_instructions() {
-        let assembler = Assembler::new("TEST");
+        let assembler = Assembler::new("TEST\nEND");
 
         assert_eq!(Err("Could not match instruction"), assembler.assemble());
     }
 
     #[test]
     fn remove_label_declarations() {
-        let input_code = "label: \n MOV A,B\n @LAB:\ntest:\nMOV A,B";
+        let input_code = "label: \n MOV A,B\n @LAB:\ntest:\nMOV A,B\nEND";
         let assembler = Assembler::new(input_code);
 
         let mut labels = HashMap::new();
@@ -676,35 +701,35 @@ mod tests {
 
     #[test]
     fn same_label() {
-        let assembler = Assembler::new("lab:\n LXI B, lab + lab");
+        let assembler = Assembler::new("lab:\n LXI B, lab + lab\nEND");
         assert_eq!(vec![0x01, 0x0, 0x0], assembler.assemble().unwrap());
     }
 
     #[test]
     fn opcodes_without_args() {
         let mut opcodes = HashMap::new();
-        opcodes.insert("RRC", 0x0f);
-        opcodes.insert("RAL", 0x17);
-        opcodes.insert("RAR", 0x1f);
-        opcodes.insert("DAA", 0x27);
-        opcodes.insert("CMA", 0x2f);
-        opcodes.insert("CMC", 0x3f);
-        opcodes.insert("HLT", 0x76);
-        opcodes.insert("RNZ", 0xc0);
-        opcodes.insert("RZ", 0xc8);
-        opcodes.insert("RET", 0xc9);
-        opcodes.insert("RNC", 0xd0);
-        opcodes.insert("RC", 0xd8);
-        opcodes.insert("RPO", 0xe0);
-        opcodes.insert("RPE", 0xe8);
-        opcodes.insert("EI", 0xfb);
-        opcodes.insert("RM", 0xf8);
-        opcodes.insert("SPHL", 0xf9);
-        opcodes.insert("DI", 0xf3);
-        opcodes.insert("RP", 0xf0);
-        opcodes.insert("XCHG", 0xeb);
-        opcodes.insert("PCHL", 0xe9);
-        opcodes.insert("XTHL", 0xe3);
+        opcodes.insert("RRC\nEND", 0x0f);
+        opcodes.insert("RAL\nEND", 0x17);
+        opcodes.insert("RAR\nEND", 0x1f);
+        opcodes.insert("DAA\nEND", 0x27);
+        opcodes.insert("CMA\nEND", 0x2f);
+        opcodes.insert("CMC\nEND", 0x3f);
+        opcodes.insert("HLT\nEND", 0x76);
+        opcodes.insert("RNZ\nEND", 0xc0);
+        opcodes.insert("RZ\nEND", 0xc8);
+        opcodes.insert("RET\nEND", 0xc9);
+        opcodes.insert("RNC\nEND", 0xd0);
+        opcodes.insert("RC\nEND", 0xd8);
+        opcodes.insert("RPO\nEND", 0xe0);
+        opcodes.insert("RPE\nEND", 0xe8);
+        opcodes.insert("EI\nEND", 0xfb);
+        opcodes.insert("RM\nEND", 0xf8);
+        opcodes.insert("SPHL\nEND", 0xf9);
+        opcodes.insert("DI\nEND", 0xf3);
+        opcodes.insert("RP\nEND", 0xf0);
+        opcodes.insert("XCHG\nEND", 0xeb);
+        opcodes.insert("PCHL\nEND", 0xe9);
+        opcodes.insert("XTHL\nEND", 0xe3);
 
         for (instruction, opc) in opcodes {
             let assembler = Assembler::new(instruction);
@@ -799,37 +824,37 @@ mod tests {
 
     #[test]
     fn preprocessing_labels() {
-        let assembler = Assembler::new("test:\nlabel: MOV A,B");
+        let assembler = Assembler::new("test:\nlabel: MOV A,B\nEND");
         assert_eq!(vec!["MOV A,B"], assembler.get_preprocessed_code().unwrap());
 
-        let assembler = Assembler::new("label: MOV A,label");
+        let assembler = Assembler::new("label: MOV A,label\nEND");
         assert_eq!(vec!["MOV A,0"], assembler.get_preprocessed_code().unwrap());
 
-        let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2");
+        let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2\nEND");
         assert_eq!(
             vec!["A", "B", "C", "JMP 2"],
             assembler.get_preprocessed_code().unwrap()
         );
 
-        let assembler = Assembler::new("A: MOV A,B");
+        let assembler = Assembler::new("A: MOV A,B\nEND");
         assert_eq!(Err("illegal label name"), assembler.get_preprocessed_code());
     }
 
     #[test]
     fn preprocessing_pc() {
-        let assembler = Assembler::new("MOV A,B\n JMP $");
+        let assembler = Assembler::new("MOV A,B\n JMP $\nEND");
         assert_eq!(
             vec!["MOV A,B", "JMP 1"],
             assembler.get_preprocessed_code().unwrap()
         );
 
-        let assembler = Assembler::new("A\nB\nC\nD\n JMP $");
+        let assembler = Assembler::new("A\nB\nC\nD\n JMP $\nEND");
         assert_eq!(
             vec!["A", "B", "C", "D", "JMP 4"],
             assembler.get_preprocessed_code().unwrap()
         );
 
-        let assembler = Assembler::new("label:\nNOP\n JMP $");
+        let assembler = Assembler::new("label:\nNOP\n JMP $\nEND");
         assert_eq!(
             vec!["NOP", "JMP 1"],
             assembler.get_preprocessed_code().unwrap()
@@ -918,7 +943,7 @@ mod tests {
             let inputs = get_bytes_and_args_by_opcode(opc).unwrap();
 
             for input in inputs {
-                let assembler = Assembler::new(&format!("{} {}", opc, &input.1));
+                let assembler = Assembler::new(&format!("{} {}\nEND", opc, &input.1));
                 assert_eq!(input.0, assembler.assemble().unwrap());
             }
         }
@@ -940,27 +965,27 @@ mod tests {
                 bytes.push(byte.parse::<u8>().unwrap());
             }
             let operation = components[1];
-            let assembler = Assembler::new(operation);
+            let assembler = Assembler::new(format!("{}\nEND", operation).as_str());
             assert_eq!(bytes, assembler.assemble().unwrap());
         }
     }
 
     #[test]
     fn org_first_address() {
-        let assembler = Assembler::new("RNC \n ORG 20H");
+        let assembler = Assembler::new("RNC \n ORG 20H\nEND");
         assert_eq!(vec![(1, 32)], assembler.get_origins());
 
-        let assembler = Assembler::new("RNC");
+        let assembler = Assembler::new("RNC\nEND");
         assert_eq!(Vec::<(u16, u16)>::new(), assembler.get_origins());
 
-        let assembler = Assembler::new("ORG 5 + 1 \nRNC");
+        let assembler = Assembler::new("ORG 5 + 1 \nRNC\nEND");
         assert_eq!(vec![(0, 6)], assembler.get_origins());
     }
 
     #[test]
     fn multiple_orgs() {
         let assembler = Assembler::new(
-            "ORG 1000H \n MOV A,C \n ADI 2\n JMP NEXT \n HERE:ORG 1050H \n NEXT: XRA A",
+            "ORG 1000H \n MOV A,C \n ADI 2\n JMP NEXT \n HERE:ORG 1050H \n NEXT: XRA A\nEND",
         );
         let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
 
@@ -969,22 +994,22 @@ mod tests {
 
     #[test]
     fn equate() {
-        let assembler = Assembler::new("PTO EQU 8 \n\n\n OUT PTO");
+        let assembler = Assembler::new("PTO EQU 8 \n\n\n OUT PTO\nEND");
         assert_eq!(
             vec!["PTO EQU 8".to_string(), "OUT 8".to_string()],
             assembler.get_preprocessed_code().unwrap()
         );
 
-        let assembler = Assembler::new("test EQU 10H + 20 \n\n\n JMP test");
+        let assembler = Assembler::new("test EQU 10H + 20 \n\n\n JMP test\nEND");
         assert_eq!(vec!["test EQU 10H + 20".to_string(), "JMP 10H + 20".to_string()], assembler.get_preprocessed_code().unwrap());
 
-        let assembler = Assembler::new("test EQU 5 \n\n\n test EQU 6");
+        let assembler = Assembler::new("test EQU 5 \n\n\n test EQU 6\nEND");
         assert_eq!(Err("Can't assign a variable more than once using EQU!"), assembler.get_preprocessed_code());
     }
 
     #[test]
     fn set() {
-        let assembler = Assembler::new("IMMED SET 5 \n ADI IMMED\n IMMED SET 10H-6\n ADI IMMED");
+        let assembler = Assembler::new("IMMED SET 5 \n ADI IMMED\n IMMED SET 10H-6\n ADI IMMED\nEND");
         assert_eq!(
             vec![
                 "IMMED SET 5".to_string(),
@@ -994,6 +1019,15 @@ mod tests {
             ],
             assembler.get_preprocessed_code().unwrap()
         );
+    }
+
+    #[test]
+    fn end() {
+        let assembler = Assembler::new("RLC\n END");
+        assert_eq!(vec![0x7], assembler.assemble().unwrap());
+
+        let assembler = Assembler::new("RLC\n");
+        assert_eq!(Err("Missing 'END' at the end of the code!"), assembler.assemble());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
