@@ -32,6 +32,8 @@ impl Assembler {
     pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let mut machine_code = Vec::new();
+        let mut should_assemble_line = true;
+        let mut in_conditional = false;
 
         let code_wrap = &self.get_preprocessed_code();
         if code_wrap.is_err() {
@@ -41,9 +43,33 @@ impl Assembler {
 
         for line in preprocessed_code {
             let line = label_regex.replace(&line, "").to_string();
-            let line = String::from(line.trim());
-            if !line.is_empty() {
-                machine_code.extend(to_machine_code(line)?);
+            let mut line = String::from(line.trim());
+
+            // check if an IF block has been entered and if it sould be assembled
+            if line.contains("ENDIF") {
+                if !in_conditional {
+                    return Err("Every ENDIF must have a matching IF");
+                }
+                should_assemble_line = true;
+                in_conditional = false;
+                line = "".to_string();
+            } else if line.contains("IF") {
+                let condition = line.split_once(" ").unwrap().1;
+                let a = evaluate_str(condition);
+                should_assemble_line = evaluate_str(condition) != 0;
+                in_conditional = true;
+                line = "".to_string();
+            }
+            if line.contains("ENDIF") {
+                if !in_conditional {
+                    return Err("Every ENDIF must have a matching IF");
+                }
+                should_assemble_line = true;
+                in_conditional = false;
+                line = "".to_string();
+            }
+            if !line.is_empty() && should_assemble_line {
+                machine_code.extend(to_machine_code(line.to_string())?);
             }
         }
         Ok(machine_code)
@@ -108,6 +134,7 @@ impl Assembler {
                     return Err("Can't assign a variable more than once using EQU!");
                 }
                 equate_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
+                processed_line = "".to_string();
             }
 
             // replace values of variables declared by EQU
@@ -120,6 +147,7 @@ impl Assembler {
                 let split_name = processed_line.split_once(" ").unwrap();
                 let split_expr = split_name.1.split_once(" ").unwrap();
                 set_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
+                processed_line = "".to_string();
             }
 
             // replace values of variables declared by SET
@@ -128,12 +156,14 @@ impl Assembler {
             }
 
             // check lines for END statement
-            while processed_line.contains("END") {
-                if has_end {
-                    return Err("Using more than one END in a program is forbidden");
+            if !line.contains("ENDIF") {
+                while processed_line.contains("END") {
+                    if has_end {
+                        return Err("Using more than one END in a program is forbidden");
+                    }
+                    has_end = true;
+                    processed_line = processed_line.replacen("END", "", 1);
                 }
-                has_end = true;
-                processed_line = processed_line.replacen("END", "", 1);
             }
 
             pc += 1;
@@ -996,12 +1026,12 @@ mod tests {
     fn equate() {
         let assembler = Assembler::new("PTO EQU 8 \n\n\n OUT PTO\nEND");
         assert_eq!(
-            vec!["PTO EQU 8".to_string(), "OUT 8".to_string()],
+            vec!["OUT 8".to_string()],
             assembler.get_preprocessed_code().unwrap()
         );
 
         let assembler = Assembler::new("test EQU 10H + 20 \n\n\n JMP test\nEND");
-        assert_eq!(vec!["test EQU 10H + 20".to_string(), "JMP 10H + 20".to_string()], assembler.get_preprocessed_code().unwrap());
+        assert_eq!(vec!["JMP 10H + 20".to_string()], assembler.get_preprocessed_code().unwrap());
 
         let assembler = Assembler::new("test EQU 5 \n\n\n test EQU 6\nEND");
         assert_eq!(Err("Can't assign a variable more than once using EQU!"), assembler.get_preprocessed_code());
@@ -1012,9 +1042,7 @@ mod tests {
         let assembler = Assembler::new("IMMED SET 5 \n ADI IMMED\n IMMED SET 10H-6\n ADI IMMED\nEND");
         assert_eq!(
             vec![
-                "IMMED SET 5".to_string(),
                 "ADI 5".to_string(),
-                "IMMED SET 10H-6".to_string(),
                 "ADI 10H-6".to_string()
             ],
             assembler.get_preprocessed_code().unwrap()
@@ -1028,6 +1056,12 @@ mod tests {
 
         let assembler = Assembler::new("RLC\n");
         assert_eq!(Err("Missing 'END' at the end of the code!"), assembler.assemble());
+    }
+
+    #[test]
+    fn if_endif() {
+        let assembler = Assembler::new("COND SET 15H\nIF COND\nMOV A,C\nENDIF\nCOND SET 0\nIF COND \nMOV A,C\nENDIF\nXRA C\nEND");
+        assert_eq!(Ok(vec![0x79, 0xA9]), assembler.assemble());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
