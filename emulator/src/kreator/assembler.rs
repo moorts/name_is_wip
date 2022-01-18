@@ -45,10 +45,10 @@ impl Assembler {
             let line = label_regex.replace(&line, "").to_string();
             let mut line = String::from(line.trim());
 
-            // check if an IF block has been entered and if it sould be assembled
+            // check if an IF block has been entered / exited and if it should be assembled
             if line.contains("ENDIF") {
                 if !in_conditional {
-                    return Err("Every ENDIF must have a matching IF");
+                    return Err("Every ENDIF must have a corresponding IF");
                 }
                 should_assemble_line = true;
                 in_conditional = false;
@@ -60,17 +60,13 @@ impl Assembler {
                 in_conditional = true;
                 line = "".to_string();
             }
-            if line.contains("ENDIF") {
-                if !in_conditional {
-                    return Err("Every ENDIF must have a matching IF");
-                }
-                should_assemble_line = true;
-                in_conditional = false;
-                line = "".to_string();
-            }
+
             if !line.is_empty() && should_assemble_line {
                 machine_code.extend(to_machine_code(line.to_string())?);
             }
+        }
+        if in_conditional {
+            return Err("Every IF must be closed");
         }
         Ok(machine_code)
     }
@@ -1062,6 +1058,12 @@ mod tests {
     fn if_endif() {
         let assembler = Assembler::new("COND SET 15H\nIF COND\nMOV A,C\nENDIF\nCOND SET 0\nIF COND \nMOV A,C\nENDIF\nXRA C\nEND");
         assert_eq!(Ok(vec![0x79, 0xA9]), assembler.assemble());
+
+        let assembler = Assembler::new("IF 1\nEND");
+        assert_eq!(Err("Every IF must be closed"), assembler.assemble());
+
+        let assembler = Assembler::new("ENDIF\nEND");
+        assert_eq!(Err("Every ENDIF must have a corresponding IF"), assembler.assemble());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
