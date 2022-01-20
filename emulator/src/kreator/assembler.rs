@@ -1,7 +1,7 @@
 use super::parser::*;
 use core::fmt;
 use regex::Regex;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
 
@@ -86,6 +86,55 @@ impl Assembler {
             }
         }
         origins
+    }
+
+    fn get_macros(&self) -> Result<(HashMap<String, Vec<String>>, HashMap<String, Vec<String>>), &'static str> {
+        let mut macros: HashMap<String, Vec<String>> = HashMap::new();
+        let mut parameters: HashMap<String, Vec<String>> = HashMap::new();
+        let mut in_macro = false;
+        let mut macro_name = String::new();
+
+        let mut current_macro: Vec<String> = Vec::new();
+        let mut current_parameters: Vec<String> = Vec::new();
+
+        for line in &self.code {
+            let line = line.trim();
+
+            if line.contains("MACRO") {
+                if in_macro {
+                    return Err("Cannot define macro within macro");
+                }
+                in_macro = true;
+                let split: Vec<&str> = line.split("MACRO").collect();
+                macro_name = split[0].trim().to_string();
+                if macro_name.is_empty() {
+                    return Err("Cannot define macro without name");
+                }
+                for parameter in split[1].split(",") {
+                    if !parameter.is_empty() {
+                        current_parameters.push(parameter.trim().to_string());
+                    }
+                }
+                continue
+            }
+            if line.contains("ENDM") {
+                if in_macro {
+                    macros.insert(macro_name.to_string(), current_macro.to_owned());
+                    parameters.insert(macro_name.to_string(), current_parameters.to_owned());
+                    current_macro.clear();
+                    current_parameters.clear();
+                    macro_name.clear();
+                    in_macro = false;
+                } else {
+                    return Err("Every ENDM must have a corresponding MACRO")
+                }
+            }
+            if in_macro {
+                current_macro.push(line.to_string());
+            }
+        }
+
+        Ok((macros, parameters))
     }
 
     fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
@@ -1056,7 +1105,7 @@ mod tests {
 
     #[test]
     fn if_endif() {
-        let assembler = Assembler::new("COND SET 15H\nIF COND\nMOV A,C\nENDIF\nCOND SET 0\nIF COND \nMOV A,C\nENDIF\nXRA C\nEND");
+        let assembler = Assembler::new("COND SET 0ffH\nIF COND\nMOV A,C\nENDIF\nCOND SET 0\nIF COND \nMOV A,C\nENDIF\nXRA C\nEND");
         assert_eq!(Ok(vec![0x79, 0xA9]), assembler.assemble());
 
         let assembler = Assembler::new("IF 1\nEND");
@@ -1064,6 +1113,12 @@ mod tests {
 
         let assembler = Assembler::new("ENDIF\nEND");
         assert_eq!(Err("Every ENDIF must have a corresponding IF"), assembler.assemble());
+    }
+
+    #[test]
+    fn macro_endm() {
+        let assembler = Assembler::new("SHRT MACRO\nRRC\nANI 7FH\nENDM\nSHRT\nEND");
+        assert_eq!(Ok(vec!["RRC".to_string(), "ANI 7FH".to_string()]), assembler.get_preprocessed_code());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
