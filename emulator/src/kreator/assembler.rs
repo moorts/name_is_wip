@@ -133,7 +133,6 @@ impl Assembler {
                 current_macro.push(line.to_string());
             }
         }
-
         Ok((macros, parameters))
     }
 
@@ -146,6 +145,11 @@ impl Assembler {
             return Err(label_wrap.unwrap_err());
         }
         let labels = label_wrap.unwrap();
+        let macro_wrap = self.get_macros();
+        if macro_wrap.is_err() {
+            return Err(macro_wrap.unwrap_err());
+        }
+        let macros = macro_wrap.unwrap();
         let decl_regex = Regex::new(LABEL_DECL).unwrap();
         let mut processed_code: Vec<String> = Vec::new();
         let mut pc = 0;
@@ -202,12 +206,38 @@ impl Assembler {
 
             // check lines for END statement
             if !line.contains("ENDIF") {
-                while processed_line.contains("END") {
+                while processed_line.contains("END") && !line.contains("ENDM") {
                     if has_end {
                         return Err("Using more than one END in a program is forbidden");
                     }
                     has_end = true;
                     processed_line = processed_line.replacen("END", "", 1);
+                }
+            }
+
+            // check lines for ENDM statement
+            if line.contains("ENDM") {
+                processed_line = line.replace("ENDM", "");
+            }
+
+            // replace macro call with contents
+            for (key, instructions) in &macros.0 {
+                if processed_line.contains(key) {
+                    let inputs = processed_line.split_once(key).unwrap().1;
+                    let inputs: Vec<&str> = inputs.split(",").collect();
+                    let mut input_map: HashMap<String, String> = HashMap::new();
+                    for (index, parameter) in macros.1.get(key).unwrap().iter().enumerate() {
+                        if inputs[index].is_empty() {
+                            input_map.insert(parameter.to_string(), String::new());
+                        }
+                    }
+                    processed_line.clear();
+                    for instruction in instructions {
+                        for (variable, value) in &input_map {
+                            let var_wrapper = format!(" {} ", variable);
+                            processed_code.push(instruction.replace(&var_wrapper, &value));
+                        }
+                    }
                 }
             }
 
