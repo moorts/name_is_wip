@@ -133,6 +133,9 @@ impl Assembler {
                 current_macro.push(line.to_string());
             }
         }
+        if in_macro {
+            return Err("Every MACRO has to be followed by an ENDM");
+        }
         Ok((macros, parameters))
     }
 
@@ -140,6 +143,7 @@ impl Assembler {
         let mut equate_assignments: HashMap<String, String> = HashMap::new();
         let mut set_assignments: HashMap<String, String> = HashMap::new();
         let mut has_end = false;
+        let mut in_macro = false;
         let label_wrap = self.get_labels();
         if label_wrap.is_err() {
             return Err(label_wrap.unwrap_err());
@@ -217,26 +221,43 @@ impl Assembler {
 
             // check lines for ENDM statement
             if line.contains("ENDM") {
-                processed_line = line.replace("ENDM", "");
+                processed_line = processed_line.replace("ENDM", "");
+                in_macro = false;
+            }
+
+            if line.contains("MACRO") {
+                processed_line.clear();
+                in_macro = true;
             }
 
             // replace macro call with contents
+            if in_macro {
+                processed_line.clear();
+            }
             for (key, instructions) in &macros.0 {
                 if processed_line.contains(key) {
-                    let inputs = processed_line.split_once(key).unwrap().1;
-                    let inputs: Vec<&str> = inputs.split(",").collect();
+                    let input_string = processed_line.split_once(key).unwrap().1.trim();
+                    let mut inputs: Vec<&str> = Vec::new();
+                    for input in input_string.split(",") {
+                        inputs.push(input.trim());
+                    }
                     let mut input_map: HashMap<String, String> = HashMap::new();
                     for (index, parameter) in macros.1.get(key).unwrap().iter().enumerate() {
-                        if inputs[index].is_empty() {
+                        if index >= inputs.len() {
                             input_map.insert(parameter.to_string(), String::new());
+                        } else {
+                            input_map.insert(parameter.to_string(), inputs[index].to_string());
                         }
                     }
+                    println!("{:?}", input_map);
                     processed_line.clear();
                     for instruction in instructions {
+                        let mut line = instruction.to_string();
                         for (variable, value) in &input_map {
-                            let var_wrapper = format!(" {} ", variable);
-                            processed_code.push(instruction.replace(&var_wrapper, &value));
+                            line = line.replace(&format!(" {} ", variable), &format!(" {} ", &value));
+                            line = line.replace(&format!(" {}", variable), &format!(" {}", &value));
                         }
+                        processed_code.push(line.trim().to_string());
                     }
                 }
             }
@@ -1149,6 +1170,21 @@ mod tests {
     fn macro_endm() {
         let assembler = Assembler::new("SHRT MACRO\nRRC\nANI 7FH\nENDM\nSHRT\nEND");
         assert_eq!(Ok(vec!["RRC".to_string(), "ANI 7FH".to_string()]), assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("MAC1 MACRO P1, P2, COMMENT\n XRA P2\nDCR P1 COMMENT\nENDM\nMAC1 C, D\nEND");
+        assert_eq!(Ok(vec!["XRA D".to_string(), "DCR C".to_string()]), assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("A MACRO\nEND");
+        assert_eq!(Err("Every MACRO has to be followed by an ENDM"), assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("ENDM\nEND");
+        assert_eq!(Err("Every ENDM must have a corresponding MACRO"), assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("MACRO\nENDM\nEND");
+        assert_eq!(Err("Cannot define macro without name"), assembler.get_preprocessed_code());
+
+        let assembler = Assembler::new("ABC MACRO\nA MACRO\nENDM\nEND");
+        assert_eq!(Err("Cannot define macro within macro"), assembler.get_preprocessed_code());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
