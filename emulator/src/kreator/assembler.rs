@@ -1,9 +1,10 @@
 use super::parser::*;
+use super::preprocessor;
 use core::fmt;
 use regex::Regex;
 use std::{collections::HashMap, hash::Hash};
 
-const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
+pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
 
 pub struct Assembler {
     code: Vec<String>,
@@ -801,28 +802,7 @@ mod tests {
         let input_code = "label: \n MOV A,B\n @LAB:\ntest:\nMOV A,B\nEND";
         let assembler = Assembler::new(input_code);
 
-        let mut labels = HashMap::new();
-        labels.insert(String::from("test"), 1);
-        labels.insert(String::from("@LAB"), 1);
-        labels.insert(String::from("label"), 0);
-
-        assert_eq!(labels, assembler.get_labels().unwrap());
         assert_eq!(vec![0x78, 0x78], assembler.assemble().unwrap());
-    }
-
-    #[test]
-    fn duplicate_labels() {
-        let assembler = Assembler::new("label:\nlabel:");
-        assert_eq!(
-            Err("labels must not point to an empty address!"),
-            assembler.get_labels()
-        );
-
-        let assembler = Assembler::new("label:\nlabel:\nMOV A,B");
-        assert_eq!(
-            Err("label must not be assigned twice!"),
-            assembler.get_labels()
-        );
     }
 
     #[test]
