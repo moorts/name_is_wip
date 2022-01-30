@@ -1146,27 +1146,6 @@ mod tests {
         assert_eq!(Err("Every ENDIF must have a corresponding IF"), assembler.assemble());
     }
 
-    #[test]
-    fn macro_endm() {
-        let assembler = Assembler::new("SHRT MACRO\nRRC\nANI 7FH\nENDM\nSHRT\nEND");
-        assert_eq!(Ok(vec!["RRC".to_string(), "ANI 7FH".to_string()]), assembler.get_preprocessed_code());
-
-        let assembler = Assembler::new("MAC1 MACRO P1, P2, COMMENT\n XRA P2\nDCR P1 COMMENT\nENDM\nMAC1 C, D\nEND");
-        assert_eq!(Ok(vec!["XRA D".to_string(), "DCR C".to_string()]), assembler.get_preprocessed_code());
-
-        let assembler = Assembler::new("A MACRO\nEND");
-        assert_eq!(Err("Every MACRO has to be followed by an ENDM"), assembler.get_preprocessed_code());
-
-        let assembler = Assembler::new("ENDM\nEND");
-        assert_eq!(Err("Every ENDM must have a corresponding MACRO"), assembler.get_preprocessed_code());
-
-        let assembler = Assembler::new("MACRO\nENDM\nEND");
-        assert_eq!(Err("Cannot define macro without name"), assembler.get_preprocessed_code());
-
-        let assembler = Assembler::new("ABC MACRO\nA MACRO\nENDM\nEND");
-        assert_eq!(Err("Cannot define macro within macro"), assembler.get_preprocessed_code());
-    }
-
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
         let f = File::open(OPCODE_TEST_DATA)?;
         let mut lines = io::BufReader::new(f).lines();

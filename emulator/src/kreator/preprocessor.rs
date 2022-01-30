@@ -109,6 +109,27 @@ fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashM
     Ok((macros, parameters))
 }
 
+fn has_correct_end(code: &Vec<String>) -> bool {
+    let mut has_end = false;
+
+    for line in code {
+        if line.is_empty() {
+            continue;
+        }
+        if line.trim().contains("END") {
+            if has_end {
+                return false;
+            }
+            has_end = true;
+            continue;
+        }
+        if has_end {
+            return false;
+        }
+    }
+    return has_end;
+}
+
 mod tests {
     use super::*;
 
@@ -164,6 +185,21 @@ mod tests {
 
         let code = convert_input(vec!["ABC MACRO", "A MACRO", "ENDM"]);
         assert_eq!(Err("Cannot define macro within macro"), get_macros(&code));
+    }
+
+    #[test]
+    fn program_has_end() {
+        let code = convert_input(vec!["END"]);
+        assert_eq!(true, has_correct_end(&code));
+
+        let code = convert_input(vec!["END", "END"]);
+        assert_eq!(false, has_correct_end(&code));
+
+        let code = convert_input(vec!["RRC"]);
+        assert_eq!(false, has_correct_end(&code));
+
+        let code = convert_input(vec!["END", "RRC"]);
+        assert_eq!(false, has_correct_end(&code));
     }
 
 
