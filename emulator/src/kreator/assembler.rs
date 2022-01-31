@@ -1,5 +1,5 @@
 use super::parser::*;
-use super::preprocessor;
+use super::preprocessor::get_preprocessed_code;
 use core::fmt;
 use regex::Regex;
 use std::{collections::HashMap, hash::Hash};
@@ -32,41 +32,20 @@ impl Assembler {
 
     pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
-        let mut machine_code = Vec::new();
-        let mut should_assemble_line = true;
-        let mut in_conditional = false;
-
-        let code_wrap = &self.get_preprocessed_code();
+        let code_wrap = get_preprocessed_code(&self.code);
         if code_wrap.is_err() {
             return Err(code_wrap.as_ref().unwrap_err());
         }
         let preprocessed_code = code_wrap.as_ref().unwrap();
 
+        let mut machine_code = Vec::new();
+
         for line in preprocessed_code {
-            let line = label_regex.replace(&line, "").to_string();
-            let mut line = String::from(line.trim());
+            let line = label_regex.replace(&line, "").trim().to_string();
 
-            // check if an IF block has been entered / exited and if it should be assembled
-            if line.contains("ENDIF") {
-                if !in_conditional {
-                    return Err("Every ENDIF must have a corresponding IF");
-                }
-                should_assemble_line = true;
-                in_conditional = false;
-                line = "".to_string();
-            } else if line.contains("IF") {
-                let condition = line.split_once(" ").unwrap().1;
-                should_assemble_line = evaluate_str(condition) != 0;
-                in_conditional = true;
-                line = "".to_string();
-            }
-
-            if !line.is_empty() && should_assemble_line {
+            if !line.is_empty() {
                 machine_code.extend(to_machine_code(line.to_string())?);
             }
-        }
-        if in_conditional {
-            return Err("Every IF must be closed");
         }
         Ok(machine_code)
     }
@@ -76,12 +55,12 @@ impl Assembler {
         let mut origins: Vec<(u16, u16)> = Vec::new();
         let mut executed_bytes = 0;
 
-        for line in &self.get_preprocessed_code().unwrap() {
+        for line in get_preprocessed_code(&self.code).unwrap() {
             if line.contains("ORG") {
                 let split = line.split_once(" ").unwrap();
                 origins.push((executed_bytes, evaluate_str(split.1)));
             } else {
-                let line = label_regex.replace(line, "").to_string();
+                let line = label_regex.replace(&line, "").to_string();
                 executed_bytes = executed_bytes + to_machine_code(line).unwrap().len() as u16;
             }
         }
@@ -137,143 +116,6 @@ impl Assembler {
             return Err("Every MACRO has to be followed by an ENDM");
         }
         Ok((macros, parameters))
-    }
-
-    fn get_preprocessed_code(&self) -> Result<Vec<String>, &'static str> {
-        let mut equate_assignments: HashMap<String, String> = HashMap::new();
-        let mut set_assignments: HashMap<String, String> = HashMap::new();
-        let mut has_end = false;
-        let mut in_macro = false;
-        let label_wrap = self.get_labels();
-        if label_wrap.is_err() {
-            return Err(label_wrap.unwrap_err());
-        }
-        let labels = label_wrap.unwrap();
-        let macro_wrap = self.get_macros();
-        if macro_wrap.is_err() {
-            return Err(macro_wrap.unwrap_err());
-        }
-        let macros = macro_wrap.unwrap();
-        let decl_regex = Regex::new(LABEL_DECL).unwrap();
-        let mut processed_code: Vec<String> = Vec::new();
-        let mut pc = 0;
-
-        for line in &self.code {
-            let mut processed_line = String::from(line.trim());
-
-            // check if an END has been reached already
-            if has_end {
-                return Err("Cannot declare lines after END statement");
-            }
-
-            // replace program counter references
-            processed_line = processed_line.replace("$", &pc.to_string());
-
-            // remove declaration of labels (labels have been determined already)
-            while let Some(_) = decl_regex.find(&processed_line) {
-                processed_line = decl_regex.replace(&processed_line, "").to_string();
-            }
-
-            // replace labels with according values
-            for (key, value) in &labels {
-                processed_line = processed_line.replace(key, &value.to_string());
-            }
-
-            // determine if a variable is being declared by EQU
-            if processed_line.contains("EQU") {
-                let split_name = processed_line.split_once(" ").unwrap();
-                let split_expr = split_name.1.split_once(" ").unwrap();
-                if equate_assignments.contains_key(split_name.0) {
-                    return Err("Can't assign a variable more than once using EQU!");
-                }
-                equate_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
-                processed_line = "".to_string();
-            }
-
-            // replace values of variables declared by EQU
-            for (key, value) in &equate_assignments {
-                processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
-            }
-
-            // determine if a variable is being declared by SET
-            if processed_line.contains("SET") {
-                let split_name = processed_line.split_once(" ").unwrap();
-                let split_expr = split_name.1.split_once(" ").unwrap();
-                set_assignments.insert(split_name.0.to_string(), split_expr.1.to_string());
-                processed_line = "".to_string();
-            }
-
-            // replace values of variables declared by SET
-            for (key, value) in &set_assignments {
-                processed_line = processed_line.replace(&format!(" {}", key), &format!(" {}", value));
-            }
-
-            // check lines for END statement
-            if !line.contains("ENDIF") {
-                while processed_line.contains("END") && !line.contains("ENDM") {
-                    if has_end {
-                        return Err("Using more than one END in a program is forbidden");
-                    }
-                    has_end = true;
-                    processed_line = processed_line.replacen("END", "", 1);
-                }
-            }
-
-            // check lines for ENDM statement
-            if line.contains("ENDM") {
-                processed_line = processed_line.replace("ENDM", "");
-                in_macro = false;
-            }
-
-            if line.contains("MACRO") {
-                processed_line.clear();
-                in_macro = true;
-            }
-
-            // replace macro call with contents
-            if in_macro {
-                processed_line.clear();
-            }
-            for (key, instructions) in &macros.0 {
-                if processed_line.contains(key) {
-                    let input_string = processed_line.split_once(key).unwrap().1.trim();
-                    let mut inputs: Vec<&str> = Vec::new();
-                    for input in input_string.split(",") {
-                        inputs.push(input.trim());
-                    }
-                    let mut input_map: HashMap<String, String> = HashMap::new();
-                    for (index, parameter) in macros.1.get(key).unwrap().iter().enumerate() {
-                        if index >= inputs.len() {
-                            input_map.insert(parameter.to_string(), String::new());
-                        } else {
-                            input_map.insert(parameter.to_string(), inputs[index].to_string());
-                        }
-                    }
-                    println!("{:?}", input_map);
-                    processed_line.clear();
-                    for instruction in instructions {
-                        let mut line = instruction.to_string();
-                        for (variable, value) in &input_map {
-                            line = line.replace(&format!(" {} ", variable), &format!(" {} ", &value));
-                            line = line.replace(&format!(" {}", variable), &format!(" {}", &value));
-                        }
-                        processed_code.push(line.trim().to_string());
-                    }
-                }
-            }
-
-            pc += 1;
-            if !processed_line.is_empty() {
-                processed_code.push(String::from(processed_line.trim()));
-            } else {
-                pc -= 1;
-            }
-        }
-        if !has_end {
-            return Err("Missing 'END' at the end of the code!");
-        }
-
-        Ok(processed_code)
     }
 
     fn get_labels(&self) -> Result<HashMap<String, u16>, &'static str> {
@@ -1042,15 +884,6 @@ mod tests {
         let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
 
         assert_eq!(jumps, assembler.get_origins());
-    }
-
-    #[test]
-    fn end() {
-        let assembler = Assembler::new("RLC\n END");
-        assert_eq!(vec![0x7], assembler.assemble().unwrap());
-
-        let assembler = Assembler::new("RLC\n");
-        assert_eq!(Err("Missing 'END' at the end of the code!"), assembler.assemble());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
