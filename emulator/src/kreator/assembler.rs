@@ -56,7 +56,6 @@ impl Assembler {
                 line = "".to_string();
             } else if line.contains("IF") {
                 let condition = line.split_once(" ").unwrap().1;
-                let a = evaluate_str(condition);
                 should_assemble_line = evaluate_str(condition) != 0;
                 in_conditional = true;
                 line = "".to_string();
@@ -798,20 +797,6 @@ mod tests {
     }
 
     #[test]
-    fn remove_label_declarations() {
-        let input_code = "label: \n MOV A,B\n @LAB:\ntest:\nMOV A,B\nEND";
-        let assembler = Assembler::new(input_code);
-
-        assert_eq!(vec![0x78, 0x78], assembler.assemble().unwrap());
-    }
-
-    #[test]
-    fn same_label() {
-        let assembler = Assembler::new("lab:\n LXI B, lab + lab\nEND");
-        assert_eq!(vec![0x01, 0x0, 0x0], assembler.assemble().unwrap());
-    }
-
-    #[test]
     fn opcodes_without_args() {
         let mut opcodes = HashMap::new();
         opcodes.insert("RRC\nEND", 0x0f);
@@ -925,45 +910,6 @@ mod tests {
         assert_eq!(
             Err("wrong arg amount!"),
             convert_opcodes_using_all_registers(vec![], 1, false)
-        );
-    }
-
-    #[test]
-    fn preprocessing_labels() {
-        let assembler = Assembler::new("test:\nlabel: MOV A,B\nEND");
-        assert_eq!(vec!["MOV A,B"], assembler.get_preprocessed_code().unwrap());
-
-        let assembler = Assembler::new("label: MOV A,label\nEND");
-        assert_eq!(vec!["MOV A,0"], assembler.get_preprocessed_code().unwrap());
-
-        let assembler = Assembler::new("A\nB\nlab: C\n label: JMP 2\nEND");
-        assert_eq!(
-            vec!["A", "B", "C", "JMP 2"],
-            assembler.get_preprocessed_code().unwrap()
-        );
-
-        let assembler = Assembler::new("A: MOV A,B\nEND");
-        assert_eq!(Err("illegal label name"), assembler.get_preprocessed_code());
-    }
-
-    #[test]
-    fn preprocessing_pc() {
-        let assembler = Assembler::new("MOV A,B\n JMP $\nEND");
-        assert_eq!(
-            vec!["MOV A,B", "JMP 1"],
-            assembler.get_preprocessed_code().unwrap()
-        );
-
-        let assembler = Assembler::new("A\nB\nC\nD\n JMP $\nEND");
-        assert_eq!(
-            vec!["A", "B", "C", "D", "JMP 4"],
-            assembler.get_preprocessed_code().unwrap()
-        );
-
-        let assembler = Assembler::new("label:\nNOP\n JMP $\nEND");
-        assert_eq!(
-            vec!["NOP", "JMP 1"],
-            assembler.get_preprocessed_code().unwrap()
         );
     }
 
@@ -1099,51 +1045,12 @@ mod tests {
     }
 
     #[test]
-    fn equate() {
-        let assembler = Assembler::new("PTO EQU 8 \n\n\n OUT PTO\nEND");
-        assert_eq!(
-            vec!["OUT 8".to_string()],
-            assembler.get_preprocessed_code().unwrap()
-        );
-
-        let assembler = Assembler::new("test EQU 10H + 20 \n\n\n JMP test\nEND");
-        assert_eq!(vec!["JMP 10H + 20".to_string()], assembler.get_preprocessed_code().unwrap());
-
-        let assembler = Assembler::new("test EQU 5 \n\n\n test EQU 6\nEND");
-        assert_eq!(Err("Can't assign a variable more than once using EQU!"), assembler.get_preprocessed_code());
-    }
-
-    #[test]
-    fn set() {
-        let assembler = Assembler::new("IMMED SET 5 \n ADI IMMED\n IMMED SET 10H-6\n ADI IMMED\nEND");
-        assert_eq!(
-            vec![
-                "ADI 5".to_string(),
-                "ADI 10H-6".to_string()
-            ],
-            assembler.get_preprocessed_code().unwrap()
-        );
-    }
-
-    #[test]
     fn end() {
         let assembler = Assembler::new("RLC\n END");
         assert_eq!(vec![0x7], assembler.assemble().unwrap());
 
         let assembler = Assembler::new("RLC\n");
         assert_eq!(Err("Missing 'END' at the end of the code!"), assembler.assemble());
-    }
-
-    #[test]
-    fn if_endif() {
-        let assembler = Assembler::new("COND SET 0ffH\nIF COND\nMOV A,C\nENDIF\nCOND SET 0\nIF COND \nMOV A,C\nENDIF\nXRA C\nEND");
-        assert_eq!(Ok(vec![0x79, 0xA9]), assembler.assemble());
-
-        let assembler = Assembler::new("IF 1\nEND");
-        assert_eq!(Err("Every IF must be closed"), assembler.assemble());
-
-        let assembler = Assembler::new("ENDIF\nEND");
-        assert_eq!(Err("Every ENDIF must have a corresponding IF"), assembler.assemble());
     }
 
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {

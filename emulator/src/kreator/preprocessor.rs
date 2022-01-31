@@ -1,10 +1,170 @@
 use std::collections::HashMap;
 use super::assembler::LABEL_DECL;
+use super::parser::*;
 
 use regex::Regex;
 
 
-pub fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
+pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+    let decl_regex = Regex::new(LABEL_DECL).unwrap();
+    let label_wrap = get_labels(code);
+    if label_wrap.is_err() {
+        return Err(label_wrap.unwrap_err());
+    }
+    let labels = label_wrap.unwrap();
+    let macro_wrap = get_macros(code);
+    if macro_wrap.is_err() {
+        return Err(macro_wrap.unwrap_err());
+    }
+    let macros = macro_wrap.unwrap();
+    if !has_correct_end(code) {
+        return Err("A program must only contain one END statement and it has to be the last")
+    }
+
+    let mut equate_assignments: HashMap<String, u16> = HashMap::new();
+    let mut set_assignments: HashMap<String, u16> = HashMap::new();
+    let mut in_macro_declaration = false;
+    let mut in_conditional = false;
+    let mut condition = false;
+    let mut preprocessed_code: Vec<String> = Vec::new();
+    let mut pc = 0;
+
+    for line in code {
+        let mut owned_line = line.trim().to_string();
+
+        // replace program counter references
+        owned_line = owned_line.replace("$", &pc.to_string());
+
+        // remove declaration of labels
+        while let Some(_) = decl_regex.find(&owned_line) {
+            owned_line = decl_regex.replace(&owned_line, "").to_string();
+        }
+
+        // replace labels with according values
+        for (key, value) in &labels {
+            owned_line = owned_line.replace(key, &value.to_string());
+        }
+
+        // determine if a variable is being declared by EQU
+        if owned_line.contains("EQU") {
+            let split_name = owned_line.split_once(" ").unwrap();
+            if equate_assignments.contains_key(split_name.0) {
+                return Err("Can't assign a variable more than once using EQU!");
+            }
+            let split_expr = split_name.1.split_once(" ").unwrap();
+            equate_assignments.insert(split_name.0.to_string(), eval_str(split_expr.1.to_string()));
+            owned_line.clear();
+        }
+
+        // determine if a variable is being declared by SET
+        if owned_line.contains("SET") {
+            let split_name = owned_line.split_once(" ").unwrap();
+            let split_expr = split_name.1.split_once(" ").unwrap();
+            set_assignments.insert(split_name.0.to_string(), eval_str(split_expr.1.to_string()));
+            owned_line.clear()
+        }
+
+        // replace values of variables declared by EQU
+        for (key, value) in &equate_assignments {
+            owned_line = owned_line.replace(&format!(" {}", key), &format!(" {}", value));
+        }
+
+        // replace values of variables declared by SET
+        for (key, value) in &set_assignments {
+            owned_line = owned_line.replace(&format!(" {}", key), &format!(" {}", value));
+        }
+
+        // check if conditional is exited (before check for entering since "IF" is contained in "ENDIF")
+        if owned_line.contains("ENDIF") {
+            if !in_conditional {
+                return Err("Every ENDIF must have a corresponding IF");
+            }
+            condition = false;
+            in_conditional = false;
+            owned_line.clear();
+        }
+
+        // check if conditional is being entered
+        else if owned_line.contains("IF") {
+            in_conditional = true;
+            let condition_str = owned_line.split_once(" ").unwrap().1.to_string();
+            condition = eval_str(condition_str) != 0;
+            owned_line.clear();
+        }
+
+        // check if conditional holds true
+        if in_conditional {
+            if !condition {
+                owned_line.clear();
+            }
+        }
+
+        // check if macro is being declared
+        if line.contains("MACRO") {
+            in_macro_declaration = true;
+            owned_line.clear();
+        }
+
+        // remove lines of macro declaration
+        if in_macro_declaration {
+            owned_line.clear();
+        }
+
+        // check lines for ENDM statement
+        if line.contains("ENDM") {
+            in_macro_declaration = false;
+            owned_line.clear();
+        }
+
+        // replace macro call with contents
+        for (macro_name, instructions) in &macros.0 {
+            if owned_line.contains(macro_name) {
+                let input_string = owned_line.split_once(macro_name).unwrap().1.trim();
+                let mut inputs: Vec<&str> = Vec::new();
+                for input in input_string.split(",") {
+                    inputs.push(input.trim());
+                }
+                let mut input_map: HashMap<String, String> = HashMap::new();
+                for (index, parameter) in macros.1.get(macro_name).unwrap().iter().enumerate() {
+                    let value = if index >= inputs.len() {
+                        String::new()
+                    } else {
+                        inputs[index].to_string()
+                    };
+                    input_map.insert(parameter.to_string(), value);
+                }
+                owned_line.clear();
+                for instruction in instructions {
+                    let mut line = instruction.to_string();
+                    for (variable, value) in &input_map {
+                        line = line.replace(&format!(" {} ", variable), &format!(" {} ", &value));
+                        line = line.replace(&format!(" {}", variable), &format!(" {}", &value));
+                    }
+                    preprocessed_code.push(line.trim().to_string());
+                }
+            }
+        }
+
+        pc += 1;
+        if !owned_line.is_empty() {
+            preprocessed_code.push(String::from(owned_line.trim()));
+        } else {
+            pc -= 1;
+        }
+    }
+    if in_conditional {
+        return Err("Every IF must be closed");
+    }
+    preprocessed_code.remove(preprocessed_code.len() - 1);
+    Ok(preprocessed_code)
+}
+
+fn eval_str(str: String) -> u16 {
+    let tokens = tokenize(str.to_string());
+    to_expression_tree(tokens).evaluate() as u16
+}
+
+fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
         let reserved_names = vec![
             "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
@@ -116,7 +276,7 @@ fn has_correct_end(code: &Vec<String>) -> bool {
         if line.is_empty() {
             continue;
         }
-        if line.trim().contains("END") {
+        if line.trim().contains("END") && !line.contains("ENDIF") && !line.contains("ENDM") {
             if has_end {
                 return false;
             }
@@ -132,6 +292,88 @@ fn has_correct_end(code: &Vec<String>) -> bool {
 
 mod tests {
     use super::*;
+
+    #[test]
+    fn preprocessing_pc() {
+        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV A,B", "JMP $", "END"]));
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "JMP 1"])), preprocessed_code);
+
+        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV $, $", "END"]));
+        assert_eq!(Ok(vec!["MOV 0, 0".to_string()]), preprocessed_code);
+    }
+
+    #[test]
+    fn remove_label_declarations() {
+        let code = vec!["label:", "MOV A,B", "@LAB:", "test:", "MOV A,B", "END"];
+        let preprocessed_code = get_preprocessed_code(&convert_input(code));
+
+        assert_eq!(Ok(vec!["MOV A,B".to_string(), "MOV A,B".to_string()]), preprocessed_code);
+    }
+
+    #[test]
+    fn illegal_label_declarations() {
+        let label_wrapper = get_labels(&convert_input(vec!["A: MOV A,B"]));
+        assert_eq!(Err("illegal label name"), label_wrapper);
+
+        let label_wrapper = get_labels(&convert_input(vec!["LAB: MOV A,B", "LAB: RRC"]));
+        assert_eq!(Err("label must not be assigned twice"), label_wrapper);
+    }
+
+    #[test]
+    fn label_replacement() {
+        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["lab: lab", "END"]));
+        assert_eq!(Ok(vec!["0".to_string()]), preprocessed_code);
+
+        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV A, lab", "lab: RRC", "END"]));
+        assert_eq!(Ok(convert_input(vec!["MOV A, 1", "RRC"])), preprocessed_code);
+    }
+
+    #[test]
+    fn equate() {
+        let ppc = get_preprocessed_code(&convert_input(vec!["PTO EQU 8", "OUT PTO", "END"]));
+        assert_eq!(Ok(vec!["OUT 8".to_string()]), ppc);
+
+        let ppc = get_preprocessed_code(&convert_input(vec!["test EQU 10H + 20", "JMP test", "END"]));
+        assert_eq!(Ok(vec!["JMP 36".to_string()]), ppc);
+
+        let ppc = get_preprocessed_code(&convert_input(vec!["test EQU 5", "test EQU 6", "END"]));
+        assert_eq!(Err("Can't assign a variable more than once using EQU!"), ppc);
+    }
+
+    #[test]
+    fn set() {
+        let code = vec!["IMMED SET 5 ", "ADI IMMED", "IMMED SET 10H-6", "ADI IMMED", "END"];
+        let ppc = get_preprocessed_code(&convert_input(code));
+        assert_eq!(Ok(convert_input(vec!["ADI 5", "ADI 10"])), ppc);
+    }
+
+    #[test]
+    fn if_endif() {
+        let code = vec!["COND SET 0ffH", "IF COND", "MOV A,C", "ENDIF", "COND SET 0", "IF COND ", "MOV A,C", "ENDIF", "XRA C", "END"];
+        let ppc = get_preprocessed_code(&convert_input(code));
+        assert_eq!(Ok(convert_input(vec!["MOV A,C", "XRA C"])), ppc);
+
+        let ppc = get_preprocessed_code(&convert_input(vec!["IF 1", "END"]));
+        assert_eq!(Err("Every IF must be closed"), ppc);
+
+        let ppc = get_preprocessed_code(&convert_input(vec!["ENDIF", "END"]));
+        assert_eq!(Err("Every ENDIF must have a corresponding IF"), ppc);
+    }
+
+    #[test]
+    fn macro_replacement() {
+        let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "SHRT", "END"]);
+        let ppc = get_preprocessed_code(code);
+        assert_eq!(Ok(convert_input(vec!["RRC", "ANI 7FH"])), ppc);
+
+        let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "END"]);
+        let ppc = get_preprocessed_code(code);
+        assert_eq!(Ok(convert_input(vec![])), ppc);
+
+        let code = &convert_input(vec!["MAC1 MACRO P1, P2,COMMENT", "XRA P2", "DCR P1 COMMENT", "ENDM", "MAC1 C, D", "END"]);
+        let ppc = get_preprocessed_code(code);
+        assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C"])), ppc);
+    }
 
     #[test]
     fn valid_labels() {
