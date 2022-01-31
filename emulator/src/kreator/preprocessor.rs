@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use super::assembler::LABEL_DECL;
+use super::assembler:: {LABEL_DECL, get_reserved_names} ;
 use super::parser::*;
 
 use regex::Regex;
@@ -216,17 +216,17 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
 }
 
 fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashMap<String, Vec<String>>), &'static str> {
+    let name_regex = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4})").unwrap();
+
     let mut macros: HashMap<String, Vec<String>> = HashMap::new();
     let mut parameters: HashMap<String, Vec<String>> = HashMap::new();
     let mut in_macro = false;
     let mut macro_name = String::new();
-
     let mut current_macro: Vec<String> = Vec::new();
     let mut current_parameters: Vec<String> = Vec::new();
 
     for line in code {
         let line = line.trim();
-
         if line.contains("MACRO") {
             if in_macro {
                 return Err("Cannot define macro within macro");
@@ -236,6 +236,9 @@ fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashM
             macro_name = split[0].trim().to_string();
             if macro_name.is_empty() {
                 return Err("Cannot define macro without name");
+            }
+            if !name_regex.is_match(&macro_name) || get_reserved_names().iter().any(|&name| name == &macro_name) {
+                return Err("Illegal macro name supplied!");
             }
             for parameter in split[1].split(",") {
                 if !parameter.is_empty() {
@@ -416,7 +419,7 @@ mod tests {
         params.insert("MAC1".to_string(), convert_input(vec!["P1", "P2", "COMMENT"]));
         assert_eq!(params, get_macros(&code).unwrap().1);
 
-        let code = convert_input(vec!["A MACRO"]);
+        let code = convert_input(vec!["THE MACRO"]);
         assert_eq!(Err("Every MACRO has to be followed by an ENDM"), get_macros(&code));
 
         let code = convert_input(vec!["ENDM"]);
@@ -427,6 +430,9 @@ mod tests {
 
         let code = convert_input(vec!["ABC MACRO", "A MACRO", "ENDM"]);
         assert_eq!(Err("Cannot define macro within macro"), get_macros(&code));
+
+        let code = convert_input(vec!["A MACRO", "ENDM"]);
+        assert_eq!(Err("Illegal macro name supplied!"), get_macros(&code));
     }
 
     #[test]

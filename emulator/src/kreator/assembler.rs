@@ -6,6 +6,19 @@ use std::{collections::HashMap, hash::Hash};
 
 pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
 
+pub fn get_reserved_names() -> Vec<&'static str> {
+    vec![
+        "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
+        "SUB", "SBB", "ANA", "XRA", "ORA", "CMP", "RLC", "RRC", "RAL", "RAR", "PUSH", "POP",
+        "DAD", "INX", "DCX", "XCHG", "XTHL", "SPHL", "LXI", "MVI", "ADI", "ACI", "SUI", "SBI",
+        "ANI", "XRI", "ORI", "CPI", "STA", "LDA", "SHLD", "LHLD", "PCHL", "JMP", "JC", "JNC",
+        "JZ", "JNZ", "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM",
+        "CPE", "CPO", "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI",
+        "DI", "IN", "OUT", "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM",
+        "B", "C", "D", "H", "L", "A", "SP", "PSW",
+    ]
+}
+
 pub struct Assembler {
     code: Vec<String>,
 }
@@ -120,16 +133,7 @@ impl Assembler {
 
     fn get_labels(&self) -> Result<HashMap<String, u16>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
-        let reserved_names = vec![
-            "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
-            "SUB", "SBB", "ANA", "XRA", "ORA", "CMP", "RLC", "RRC", "RAL", "RAR", "PUSH", "POP",
-            "DAD", "INX", "DCX", "XCHG", "XTHL", "SPHL", "LXI", "MVI", "ADI", "ACI", "SUI", "SBI",
-            "ANI", "XRI", "ORI", "CPI", "STA", "LDA", "SHLD", "LHLD", "PCHL", "JMP", "JC", "JNC",
-            "JZ", "JNZ", "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM",
-            "CPE", "CPO", "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI",
-            "DI", "IN", "OUT", "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM",
-            "B", "C", "D", "H", "L", "A", "SP", "PSW",
-        ];
+        
         let mut temp_labels = Vec::new();
         let mut labels = HashMap::new();
         let mut mem_address = 0;
@@ -138,7 +142,7 @@ impl Assembler {
             if label_regex.is_match(&line) {
                 let split = line.split(":").collect::<Vec<&str>>();
                 let label = split[0].trim_start().to_string();
-                if reserved_names.iter().any(|&name| name == label) {
+                if get_reserved_names().iter().any(|&name| name == label) {
                     return Err("illegal label name");
                 }
                 temp_labels.push(label);
