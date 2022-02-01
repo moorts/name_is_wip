@@ -118,7 +118,7 @@ impl Assembler {
                     macro_name.clear();
                     in_macro = false;
                 } else {
-                    return Err("Every ENDM must have a corresponding MACRO")
+                    return Err("Every ENDM must have a corresponding MACRO");
                 }
             }
             if in_macro {
