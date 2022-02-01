@@ -507,73 +507,51 @@ mod tests {
 
     #[test]
     fn mov_errors() {
-        let assembler = Assembler::new("MOV A\nEND");
-        assert_eq!(
-            Err("Missing argument(s) for MOV instruction"),
-            assembler.assemble()
-        );
-
-        let assembler = Assembler::new("MOV B,Q\nEND");
-        assert_eq!(
-            Err("Invalid second argument for MOV instruction"),
-            assembler.assemble()
-        );
-
-        let assembler = Assembler::new("MOV M,M\nEND");
-        assert_eq!(
-            Err("Invalid arguments for MOV instruction (Can't move M into M)"),
-            assembler.assemble()
-        );
-
-        let assembler = Assembler::new("MOV A,B,C\nEND");
-        assert_eq!(Err("MOV only takes 2 arguments!"), assembler.assemble());
+        assert_eq!(Err("Missing argument(s) for MOV instruction"), to_machine_code("MOV A".to_string()));
+        assert_eq!(Err("Invalid second argument for MOV instruction"), to_machine_code("MOV B,Q".to_string()));
+        assert_eq!(Err("Invalid arguments for MOV instruction (Can't move M into M)"), to_machine_code("MOV M,M".to_string()));
+        assert_eq!(Err("MOV only takes 2 arguments!"), to_machine_code("MOV A,B,C".to_string()));
     }
 
     #[test]
     fn nop_operation() {
-        let assembler = Assembler::new("NOP\nEND");
-        assert_eq!(0x0, assembler.assemble().unwrap()[0]);
-
-        let assembler = Assembler::new("NOP A\nEND");
-        assert_eq!(Err("Could not match instruction"), assembler.assemble());
+        assert_eq!(Ok(vec![0x0]), to_machine_code("NOP".to_string()));
+        assert_eq!(Err("Could not match instruction"), to_machine_code("NOP A".to_string()));
     }
 
     #[test]
     fn invalid_instructions() {
-        let assembler = Assembler::new("TEST\nEND");
-
-        assert_eq!(Err("Could not match instruction"), assembler.assemble());
+        assert_eq!(Err("Could not match instruction"), to_machine_code("TEST".to_string()));
     }
 
     #[test]
     fn opcodes_without_args() {
         let mut opcodes = HashMap::new();
-        opcodes.insert("RRC\nEND", 0x0f);
-        opcodes.insert("RAL\nEND", 0x17);
-        opcodes.insert("RAR\nEND", 0x1f);
-        opcodes.insert("DAA\nEND", 0x27);
-        opcodes.insert("CMA\nEND", 0x2f);
-        opcodes.insert("CMC\nEND", 0x3f);
-        opcodes.insert("HLT\nEND", 0x76);
-        opcodes.insert("RNZ\nEND", 0xc0);
-        opcodes.insert("RZ\nEND", 0xc8);
-        opcodes.insert("RET\nEND", 0xc9);
-        opcodes.insert("RNC\nEND", 0xd0);
-        opcodes.insert("RC\nEND", 0xd8);
-        opcodes.insert("RPO\nEND", 0xe0);
-        opcodes.insert("RPE\nEND", 0xe8);
-        opcodes.insert("EI\nEND", 0xfb);
-        opcodes.insert("RM\nEND", 0xf8);
-        opcodes.insert("SPHL\nEND", 0xf9);
-        opcodes.insert("DI\nEND", 0xf3);
-        opcodes.insert("RP\nEND", 0xf0);
-        opcodes.insert("XCHG\nEND", 0xeb);
-        opcodes.insert("PCHL\nEND", 0xe9);
-        opcodes.insert("XTHL\nEND", 0xe3);
+        opcodes.insert("RRC", 0x0f);
+        opcodes.insert("RAL", 0x17);
+        opcodes.insert("RAR", 0x1f);
+        opcodes.insert("DAA", 0x27);
+        opcodes.insert("CMA", 0x2f);
+        opcodes.insert("CMC", 0x3f);
+        opcodes.insert("HLT", 0x76);
+        opcodes.insert("RNZ", 0xc0);
+        opcodes.insert("RZ", 0xc8);
+        opcodes.insert("RET", 0xc9);
+        opcodes.insert("RNC", 0xd0);
+        opcodes.insert("RC", 0xd8);
+        opcodes.insert("RPO", 0xe0);
+        opcodes.insert("RPE", 0xe8);
+        opcodes.insert("EI", 0xfb);
+        opcodes.insert("RM", 0xf8);
+        opcodes.insert("SPHL", 0xf9);
+        opcodes.insert("DI", 0xf3);
+        opcodes.insert("RP", 0xf0);
+        opcodes.insert("XCHG", 0xeb);
+        opcodes.insert("PCHL", 0xe9);
+        opcodes.insert("XTHL", 0xe3);
 
         for (instruction, opc) in opcodes {
-            let assembler = Assembler::new(instruction);
-            assert_eq!(Ok(vec![opc]), assembler.assemble());
+            assert_eq!(Ok(vec![opc]), to_machine_code(instruction.to_string()));
         }
     }
 
@@ -744,8 +722,7 @@ mod tests {
             let inputs = get_bytes_and_args_by_opcode(opc).unwrap();
 
             for input in inputs {
-                let assembler = Assembler::new(&format!("{} {}\nEND", opc, &input.1));
-                assert_eq!(input.0, assembler.assemble().unwrap());
+                assert_eq!(Ok(input.0), to_machine_code(format!("{} {}", opc, &input.1)));
             }
         }
     }
