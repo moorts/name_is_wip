@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-use super::assembler:: {LABEL_DECL, get_reserved_names} ;
+use super::assembler::{get_reserved_names, LABEL_DECL};
 use super::parser::*;
+use std::collections::HashMap;
 
 use regex::Regex;
-
 
 pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let decl_regex = Regex::new(LABEL_DECL).unwrap();
@@ -17,7 +16,7 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
         return Err(macro_wrap.unwrap_err());
     }
     if !has_correct_end(code) {
-        return Err("A program must only contain one END statement and it has to be the last")
+        return Err("A program must only contain one END statement and it has to be the last");
     }
 
     let mut equate_assignments: HashMap<String, u16> = HashMap::new();
@@ -87,7 +86,6 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             in_conditional = false;
             owned_line.clear();
         }
-
         // check if conditional is being entered
         else if owned_line.contains("IF") {
             in_conditional = true;
@@ -172,7 +170,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                 }
             }
         }
-        
+
         if !owned_line.is_empty() {
             macroless_code.push(owned_line.trim().to_string());
         }
@@ -188,53 +186,53 @@ fn eval_str(str: String) -> u16 {
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
-        let reserved_names = vec![
-            "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
-            "SUB", "SBB", "ANA", "XRA", "ORA", "CMP", "RLC", "RRC", "RAL", "RAR", "PUSH", "POP",
-            "DAD", "INX", "DCX", "XCHG", "XTHL", "SPHL", "LXI", "MVI", "ADI", "ACI", "SUI", "SBI",
-            "ANI", "XRI", "ORI", "CPI", "STA", "LDA", "SHLD", "LHLD", "PCHL", "JMP", "JC", "JNC",
-            "JZ", "JNZ", "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM",
-            "CPE", "CPO", "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI",
-            "DI", "IN", "OUT", "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM",
-            "B", "C", "D", "H", "L", "A", "SP", "PSW", 
-        ];
-        let mut temp_labels = Vec::new();
-        let mut labels = HashMap::new();
-        let mut mem_address = 0;
+    let reserved_names = vec![
+        "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
+        "SUB", "SBB", "ANA", "XRA", "ORA", "CMP", "RLC", "RRC", "RAL", "RAR", "PUSH", "POP", "DAD",
+        "INX", "DCX", "XCHG", "XTHL", "SPHL", "LXI", "MVI", "ADI", "ACI", "SUI", "SBI", "ANI",
+        "XRI", "ORI", "CPI", "STA", "LDA", "SHLD", "LHLD", "PCHL", "JMP", "JC", "JNC", "JZ", "JNZ",
+        "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM", "CPE", "CPO",
+        "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI", "DI", "IN", "OUT",
+        "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM", "B", "C", "D", "H", "L",
+        "A", "SP", "PSW",
+    ];
+    let mut temp_labels = Vec::new();
+    let mut labels = HashMap::new();
+    let mut mem_address = 0;
 
-        for line in code {
-            if label_regex.is_match(&line) {
-                let split = line.split(":").collect::<Vec<&str>>();
-                let label = split[0].trim_start().to_string();
-                if reserved_names.iter().any(|&name| name == label) {
-                    return Err("illegal label name");
-                }
-                temp_labels.push(label);
-                if !split[1].trim().is_empty() {
-                    while let Some(new_label) = temp_labels.pop() {
-                        if labels.contains_key(&new_label) {
-                            return Err("label must not be assigned twice");
-                        } else {
-                            labels.insert(String::from(new_label), mem_address as u16);
-                        }
-                    }
-                    mem_address += 1;
-                }
-            } else {
+    for line in code {
+        if label_regex.is_match(&line) {
+            let split = line.split(":").collect::<Vec<&str>>();
+            let label = split[0].trim_start().to_string();
+            if reserved_names.iter().any(|&name| name == label) {
+                return Err("illegal label name");
+            }
+            temp_labels.push(label);
+            if !split[1].trim().is_empty() {
                 while let Some(new_label) = temp_labels.pop() {
                     if labels.contains_key(&new_label) {
-                        return Err("label must not be assigned twice!");
+                        return Err("label must not be assigned twice");
                     } else {
                         labels.insert(String::from(new_label), mem_address as u16);
                     }
                 }
                 mem_address += 1;
             }
+        } else {
+            while let Some(new_label) = temp_labels.pop() {
+                if labels.contains_key(&new_label) {
+                    return Err("label must not be assigned twice!");
+                } else {
+                    labels.insert(String::from(new_label), mem_address as u16);
+                }
+            }
+            mem_address += 1;
         }
-        if !temp_labels.is_empty() {
-            return Err("labels must not point to an empty address!");
-        }
-        Ok(labels)
+    }
+    if !temp_labels.is_empty() {
+        return Err("labels must not point to an empty address!");
+    }
+    Ok(labels)
 }
 
 fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashMap<String, Vec<String>>), &'static str> {
@@ -259,7 +257,9 @@ fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashM
             if macro_name.is_empty() {
                 return Err("Cannot define macro without name");
             }
-            if !name_regex.is_match(&macro_name) || get_reserved_names().iter().any(|&name| name == &macro_name) {
+            if !name_regex.is_match(&macro_name)
+                || get_reserved_names().iter().any(|&name| name == &macro_name)
+            {
                 return Err("Illegal macro name supplied!");
             }
             for parameter in split[1].split(",") {
@@ -267,7 +267,7 @@ fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashM
                     current_parameters.push(parameter.trim().to_string());
                 }
             }
-            continue
+            continue;
         }
         if line.contains("ENDM") {
             if line != "ENDM" {
@@ -281,7 +281,7 @@ fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashM
                 macro_name.clear();
                 in_macro = false;
             } else {
-                return Err("Every ENDM must have a corresponding MACRO")
+                return Err("Every ENDM must have a corresponding MACRO");
             }
         }
         if in_macro {
@@ -320,8 +320,9 @@ mod tests {
 
     #[test]
     fn preprocessing_pc() {
-        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV A,B", "JMP $", "END"]));
-        assert_eq!(Ok(convert_input(vec!["MOV A,B", "JMP 1"])), preprocessed_code);
+        let code = vec!["MOV A,B", "JMP $", "END"];
+        let ppc = get_preprocessed_code(&convert_input(code));
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "JMP 1"])), ppc);
 
         let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV $, $", "END"]));
         assert_eq!(Ok(vec!["MOV 0, 0".to_string()]), preprocessed_code);
@@ -330,9 +331,9 @@ mod tests {
     #[test]
     fn remove_label_declarations() {
         let code = vec!["label:", "MOV A,B", "@LAB:", "test:", "MOV A,B", "END"];
-        let preprocessed_code = get_preprocessed_code(&convert_input(code));
+        let ppc = get_preprocessed_code(&convert_input(code));
 
-        assert_eq!(Ok(vec!["MOV A,B".to_string(), "MOV A,B".to_string()]), preprocessed_code);
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "MOV A,B"])), ppc);
     }
 
     #[test]
@@ -346,11 +347,12 @@ mod tests {
 
     #[test]
     fn label_replacement() {
-        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["lab: lab", "END"]));
-        assert_eq!(Ok(vec!["0".to_string()]), preprocessed_code);
+        let ppc = get_preprocessed_code(&convert_input(vec!["lab: lab", "END"]));
+        assert_eq!(Ok(vec!["0".to_string()]), ppc);
 
-        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV A, lab", "lab: RRC", "END"]));
-        assert_eq!(Ok(convert_input(vec!["MOV A, 1", "RRC"])), preprocessed_code);
+        let ppc =
+            get_preprocessed_code(&convert_input(vec!["MOV A, lab", "lab: RRC", "END"]));
+        assert_eq!(Ok(convert_input(vec!["MOV A, 1", "RRC"])), ppc);
     }
 
     #[test]
@@ -367,14 +369,31 @@ mod tests {
 
     #[test]
     fn set() {
-        let code = vec!["IMMED SET 5 ", "ADI IMMED", "IMMED SET 10H-6", "ADI IMMED", "END"];
+        let code = vec![
+            "IMMED SET 5 ",
+            "ADI IMMED",
+            "IMMED SET 10H-6",
+            "ADI IMMED",
+            "END",
+        ];
         let ppc = get_preprocessed_code(&convert_input(code));
         assert_eq!(Ok(convert_input(vec!["ADI 5", "ADI 10"])), ppc);
     }
 
     #[test]
     fn if_endif() {
-        let code = vec!["COND SET 0ffH", "IF COND", "MOV A,C", "ENDIF", "COND SET 0", "IF COND ", "MOV A,C", "ENDIF", "XRA C", "END"];
+        let code = vec![
+            "COND SET 0ffH",
+            "IF COND",
+            "MOV A,C",
+            "ENDIF",
+            "COND SET 0",
+            "IF COND ",
+            "MOV A,C",
+            "ENDIF",
+            "XRA C",
+            "END",
+        ];
         let ppc = get_preprocessed_code(&convert_input(code));
         assert_eq!(Ok(convert_input(vec!["MOV A,C", "XRA C"])), ppc);
 
@@ -395,7 +414,14 @@ mod tests {
         let ppc = replace_macros(code);
         assert_eq!(Ok(convert_input(vec![])), ppc);
 
-        let code = &convert_input(vec!["MAC1 MACRO P1, P2,COMMENT", "XRA P2", "DCR P1 COMMENT", "ENDM", "MAC1 C, D", "END"]);
+        let code = &convert_input(vec![
+            "MAC1 MACRO P1, P2,COMMENT",
+            "XRA P2",
+            "DCR P1 COMMENT",
+            "ENDM",
+            "MAC1 C, D",
+            "END",
+        ]);
         let ppc = replace_macros(code);
         assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C"])), ppc);
     }
@@ -436,7 +462,13 @@ mod tests {
         instructions.insert("SHRT".to_string(), convert_input(vec!["RRC", "ANI 7FH"]));
         assert_eq!(instructions, get_macros(&code).unwrap().0);
 
-        let code = convert_input(vec!["MAC1 MACRO P1, P2, COMMENT", "XRA P2", "DCR P1 COMMENT", "ENDM", "MAC1 C, D"]);
+        let code = convert_input(vec![
+            "MAC1 MACRO P1, P2, COMMENT",
+            "XRA P2",
+            "DCR P1 COMMENT",
+            "ENDM",
+            "MAC1 C, D",
+        ]);
         let mut params = HashMap::new();
         params.insert("MAC1".to_string(), convert_input(vec!["P1", "P2", "COMMENT"]));
         assert_eq!(params, get_macros(&code).unwrap().1);
@@ -497,13 +529,7 @@ mod tests {
             "",
         ]);
 
-        let result = convert_input(vec![
-            "JMP 0 +6",
-            "ADD C",
-            "POP B",
-            "RZ",
-            "EI",
-        ]);
+        let result = convert_input(vec!["JMP 0 +6", "ADD C", "POP B", "RZ", "EI"]);
 
         assert_eq!(Ok(result), get_preprocessed_code(&code));
     }
