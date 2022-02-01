@@ -890,6 +890,33 @@ mod tests {
         assert_eq!(jumps, assembler.get_origins());
     }
 
+    #[test]
+    fn full_program() {
+        let code = "VAR1 EQU 123\n 
+        GO: JMP $ +6\n
+        ADD C\n
+        \n
+        \n
+        IF 0+0*00O\n
+        MOV A,B\n
+        ENDIF\n
+        POP B\n
+        macr0 MACRO par\n
+        NOM SET 21\n
+        RZ\n
+        ENDM\n
+        \n
+        macr0 input\n
+        IF NOM\n
+        EI\n
+        ENDIF\n
+        END\n";
+
+        let result = vec![0xc3, 0x6, 0x0, 0x81, 0xC1, 0xC8, 0xFB];
+        
+        assert_eq!(Ok(result), Assembler::new(code).assemble());
+    }
+
     fn get_bytes_and_args_by_opcode(opcode: &str) -> io::Result<Vec<(Vec<u8>, String)>> {
         let f = File::open(OPCODE_TEST_DATA)?;
         let mut lines = io::BufReader::new(f).lines();
