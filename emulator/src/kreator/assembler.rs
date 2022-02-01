@@ -45,11 +45,7 @@ impl Assembler {
 
     pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
-        let code_wrap = get_preprocessed_code(&self.code);
-        if code_wrap.is_err() {
-            return Err(code_wrap.as_ref().unwrap_err());
-        }
-        let preprocessed_code = code_wrap.as_ref().unwrap();
+        let preprocessed_code = get_preprocessed_code(&self.code)?;
 
         let mut machine_code = Vec::new();
 

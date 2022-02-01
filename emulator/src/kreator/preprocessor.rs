@@ -6,15 +6,6 @@ use regex::Regex;
 
 pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let decl_regex = Regex::new(LABEL_DECL).unwrap();
-    let label_wrap = get_labels(code);
-    if label_wrap.is_err() {
-        return Err(label_wrap.unwrap_err());
-    }
-    let labels = label_wrap.unwrap();
-    let macro_wrap = get_macros(code);
-    if macro_wrap.is_err() {
-        return Err(macro_wrap.unwrap_err());
-    }
     if !has_correct_end(code) {
         return Err("A program must only contain one END statement and it has to be the last");
     }
@@ -26,11 +17,8 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let code_wrap = replace_macros(code);
-    if code_wrap.is_err() {
-        return Err(code_wrap.unwrap_err());
-    }
-    let code = &code_wrap.unwrap();
+    let labels = get_labels(code)?;
+    let code = replace_macros(code)?;
 
     for line in code {
         let mut owned_line = line.trim().to_string();
