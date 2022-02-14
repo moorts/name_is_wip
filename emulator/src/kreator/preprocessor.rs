@@ -186,11 +186,11 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
     for line in code {
         if label_regex.is_match(&line) {
             let split = line.split(":").collect::<Vec<&str>>();
-            let label = split[0].trim_start().to_string();
-            if reserved_names.iter().any(|&name| name == label) {
+            let label = split[0].trim_start();
+            if reserved_names.contains(&label) {
                 return Err("illegal label name");
             }
-            temp_labels.push(label);
+            temp_labels.push(label.to_string());
             if !split[1].trim().is_empty() {
                 while let Some(new_label) = temp_labels.pop() {
                     if labels.contains_key(&new_label) {
