@@ -43,14 +43,14 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
                 return Err("Can't assign a variable more than once using EQU!");
             }
             equate_assignments.insert(name.to_string(), eval_str(expression.to_string()));
-            owned_line.clear();
+            continue;
         }
 
         // determine if a variable is being declared by SET
         if owned_line.contains("SET") {
             let (name, expression) = owned_line.split_once(" SET ").unwrap();
             set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
-            owned_line.clear();
+            continue;
         }
 
         // replace values of variables declared by EQU
@@ -70,33 +70,37 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             }
             condition = false;
             in_conditional = false;
-            owned_line.clear();
+            continue;
         }
         // check if conditional is being entered
         else if owned_line.contains("IF") {
             in_conditional = true;
             let condition_str = owned_line.split_once(" ").unwrap().1.to_string();
             condition = eval_str(condition_str) != 0;
-            owned_line.clear();
+            continue;
         }
 
         // check if conditional holds true
         if in_conditional {
             if !condition {
-                owned_line.clear();
+                continue;
             }
         }
 
         pc += 1;
         if !owned_line.is_empty() {
-            preprocessed_code.push(String::from(owned_line.trim()));
+            preprocessed_code.push(owned_line.trim().to_string());
         } else {
             pc -= 1;
         }
     }
+
     if in_conditional {
         return Err("Every IF must be closed");
     }
+
+    // remove "END" from code
+    preprocessed_code.remove(preprocessed_code.len() - 1);
     Ok(preprocessed_code)
 }
 
@@ -105,24 +109,24 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let mut macroless_code: Vec<String> = Vec::new();
     let mut in_macro_declaration = false;
 
-    for line in code {
-        let mut owned_line = line.trim().to_string();
+    'outer: for line in code {
+        let owned_line = line.trim().to_string();
 
         // check if macro is being declared
         if line.contains("MACRO") {
             in_macro_declaration = true;
-            owned_line.clear();
-        }
-
-        // remove lines of macro declaration
-        if in_macro_declaration {
-            owned_line.clear();
+            continue;
         }
 
         // check lines for ENDM statement
         if line.contains("ENDM") {
             in_macro_declaration = false;
-            owned_line.clear();
+            continue;
+        }
+
+        // remove lines of macro declaration
+        if in_macro_declaration {
+            continue;
         }
 
         for (macro_name, instructions) in &macro_instructions {
@@ -141,7 +145,6 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     };
                     input_map.insert(parameter.to_string(), value);
                 }
-                owned_line.clear();
                 for instruction in instructions {
                     let mut line = instruction.to_string();
                     for (variable, value) in &input_map {
@@ -150,14 +153,12 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     }
                     macroless_code.push(line.trim().to_string());
                 }
+                continue 'outer;
             }
         }
 
-        if !owned_line.is_empty() {
             macroless_code.push(owned_line.trim().to_string());
-        }
     }
-    macroless_code.remove(macroless_code.len() - 1);
     Ok(macroless_code)
 }
 
@@ -390,11 +391,11 @@ mod tests {
     fn macro_replacement() {
         let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "SHRT", "END"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec!["RRC", "ANI 7FH"])), ppc);
+        assert_eq!(Ok(convert_input(vec!["RRC", "ANI 7FH", "END"])), ppc);
 
         let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "END"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec![])), ppc);
+        assert_eq!(Ok(convert_input(vec!["END"])), ppc);
 
         let code = &convert_input(vec![
             "MAC1 MACRO P1, P2,COMMENT",
@@ -405,7 +406,7 @@ mod tests {
             "END",
         ]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C"])), ppc);
+        assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C", "END"])), ppc);
     }
 
     #[test]
