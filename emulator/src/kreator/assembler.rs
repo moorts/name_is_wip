@@ -53,7 +53,7 @@ impl Assembler {
             let line = label_regex.replace(&line, "").trim().to_string();
 
             if !line.is_empty() {
-                machine_code.extend(to_machine_code(line.to_string())?);
+                machine_code.extend(to_machine_code(line)?);
             }
         }
         Ok(machine_code)

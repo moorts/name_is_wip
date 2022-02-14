@@ -182,7 +182,7 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
         "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM", "CPE", "CPO",
         "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI", "DI", "IN", "OUT",
         "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM", "B", "C", "D", "H", "L",
-        "A", "SP", "PSW",
+        "A", "SP", "PSW"
     ];
     let mut temp_labels = Vec::new();
     let mut labels = HashMap::new();
