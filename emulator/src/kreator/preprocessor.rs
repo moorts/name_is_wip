@@ -38,21 +38,19 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 
         // determine if a variable is being declared by EQU
         if owned_line.contains("EQU") {
-            let split_name = owned_line.split_once(" ").unwrap();
-            if equate_assignments.contains_key(split_name.0) {
+            let (name, expression) = owned_line.split_once(" EQU ").unwrap();
+            if equate_assignments.contains_key(name) {
                 return Err("Can't assign a variable more than once using EQU!");
             }
-            let split_expr = split_name.1.split_once(" ").unwrap();
-            equate_assignments.insert(split_name.0.to_string(), eval_str(split_expr.1.to_string()));
+            equate_assignments.insert(name.to_string(), eval_str(expression.to_string()));
             owned_line.clear();
         }
 
         // determine if a variable is being declared by SET
         if owned_line.contains("SET") {
-            let split_name = owned_line.split_once(" ").unwrap();
-            let split_expr = split_name.1.split_once(" ").unwrap();
-            set_assignments.insert(split_name.0.to_string(), eval_str(split_expr.1.to_string()));
-            owned_line.clear()
+            let (name, expression) = owned_line.split_once(" SET ").unwrap();
+            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+            owned_line.clear();
         }
 
         // replace values of variables declared by EQU
@@ -103,11 +101,7 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 }
 
 fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
-    let macro_wrap = get_macros(code);
-    if macro_wrap.is_err() {
-        return Err(macro_wrap.unwrap_err());
-    }
-    let macros = macro_wrap.unwrap();
+    let (macro_instructions, macro_params) = get_macros(code)?;
     let mut macroless_code: Vec<String> = Vec::new();
     let mut in_macro_declaration = false;
 
@@ -131,7 +125,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
             owned_line.clear();
         }
 
-        for (macro_name, instructions) in &macros.0 {
+        for (macro_name, instructions) in &macro_instructions {
             if owned_line.contains(macro_name) {
                 let input_string = owned_line.split_once(macro_name).unwrap().1.trim();
                 let mut inputs: Vec<&str> = Vec::new();
@@ -139,7 +133,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     inputs.push(input.trim());
                 }
                 let mut input_map: HashMap<String, String> = HashMap::new();
-                for (index, parameter) in macros.1.get(macro_name).unwrap().iter().enumerate() {
+                for (index, parameter) in macro_params.get(macro_name).unwrap().iter().enumerate() {
                     let value = if index >= inputs.len() {
                         String::new()
                     } else {
