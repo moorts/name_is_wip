@@ -1,7 +1,6 @@
 use super::assembler::{get_reserved_names, LABEL_DECL};
 use super::parser::*;
 use std::collections::HashMap;
-
 use regex::Regex;
 
 pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
@@ -148,8 +147,29 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                 for instruction in instructions {
                     let mut line = instruction.to_string();
                     for (variable, value) in &input_map {
-                        line = line.replace(&format!(" {} ", variable), &format!(" {} ", &value));
-                        line = line.replace(&format!(" {}", variable), &format!(" {}", &value));
+                        let var_regex = Regex::new(&format!(r"[ ,]{}[ ,+\-*/,].", variable)).unwrap();
+                        let end_regex = Regex::new(&format!("[ ,]{} ?$", variable)).unwrap();
+                        while let Some(reg_match) = var_regex.find(&line) {
+                            let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
+                            let last_match_symbol =  line.get(reg_match.end()..reg_match.end() + 1).unwrap();
+                            let start = match first_match_symbol {
+                                " " | "," => reg_match.start() + 1,
+                                _ => reg_match.start()
+                            };
+                            let end = match last_match_symbol {
+                                " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
+                                _ => reg_match.end() -1
+                            };
+                            line.replace_range(start..end - 1, &value);
+                        }
+                        if let Some(reg_match) = end_regex.find(&line) {
+                            let first_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
+                            let start = match first_symbol {
+                                " " | "," => reg_match.start() + 1,
+                                _ => reg_match.start()
+                            };
+                            line.replace_range(start..reg_match.end(), &value);
+                        }
                     }
                     macroless_code.push(line.trim().to_string());
                 }
@@ -157,7 +177,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
             }
         }
 
-            macroless_code.push(owned_line.trim().to_string());
+        macroless_code.push(owned_line.trim().to_string());
     }
     Ok(macroless_code)
 }
@@ -407,6 +427,10 @@ mod tests {
         ]);
         let ppc = replace_macros(code);
         assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C", "END"])), ppc);
+
+        let code = &convert_input(vec!["MA MACRO Foo, FooBar", "MOV Foo, FooBar", "ENDM", "MA A, B"]);
+        let ppc = replace_macros(code);
+        assert_eq!(Ok(convert_input(vec!["MOV A, B"])), ppc);
     }
 
     #[test]
