@@ -132,10 +132,12 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
             if owned_line.contains(macro_name) {
                 let input_string = owned_line.split_once(macro_name).unwrap().1.trim();
                 let mut inputs: Vec<&str> = Vec::new();
+
                 for input in input_string.split(",") {
                     inputs.push(input.trim());
                 }
                 let mut input_map: HashMap<String, String> = HashMap::new();
+
                 for (index, parameter) in macro_params.get(macro_name).unwrap().iter().enumerate() {
                     let value = if index >= inputs.len() {
                         String::new()
@@ -144,14 +146,19 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     };
                     input_map.insert(parameter.to_string(), value);
                 }
+
                 for instruction in instructions {
+                    let replacement_protection = "@";
                     let mut line = instruction.to_string();
+
                     for (variable, value) in &input_map {
                         let var_regex = Regex::new(&format!(r"[ ,]{}[ ,+\-*/,].", variable)).unwrap();
                         let end_regex = Regex::new(&format!("[ ,]{} ?$", variable)).unwrap();
-                        while let Some(reg_match) = var_regex.find(&line) {
+
+                        while let Some(reg_match) = var_regex.find(&line.clone()) {
+                            println!("{:?}", reg_match);
                             let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
-                            let last_match_symbol =  line.get(reg_match.end()..reg_match.end() + 1).unwrap();
+                            let last_match_symbol =  line.get(reg_match.end()..).unwrap();
                             let start = match first_match_symbol {
                                 " " | "," => reg_match.start() + 1,
                                 _ => reg_match.start()
@@ -160,17 +167,18 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                                 " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
                                 _ => reg_match.end() -1
                             };
-                            line.replace_range(start..end - 1, &value);
+                            line.replace_range(start..end - 1, &format!("{}{}", &value, replacement_protection));
                         }
-                        if let Some(reg_match) = end_regex.find(&line) {
+                        if let Some(reg_match) = end_regex.find(&line.clone()) {
                             let first_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
                             let start = match first_symbol {
                                 " " | "," => reg_match.start() + 1,
                                 _ => reg_match.start()
                             };
-                            line.replace_range(start..reg_match.end(), &value);
+                            line.replace_range(start..reg_match.end(), &format!("{}{}", &value, replacement_protection));
                         }
                     }
+                    line = line.replace(replacement_protection, "");
                     macroless_code.push(line.trim().to_string());
                 }
                 continue 'outer;
@@ -431,6 +439,10 @@ mod tests {
         let code = &convert_input(vec!["MA MACRO Foo, FooBar", "MOV Foo, FooBar", "ENDM", "MA A, B"]);
         let ppc = replace_macros(code);
         assert_eq!(Ok(convert_input(vec!["MOV A, B"])), ppc);
+
+        let code = &convert_input(vec!["MAC MACRO p1, p2", "ADI p1", "ADI p2", "ENDM", "MAC p2, 5"]);
+        let ppc = replace_macros(code);
+        assert_eq!(Ok(convert_input(vec!["ADI p2", "ADI 5"])), ppc);
     }
 
     #[test]
