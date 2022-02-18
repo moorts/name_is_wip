@@ -156,7 +156,6 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                         let end_regex = Regex::new(&format!("[ ,]{} ?$", variable)).unwrap();
 
                         while let Some(reg_match) = var_regex.find(&line.clone()) {
-                            println!("{:?}", reg_match);
                             let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
                             let last_match_symbol =  line.get(reg_match.end()..).unwrap();
                             let start = match first_match_symbol {
