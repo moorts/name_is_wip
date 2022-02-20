@@ -3,6 +3,9 @@ use super::parser::*;
 use std::collections::HashMap;
 use regex::Regex;
 
+const MACRO_START: &str = "Custom Mac";
+const MARCO_END: &str = "Custom End";
+
 pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let decl_regex = Regex::new(LABEL_DECL).unwrap();
     if !has_correct_end(code) {
@@ -11,6 +14,7 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 
     let mut equate_assignments: HashMap<String, u16> = HashMap::new();
     let mut set_assignments: HashMap<String, u16> = HashMap::new();
+    let mut in_macro = false;
     let mut in_conditional = false;
     let mut condition = false;
     let mut preprocessed_code: Vec<String> = Vec::new();
@@ -21,6 +25,16 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 
     for line in code {
         let mut owned_line = line.trim().to_string();
+
+        if owned_line.eq(MACRO_START) {
+            in_macro = true;
+            continue;
+        }
+
+        if owned_line.eq(MARCO_END) {
+            in_macro = false;
+            continue;
+        }
 
         // replace program counter references
         owned_line = owned_line.replace("$", &pc.to_string());
@@ -130,6 +144,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
 
         for (macro_name, instructions) in &macro_instructions {
             if owned_line.contains(macro_name) {
+                macroless_code.push(MACRO_START.to_string());
                 let input_string = owned_line.split_once(macro_name).unwrap().1.trim();
                 let mut inputs: Vec<&str> = Vec::new();
 
@@ -180,6 +195,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     line = line.replace(replacement_protection, "");
                     macroless_code.push(line.trim().to_string());
                 }
+                macroless_code.push(MARCO_END.to_string());
                 continue 'outer;
             }
         }
@@ -418,7 +434,7 @@ mod tests {
     fn macro_replacement() {
         let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "SHRT", "END"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec!["RRC", "ANI 7FH", "END"])), ppc);
+        assert_eq!(Ok(convert_input(vec![MACRO_START, "RRC", "ANI 7FH", MARCO_END, "END"])), ppc);
 
         let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "END"]);
         let ppc = replace_macros(code);
@@ -433,15 +449,15 @@ mod tests {
             "END",
         ]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C", "END"])), ppc);
+        assert_eq!(Ok(convert_input(vec![MACRO_START, "XRA D", "DCR C", MARCO_END, "END"])), ppc);
 
         let code = &convert_input(vec!["MA MACRO Foo, FooBar", "MOV Foo, FooBar", "ENDM", "MA A, B"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec!["MOV A, B"])), ppc);
+        assert_eq!(Ok(convert_input(vec![MACRO_START, "MOV A, B", MARCO_END])), ppc);
 
         let code = &convert_input(vec!["MAC MACRO p1, p2", "ADI p1", "ADI p2", "ENDM", "MAC p2, 5"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec!["ADI p2", "ADI 5"])), ppc);
+        assert_eq!(Ok(convert_input(vec![MACRO_START, "ADI p2", "ADI 5", MARCO_END])), ppc);
     }
 
     #[test]
