@@ -2,9 +2,10 @@ use super::assembler::{get_reserved_names, LABEL_DECL};
 use super::parser::*;
 use std::collections::HashMap;
 use regex::Regex;
+use rand::Rng;
 
 const MACRO_START: &str = "Custom Mac";
-const MARCO_END: &str = "Custom End";
+const MACRO_END: &str = "Custom End";
 
 pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let decl_regex = Regex::new(LABEL_DECL).unwrap();
@@ -14,7 +15,6 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 
     let mut equate_assignments: HashMap<String, u16> = HashMap::new();
     let mut set_assignments: HashMap<String, u16> = HashMap::new();
-    let mut in_macro = false;
     let mut in_conditional = false;
     let mut condition = false;
     let mut preprocessed_code: Vec<String> = Vec::new();
@@ -25,16 +25,6 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 
     for line in code {
         let mut owned_line = line.trim().to_string();
-
-        if owned_line.eq(MACRO_START) {
-            in_macro = true;
-            continue;
-        }
-
-        if owned_line.eq(MARCO_END) {
-            in_macro = false;
-            continue;
-        }
 
         // replace program counter references
         owned_line = owned_line.replace("$", &pc.to_string());
@@ -117,6 +107,11 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     Ok(preprocessed_code)
 }
 
+fn eval_str(str: String) -> u16 {
+    let tokens = tokenize(str.to_string());
+    to_expression_tree(tokens).evaluate() as u16
+}
+
 fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let (macro_instructions, macro_params) = get_macros(code)?;
     let mut macroless_code: Vec<String> = Vec::new();
@@ -195,19 +190,96 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     line = line.replace(replacement_protection, "");
                     macroless_code.push(line.trim().to_string());
                 }
-                macroless_code.push(MARCO_END.to_string());
+                macroless_code.push(MACRO_END.to_string());
                 continue 'outer;
             }
         }
 
         macroless_code.push(owned_line.trim().to_string());
     }
+    macroless_code = handle_macro_locals(&macroless_code).unwrap();
     Ok(macroless_code)
 }
 
-fn eval_str(str: String) -> u16 {
-    let tokens = tokenize(str.to_string());
-    to_expression_tree(tokens).evaluate() as u16
+fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+    let label_regex = Regex::new(LABEL_DECL).unwrap();
+
+    let mut handled_code: Vec<String> = Vec::new();
+    let mut label_names: Vec<String> = Vec::new();
+    let mut label_map: HashMap<String, String> = HashMap::new();
+    let mut in_macro = false;
+
+    for line in code {
+        if line.eq(MACRO_START) {
+            in_macro = true;
+            continue;
+        }
+        if line.eq(MACRO_END) {
+            in_macro = false;
+            continue;
+        }
+        if !in_macro && label_regex.is_match(line) {
+            let (label, _) = line.split_once(":").unwrap();
+            label_names.push(label.to_string());
+        }
+    }
+
+    for line in code {
+        let mut owned_line = line.clone();
+
+        // check if current block of code is a macro
+        if owned_line.eq(MACRO_START) {
+            in_macro = true;
+            continue;
+        } 
+        if owned_line.eq(MACRO_END) {
+            in_macro = false;
+            label_map.clear();
+            continue;
+        }
+
+        // map labels in macros
+        if in_macro && label_regex.is_match(&owned_line) {
+            let (label, _) = owned_line.split_once(":").unwrap();
+            label_map.insert(label.to_string(), generate_label_name(&label_names));
+        }
+
+        // replace label calls 
+        if in_macro {
+            for (old_label, generated_label) in &label_map {
+                owned_line = owned_line.replace(old_label, generated_label);
+            }
+        }
+
+        handled_code.push(owned_line.to_string());
+    }
+
+    Ok(handled_code)
+}
+
+fn generate_label_name(taken_names: &Vec<String>) -> String {
+    let mut new_label = String::new();
+    let mut rng = rand::thread_rng();
+    
+    while taken_names.contains(&new_label) || new_label.is_empty() {
+        new_label = get_random_char().to_string();
+        for _ in 0..4 {
+            if rng.gen_bool(0.5) {
+                new_label = format!("{}{}", new_label, get_random_char());
+            } else {
+                new_label = format!("{}{}", new_label, get_random_number());
+            }
+        }
+    }
+    new_label
+}
+
+fn get_random_char() -> char {
+    rand::thread_rng().gen_range(b'A'..b'Z') as char
+}
+
+fn get_random_number() -> String {
+    rand::thread_rng().gen_range(0..=9).to_string()
 }
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
@@ -434,7 +506,7 @@ mod tests {
     fn macro_replacement() {
         let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "SHRT", "END"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec![MACRO_START, "RRC", "ANI 7FH", MARCO_END, "END"])), ppc);
+        assert_eq!(Ok(convert_input(vec!["RRC", "ANI 7FH", "END"])), ppc);
 
         let code = &convert_input(vec!["SHRT MACRO", "RRC", "ANI 7FH", "ENDM", "END"]);
         let ppc = replace_macros(code);
@@ -449,15 +521,28 @@ mod tests {
             "END",
         ]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec![MACRO_START, "XRA D", "DCR C", MARCO_END, "END"])), ppc);
+        assert_eq!(Ok(convert_input(vec!["XRA D", "DCR C", "END"])), ppc);
 
         let code = &convert_input(vec!["MA MACRO Foo, FooBar", "MOV Foo, FooBar", "ENDM", "MA A, B"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec![MACRO_START, "MOV A, B", MARCO_END])), ppc);
+        assert_eq!(Ok(convert_input(vec!["MOV A, B"])), ppc);
 
         let code = &convert_input(vec!["MAC MACRO p1, p2", "ADI p1", "ADI p2", "ENDM", "MAC p2, 5"]);
         let ppc = replace_macros(code);
-        assert_eq!(Ok(convert_input(vec![MACRO_START, "ADI p2", "ADI 5", MARCO_END])), ppc);
+        assert_eq!(Ok(convert_input(vec!["ADI p2", "ADI 5"])), ppc);
+    }
+
+    #[test]
+    fn labels_in_macros() {
+        let code = convert_input(vec![MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END, MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[0].contains("LOOP:"), false);
+        assert_ne!(ppc[1], ppc[3]);
+
+        let code = convert_input(vec!["@LAB:", "MOV A,B", MACRO_START, "@LAB: JMP @LAB", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[0], "@LAB:");
+        assert_eq!(ppc[2].contains("@LAB"), true);
     }
 
     #[test]
