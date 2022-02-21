@@ -24,6 +24,16 @@ impl Emulator {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         match opcode {
+            0x80..=0x87 => {
+                let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+                let index = (opcode & 0xF) as usize;
+                let register = registers[index];
+                if register == 'm' {
+                    self.add_memory()?;
+                } else {
+                    self.add_register(register)?;
+                }
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
@@ -386,6 +396,29 @@ impl Emulator {
         self.pc += 1;
         Ok((high << 8) | low)
     }
+    
+    fn add_memory(&mut self) -> EResult<()> {
+        let address = self.read_addr()?;
+        let memoryValue = self.ram[address];
+        self.add_value(memoryValue)
+    }
+    
+    fn add_register(&mut self, register: char) -> EResult<()> {
+        self.add_value(self.reg[register])
+    }
+    
+    fn add_value(&mut self, value: u8) -> EResult<()> {
+        let accumulator = self.reg['a'] as u16;
+        let result = accumulator + value as u16;
+        let resultByte = (result & 0xff) as u8;
+        self.reg.set_flag("zero", (result & 0xff) == 0);
+        self.reg.set_flag("sign", (result & 0x80) != 0);
+        self.reg.set_flag("carry", result > 0xff);
+        self.reg.set_flag("parity", resultByte.count_ones() & 1 == 0);
+        self.reg.set_flag("aux", ((accumulator & 0x0F) + (value as u16 & 0x0F)) > 0x0F);
+        self.reg['a'] = (result & 0xff) as u8;  
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -436,7 +469,7 @@ mod tests {
         for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
             e.jmp_if(flag).expect("");
             assert_eq!(e.pc, 2);
-            e.reg.set_flag(flag);
+            e.reg.set_flag(flag, true);
             e.jmp_if(flag).expect("");
             assert_eq!(e.pc, 0);
         }
@@ -472,7 +505,7 @@ mod tests {
             assert_eq!(e.pc, 2);
             e.ret_if(flag).expect("");
             assert_eq!(e.pc, 2);
-            e.reg.set_flag(flag);
+            e.reg.set_flag(flag, true);
             e.call_if(flag).expect("");
             assert_eq!(e.pc, 0x1111);
             e.ret_if(flag).expect("");
@@ -513,7 +546,7 @@ mod tests {
         assert_eq!(e.pc, 0x0);
         e.call_if("carry").expect("Fuck");
         assert_eq!(e.pc, 0x2);
-        e.reg.set_flag("carry");
+        e.reg.set_flag("carry", true);
         e.ram.load_vec(vec![0x34, 0x12], 2);
         e.call_if("carry").expect("Fuck");
         assert_eq!(e.pc, 0x1234);
@@ -533,5 +566,87 @@ mod tests {
             assert_eq!(e.pc, (i - 0x1111) * 8);
         }
 
+    }
+    
+    #[test]
+    fn add_reg() {
+        let mut e = Emulator::new();
+        
+        // ADD B, ADD A
+        e.ram.load_vec(vec![0x80, 0x87], 0);
+        
+        e.reg['b'] = 69;
+        e.reg['a'] = 42;
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 111);
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 222);
+    }
+    
+    #[test]
+    fn add_mem() {
+        let mut e = Emulator::new();
+        
+        // ADD M with address 0x03
+        e.ram.load_vec(vec![0x86, 0x03, 0x00, 69], 0);
+        
+        e.reg['a'] = 42;
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 111);
+    }
+    
+    #[test]
+    fn add_flags() {
+        let mut e = Emulator::new();
+        
+        // ADD B, ADD A, ADD A
+        e.ram.load_vec(vec![0x80, 0x87, 0x87], 0);
+        
+        e.reg['b'] = 69;
+        e.reg['a'] = 42;
+        
+        e.execute_next().expect("Fuck"); // Result is 111
+        
+        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
+        
+        e.execute_next().expect("Fuck"); // Result is 222 -> sign is true
+        
+        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(e.reg.get_flag("sign"), true, "Sign bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+        
+        e.execute_next().expect("Fuck"); // Result is 444 -> overflow to 188
+        
+        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
+        assert_eq!(e.reg.get_flag("sign"), true, "Sign bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
+        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+        
+        // Test auxiliary carry flag
+        // ADD B
+        e.ram.load_vec(vec![0x80], 0);
+        
+        e.pc = 0;
+        e.reg['b'] = 0x2E;
+        e.reg['a'] = 0x74;
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 0xA2);
+        assert_eq!(e.reg.get_flag("aux"), true);
+        
     }
 }
