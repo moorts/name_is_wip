@@ -25,13 +25,25 @@ impl Emulator {
         self.pc += 1;
         match opcode {
             0x80..=0x87 => {
+                // ADD
                 let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
                 let index = (opcode & 0xF) as usize;
                 let register = registers[index];
                 if register == 'm' {
-                    self.add_memory()?;
+                    self.add_memory(false)?;
                 } else {
-                    self.add_register(register)?;
+                    self.add_register(register, false)?;
+                }
+            }
+            0x88..=0x8F => {
+                // ADC
+                let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+                let index = (opcode & 0xF - 8) as usize;
+                let register = registers[index];
+                if register == 'm' {
+                    self.add_memory(true)?;
+                } else {
+                    self.add_register(register, true)?;
                 }
             }
             0xc0 => {
@@ -397,25 +409,32 @@ impl Emulator {
         Ok((high << 8) | low)
     }
     
-    fn add_memory(&mut self) -> EResult<()> {
+    fn add_memory(&mut self, use_carry: bool) -> EResult<()> {
         let address = self.read_addr()?;
-        let memoryValue = self.ram[address];
+        let mut memoryValue = self.ram[address] as u16;
+        if use_carry && self.reg.get_flag("carry") {
+            memoryValue += 1;
+        }
         self.add_value(memoryValue)
     }
     
-    fn add_register(&mut self, register: char) -> EResult<()> {
-        self.add_value(self.reg[register])
+    fn add_register(&mut self, register: char, use_carry: bool) -> EResult<()> {
+        let mut register_value = self.reg[register] as u16;
+        if use_carry && self.reg.get_flag("carry") {
+            register_value += 1;
+        }
+        self.add_value(register_value)
     }
     
-    fn add_value(&mut self, value: u8) -> EResult<()> {
+    fn add_value(&mut self, value: u16) -> EResult<()> {
         let accumulator = self.reg['a'] as u16;
-        let result = accumulator + value as u16;
+        let result = accumulator + value;
         let resultByte = (result & 0xff) as u8;
         self.reg.set_flag("zero", (result & 0xff) == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
         self.reg.set_flag("carry", result > 0xff);
         self.reg.set_flag("parity", resultByte.count_ones() & 1 == 0);
-        self.reg.set_flag("aux", ((accumulator & 0x0F) + (value as u16 & 0x0F)) > 0x0F);
+        self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
         self.reg['a'] = (result & 0xff) as u8;  
         Ok(())
     }
@@ -647,6 +666,33 @@ mod tests {
         
         assert_eq!(e.reg['a'], 0xA2);
         assert_eq!(e.reg.get_flag("aux"), true);
+    }
+    
+    #[test]
+    fn adc() {
+        let mut e = Emulator::new();
         
+        // ADC B without carry
+        e.ram.load_vec(vec![0x88], 0);
+        
+        e.reg['b'] = 69;
+        e.reg['a'] = 42;
+        e.reg.set_flag("carry", false);
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 111);
+        
+        // ADC B with carry
+        e.ram.load_vec(vec![0x88], 0);
+        e.pc = 0;
+        
+        e.reg['b'] = 69;
+        e.reg['a'] = 42;
+        e.reg.set_flag("carry", true);
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 112);
     }
 }
