@@ -24,6 +24,38 @@ impl Emulator {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         match opcode {
+            0x06 => {
+                // MVI B, D8
+                self.mvi('b')?;
+            }
+            0x0e => {
+                // MVI C, D8
+                self.mvi('c')?;
+            }
+            0x16 => {
+                // MVI D, D8
+                self.mvi('d')?;
+            }
+            0x1e => {
+                // MVI E, D8
+                self.mvi('e')?;
+            }
+            0x26 => {
+                // MVI H, D8
+                self.mvi('h')?;
+            }
+            0x2e => {
+                // MVI L, D8
+                self.mvi('l')?;
+            }
+            0x36 => {
+                // MVI M, D8
+                self.mvi_adr()?;
+            }
+            0x3e => {
+                // MVI A, D8
+                self.mvi('a')?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
@@ -281,6 +313,19 @@ impl Emulator {
         Ok(())
     }
 
+    fn mvi(&mut self, r: char) -> EResult<()> {
+        self.reg[r] = self.read_byte()?;
+        Ok(())
+    }
+
+    fn mvi_adr(&mut self) -> EResult<()> {
+        // Move byte 2 to address in HL
+        let byte = self.read_byte()?;
+        let adr = self.reg["hl"];
+        self.ram[adr] = byte;
+        Ok(())
+    }
+
     fn jmp_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
             self.pc = self.read_addr()?;
@@ -376,6 +421,14 @@ impl Emulator {
 
     }
 
+    fn read_byte(&mut self) -> EResult<u8> {
+        if self.pc + 1 > self.ram.size() as u16 {
+            return Err("READ_BYTE: Not enough bytes available");
+        }
+        self.pc += 1;
+        Ok(self.ram[self.pc-1])
+    }
+
     fn read_addr(&mut self) -> EResult<u16> {
         if self.pc + 2 > self.ram.size() as u16 {
             return Err("READ_ADDR: Not enough bytes available");
@@ -391,6 +444,32 @@ impl Emulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kreator::assembler::Assembler;
+    use std::{fs::*, io::{self, Read}};
+    use crate::core::ram::*;
+
+    #[test]
+    fn mvi() -> io::Result<()> {
+        let mut file = File::open("./src/core/asm/mvi.s")?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)?;
+        let asmblr = Assembler::new(&buf);
+        let mc = asmblr.assemble().expect("Fuck");
+        let mut emu = Emulator::new();
+        emu.ram.load_vec(mc, 0);
+
+        // Check MVI reg, D8
+        let regs = ['b', 'c', 'd', 'e', 'h', 'l', 'a'];
+        for i in 0..7 {
+            emu.execute_next().expect("Fuck");
+            assert_eq!(emu.reg[regs[i]], (0x1d + i) as u8);
+        }
+        emu.execute_next().expect("Fuck");
+
+        // Check MVI M, D8
+        assert_eq!(emu.ram[emu.reg["hl"]], 0x24);
+        Ok(())
+    }
 
     #[test]
     fn push_pop() {
