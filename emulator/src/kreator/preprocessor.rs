@@ -202,7 +202,8 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
 }
 
 fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
-    let label_regex = Regex::new(LABEL_DECL).unwrap();
+    let loc_label_regex = Regex::new(LABEL_DECL).unwrap();
+    let glob_label_regex = Regex::new(&format!("{}:", LABEL_DECL)).unwrap();
 
     let mut handled_code: Vec<String> = Vec::new();
     let mut label_names: Vec<String> = Vec::new();
@@ -218,7 +219,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             in_macro = false;
             continue;
         }
-        if !in_macro && label_regex.is_match(line) {
+        if !in_macro && loc_label_regex.is_match(line) {
             let (label, _) = line.split_once(":").unwrap();
             label_names.push(label.to_string());
         }
@@ -238,13 +239,13 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             continue;
         }
 
-        // map labels in macros
-        if in_macro && label_regex.is_match(&owned_line) {
+        // map local labels in macros
+        if in_macro && loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
             let (label, _) = owned_line.split_once(":").unwrap();
             label_map.insert(label.to_string(), generate_label_name(&label_names));
         }
 
-        // replace label calls 
+        // replace local label calls 
         if in_macro {
             for (old_label, generated_label) in &label_map {
                 owned_line = owned_line.replace(old_label, generated_label);
@@ -542,7 +543,12 @@ mod tests {
         let code = convert_input(vec!["@LAB:", "MOV A,B", MACRO_START, "@LAB: JMP @LAB", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[0], "@LAB:");
-        assert_eq!(ppc[2].contains("@LAB"), true);
+        assert_eq!(ppc[2].contains("@LAB"), false);
+
+        let code = convert_input(vec!["GLOB: MOV A,B", MACRO_START, "GLOB2::", "NOP", "JMP GLOB2", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "GLOB2::");
+        assert_eq!(ppc[3], "JMP GLOB2");
     }
 
     #[test]
