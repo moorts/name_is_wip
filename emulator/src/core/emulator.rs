@@ -56,6 +56,15 @@ impl Emulator {
                 // MVI A, D8
                 self.mvi('a')?;
             }
+            0x40..=0x7f => {
+                // MOV DST, SRC
+                if opcode == 0x76 {
+                    // HLT
+                    // TODO: Implement this
+                    unimplemented!("HLT not yet supported");
+                }
+                self.resolve_mov(opcode)?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
@@ -326,6 +335,28 @@ impl Emulator {
         Ok(())
     }
 
+    fn resolve_mov(&mut self, opcode: u8) -> EResult<()> {
+        let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+        let opcode_rel = opcode - 0x40;
+        let dst_idx = opcode_rel >> 3;
+        let src_idx = opcode_rel - (dst_idx << 3);
+        if dst_idx == 6 {
+            self.ram[self.reg["hl"]] = self.reg[registers[src_idx as usize]];
+        } else {
+            if src_idx == 6 {
+                self.reg[registers[dst_idx as usize]] = self.ram[self.reg["hl"]];
+            } else {
+                self.mov(registers[dst_idx as usize], registers[src_idx as usize])?;
+            }
+        }
+        Ok(())
+    }
+
+    fn mov(&mut self, dst: char, src: char) -> EResult<()> {
+        self.reg[dst] = self.reg[src];
+        Ok(())
+    }
+
     fn jmp_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
             self.pc = self.read_addr()?;
@@ -448,15 +479,20 @@ mod tests {
     use std::{fs::*, io::{self, Read}};
     use crate::core::ram::*;
 
-    #[test]
-    fn mvi() -> io::Result<()> {
-        let mut file = File::open("./src/core/asm/mvi.s")?;
+    fn load_asm_file(emulator: &mut Emulator, path: &str) -> io::Result<()> {
+        let mut file = File::open(path)?;
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
         let asmblr = Assembler::new(&buf);
         let mc = asmblr.assemble().expect("Fuck");
+        emulator.ram.load_vec(mc, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn mvi() -> io::Result<()> {
         let mut emu = Emulator::new();
-        emu.ram.load_vec(mc, 0);
+        load_asm_file(&mut emu, "./src/core/asm/mvi.s")?;
 
         // Check MVI reg, D8
         let regs = ['b', 'c', 'd', 'e', 'h', 'l', 'a'];
@@ -469,6 +505,29 @@ mod tests {
         // Check MVI M, D8
         assert_eq!(emu.ram[emu.reg["hl"]], 0x24);
         Ok(())
+    }
+
+    #[test]
+    fn mov() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/mov.s")?;
+        for _ in 0..8 {
+            emu.execute_next().expect("Fuck");
+        }
+        for i in 0..8 {
+            emu.execute_next().expect("Fuck");
+            assert_eq!(emu.reg['b'], (0x1d + i) as u8);
+        }
+
+        // Test MOV M, SRC
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.ram[emu.reg["hl"]], emu.reg['b']);
+        Ok(())
+    }
+
+    #[test]
+    fn mov_adr() {
+        
     }
 
     #[test]
