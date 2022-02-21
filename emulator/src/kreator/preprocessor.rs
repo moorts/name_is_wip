@@ -236,7 +236,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
     for line in code {
         let mut owned_line = line.clone();
 
-        // check if current block of code is a macro
+        // check if current block of code is (not) a macro
         if owned_line.eq(MACRO_START) {
             in_macro = true;
             continue;
@@ -244,6 +244,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
         if owned_line.eq(MACRO_END) {
             in_macro = false;
             label_map.clear();
+            equ_map.clear();
+            set_map.clear();
             continue;
         }
 
@@ -289,10 +291,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
                 owned_line = owned_line.replace(old_name, new_name);
             }
         }
-
         handled_code.push(owned_line.to_string());
     }
-
     Ok(handled_code)
 }
 
