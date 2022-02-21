@@ -260,29 +260,31 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             all_existing_names.push(name.to_string());
         }
 
-        // map local labels in macros
-        if in_macro && loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
-            let (label, _) = owned_line.split_once(":").unwrap();
-            let gen_name = generate_label_name(&all_existing_names);
-            all_existing_names.push(gen_name.clone());
-            label_map.insert(label.to_string(), gen_name);
-        }
-
-        // convert globally declared label to normal label
-        if in_macro && glob_label_regex.is_match(&owned_line) {
-            owned_line = owned_line.replace("::", ":");
-        }
-
-        // map local equ assignments
-        if in_macro && line.contains(" EQU ") {
-            let (name, _) = owned_line.split_once(" EQU ").unwrap();
-            let gen_name = generate_label_name(&all_existing_names);
-            all_existing_names.push(gen_name.clone());
-            equ_map.insert(name.to_string(), gen_name);
-        }
-
-        // replace local label calls and equ assigned variables
+        // change line of macro according to principles of locality
         if in_macro {
+            
+            // map local labels in macros
+            if loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
+                let (label, _) = owned_line.split_once(":").unwrap();
+                let gen_name = generate_label_name(&all_existing_names);
+                all_existing_names.push(gen_name.clone());
+                label_map.insert(label.to_string(), gen_name);
+            }
+
+            // convert globally declared label to normal label
+            if glob_label_regex.is_match(&owned_line) {
+                owned_line = owned_line.replace("::", ":");
+            }
+
+            // map local equ assignments
+            if line.contains(" EQU ") {
+                let (name, _) = owned_line.split_once(" EQU ").unwrap();
+                let gen_name = generate_label_name(&all_existing_names);
+                all_existing_names.push(gen_name.clone());
+                equ_map.insert(name.to_string(), gen_name);
+            }
+
+            // replace local label calls and equ assigned variables
             for (old_label, generated_label) in &label_map {
                 owned_line = owned_line.replace(old_label, generated_label);
             }
@@ -290,6 +292,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
                 owned_line = owned_line.replace(old_name, new_name);
             }
             
+            // check if set assignment variable existed outside of macro
             if owned_line.contains(" SET ") {
                 let (name, _) = owned_line.split_once(" SET ").unwrap();
                 if !found_set_names.contains(&name.to_string()) {
