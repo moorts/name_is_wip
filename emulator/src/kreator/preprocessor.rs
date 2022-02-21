@@ -208,6 +208,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
     let mut handled_code: Vec<String> = Vec::new();
     let mut label_names: Vec<String> = Vec::new();
     let mut label_map: HashMap<String, String> = HashMap::new();
+    let mut equ_names: Vec<String> = Vec::new();
+    let mut equ_map: HashMap<String, String> = HashMap::new();
     let mut in_macro = false;
 
     for line in code {
@@ -222,6 +224,10 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
         if !in_macro && loc_label_regex.is_match(line) {
             let (label, _) = line.split_once(":").unwrap();
             label_names.push(label.to_string());
+        }
+        if !in_macro && line.contains(" EQU ") {
+            let (var, _) = line.split_once(" EQU ").unwrap();
+            equ_names.push(var.to_string());
         }
     }
 
@@ -245,10 +251,19 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             label_map.insert(label.to_string(), generate_label_name(&label_names));
         }
 
-        // replace local label calls 
+        // map local equ assignments
+        if in_macro && line.contains(" EQU ") {
+            let (name, _) = owned_line.split_once(" EQU ").unwrap();
+            equ_map.insert(name.to_string(), generate_label_name(&equ_names));
+        }
+
+        // replace local label calls and equ assigned variables
         if in_macro {
             for (old_label, generated_label) in &label_map {
                 owned_line = owned_line.replace(old_label, generated_label);
+            }
+            for (old_name, new_name) in &equ_map {
+                owned_line = owned_line.replace(old_name, new_name);
             }
         }
 
@@ -549,6 +564,16 @@ mod tests {
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[1], "GLOB2::");
         assert_eq!(ppc[3], "JMP GLOB2");
+    }
+
+    #[test]
+    fn variables_in_macros() {
+        let code = convert_input(vec!["VAL EQU 6", MACRO_START, "VAL EQU 8", "DB VAL", MACRO_END, "JMP VAL"]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert!(ppc[0].contains("VAL"));
+        assert_eq!(ppc[1].contains("VAL"), false);
+        assert_eq!(ppc[2].contains("VAL"), false);
+        assert!(ppc[3].contains("VAL"));
     }
 
     #[test]
