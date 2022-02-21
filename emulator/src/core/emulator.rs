@@ -26,25 +26,11 @@ impl Emulator {
         match opcode {
             0x80..=0x87 => {
                 // ADD
-                let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
-                let index = (opcode & 0xF) as usize;
-                let register = registers[index];
-                if register == 'm' {
-                    self.add_memory(false)?;
-                } else {
-                    self.add_register(register, false)?;
-                }
+                self.add(opcode, false)?;
             }
             0x88..=0x8F => {
                 // ADC
-                let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
-                let index = (opcode & 0xF - 8) as usize;
-                let register = registers[index];
-                if register == 'm' {
-                    self.add_memory(true)?;
-                } else {
-                    self.add_register(register, true)?;
-                }
+                self.add(opcode, true)?;
             }
             0xc0 => {
                 // RNZ
@@ -407,6 +393,21 @@ impl Emulator {
         let high = self.ram[self.pc] as u16;
         self.pc += 1;
         Ok((high << 8) | low)
+    }
+
+    fn add(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
+        // ADD
+        let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+        let mut index = (opcode & 0xF) as usize;
+        if use_carry {
+            index -= 8;
+        }
+        let register = registers[index];
+        if register == 'm' {
+            self.add_memory(use_carry)
+        } else {
+            self.add_register(register, use_carry)
+        }
     }
     
     fn add_memory(&mut self, use_carry: bool) -> EResult<()> {
