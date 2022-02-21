@@ -259,6 +259,11 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             label_map.insert(label.to_string(), generate_label_name(&label_names));
         }
 
+        // convert globally declared label to normal label
+        if in_macro && glob_label_regex.is_match(&owned_line) {
+            owned_line = owned_line.replace("::", ":");
+        }
+
         // map local equ assignments
         if in_macro && line.contains(" EQU ") {
             let (name, _) = owned_line.split_once(" EQU ").unwrap();
@@ -580,7 +585,7 @@ mod tests {
 
         let code = convert_input(vec!["GLOB: MOV A,B", MACRO_START, "GLOB2::", "NOP", "JMP GLOB2", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
-        assert_eq!(ppc[1], "GLOB2::");
+        assert_eq!(ppc[1], "GLOB2:");
         assert_eq!(ppc[3], "JMP GLOB2");
     }
 
