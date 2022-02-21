@@ -210,6 +210,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
     let mut label_map: HashMap<String, String> = HashMap::new();
     let mut equ_names: Vec<String> = Vec::new();
     let mut equ_map: HashMap<String, String> = HashMap::new();
+    let mut found_set_names: Vec<String> = Vec::new();
+    let mut set_map: HashMap<String, String> = HashMap::new();
     let mut in_macro = false;
 
     for line in code {
@@ -245,6 +247,12 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             continue;
         }
 
+        // find set assignments outside of macros
+        if owned_line.contains(" SET ") && !in_macro {
+            let (name, _) = owned_line.split_once(" SET ").unwrap();
+            found_set_names.push(name.to_string());
+        }
+
         // map local labels in macros
         if in_macro && loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
             let (label, _) = owned_line.split_once(":").unwrap();
@@ -263,6 +271,16 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
                 owned_line = owned_line.replace(old_label, generated_label);
             }
             for (old_name, new_name) in &equ_map {
+                owned_line = owned_line.replace(old_name, new_name);
+            }
+            
+            if owned_line.contains(" SET ") {
+                let (name, _) = owned_line.split_once(" SET ").unwrap();
+                if !found_set_names.contains(&name.to_string()) {
+                    set_map.insert(name.to_string(), generate_label_name(&found_set_names));
+                }
+            }
+            for (old_name, new_name) in &set_map {
                 owned_line = owned_line.replace(old_name, new_name);
             }
         }
@@ -574,6 +592,14 @@ mod tests {
         assert_eq!(ppc[1].contains("VAL"), false);
         assert_eq!(ppc[2].contains("VAL"), false);
         assert!(ppc[3].contains("VAL"));
+
+        let code = convert_input(vec!["VAL SET 5", MACRO_START, "VAL SET 8", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert!(ppc[1].eq("VAL SET 8"));
+
+        let code = convert_input(vec!["TEST SET 5", MACRO_START, "VAL SET 8", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1].contains("VAL"), false);
     }
 
     #[test]
@@ -672,7 +698,7 @@ mod tests {
             "ENDM",
             "",
             "macr0 input",
-            "IF NOM",
+            "IF 1",
             "EI",
             "ENDIF",
             "END",
