@@ -48,6 +48,10 @@ impl Emulator {
                 // XRA
                 self.xor(opcode)?;
             }
+            0xB0..=0xB7 => {
+                // ORA
+                self.or(opcode)?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
