@@ -17,4 +17,5 @@ MOV B, M
 MOV B, A
 
 MOV M, B
+HLT
 END
