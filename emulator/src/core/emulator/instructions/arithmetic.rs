@@ -1,9 +1,9 @@
 use super::super::{Emulator, EResult};
 
+const registers: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+
 impl Emulator {
     pub fn add(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
-        // ADD
-        let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
         let mut index = (opcode & 0xF) as usize;
         if use_carry {
             index -= 8;
@@ -42,6 +42,49 @@ impl Emulator {
         self.reg.set_flag("carry", result > 0xff);
         self.reg.set_flag("parity", resultByte.count_ones() & 1 == 0);
         self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
+        self.reg['a'] = (result & 0xff) as u8;
+        Ok(())
+    }
+    
+    pub fn sub(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
+        let mut index = (opcode & 0xF) as usize;
+        if use_carry {
+            index -= 8;
+        }
+        let register = registers[index];
+        if register == 'm' {
+            self.sub_memory(use_carry)
+        } else {
+            self.sub_register(register, use_carry)
+        }
+    }
+    
+    fn sub_memory(&mut self, use_carry: bool) -> EResult<()> {
+        let address = self.reg["hl"];
+        let mut memory_value = self.ram[address] as u16;
+        if use_carry && self.reg.get_flag("carry") {
+            memory_value += 1;
+        }
+        self.sub_value(memory_value)
+    }
+
+    fn sub_register(&mut self, register: char, use_carry: bool) -> EResult<()> {
+        let mut register_value = self.reg[register] as u16;
+        if use_carry && self.reg.get_flag("carry") {
+            register_value += 1;
+        }
+        self.sub_value(register_value)
+    }
+    
+    fn sub_value(&mut self, value: u16) -> EResult<()> {
+        let accumulator = self.reg['a'] as u16;
+        let result = accumulator + (!value & 0xFF) + 1;
+        let result_byte = (result & 0xff) as u8;
+        self.reg.set_flag("zero", (result & 0xff) == 0);
+        self.reg.set_flag("sign", (result & 0x80) != 0);
+        self.reg.set_flag("carry", !(result > 0xff));
+        self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
+        self.reg.set_flag("aux", ((accumulator & 0x0F) + (!value & 0x0F) + 1) > 0x0F);
         self.reg['a'] = (result & 0xff) as u8;
         Ok(())
     }
@@ -160,6 +203,73 @@ mod tests {
         e.execute_next().expect("Fuck");
 
         assert_eq!(e.reg['a'], 112);
+    }
+    
+    #[test]
+    fn sub_reg() {
+        let mut e = Emulator::new();
+
+        // SUB B, SUB A, SUB B
+        e.ram.load_vec(vec![0x90, 0x97, 0x90], 0);
+
+        e.reg['a'] = 69;
+        e.reg['b'] = 42;
+
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.reg['a'], 27);
+
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.reg['a'], 0);
+        
+        e.execute_next().expect("Fuck");
+        assert_eq!(e.reg['a'], 214);
+    }
+    
+    #[test]
+    fn sub_flags() {
+        let mut e = Emulator::new();
+
+        // SUB A
+        e.ram.load_vec(vec![0x97], 0);
+        e.pc = 0;
+        e.reg['a'] = 0x3E;
+
+        e.execute_next().expect("Fuck"); // Result is 0
+
+        assert_eq!(e.reg['a'], 0);
+        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(e.reg.get_flag("zero"), true, "Zero bit");
+        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+    }
+    
+    #[test]
+    fn sbb() {
+        let mut e = Emulator::new();
+
+        // SBB B without carry
+        e.ram.load_vec(vec![0x98], 0);
+
+        e.reg['b'] = 42;
+        e.reg['a'] = 69;
+        e.reg.set_flag("carry", false);
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 69-42);
+
+        // SBB B with carry
+        e.ram.load_vec(vec![0x98], 0);
+        e.pc = 0;
+
+        e.reg['b'] = 42;
+        e.reg['a'] = 69;
+        e.reg.set_flag("carry", true);
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 69-43);
     }
 }
 

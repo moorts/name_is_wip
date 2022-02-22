@@ -32,6 +32,14 @@ impl Emulator {
                 // ADC
                 self.add(opcode, true)?;
             }
+            0x90..=0x97 => {
+                // SUB
+                self.sub(opcode, false)?;
+            }
+            0x98..=0x9F => {
+                // SBB
+                self.sub(opcode, true)?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
