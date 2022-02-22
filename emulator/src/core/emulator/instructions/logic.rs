@@ -4,7 +4,7 @@ const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
 impl Emulator {
     pub fn and(&mut self, opcode: u8) -> EResult<()> {
-        let mut index = (opcode & 0xF) as usize;
+        let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
@@ -23,7 +23,7 @@ impl Emulator {
     }
     
     pub fn xor(&mut self, opcode: u8) -> EResult<()> {
-        let mut index = ((opcode - 8) & 0xF) as usize;
+        let index = ((opcode - 8) & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
@@ -42,7 +42,7 @@ impl Emulator {
     }
     
     pub fn or(&mut self, opcode: u8) -> EResult<()> {
-        let mut index = (opcode & 0xF) as usize;
+        let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
@@ -57,6 +57,25 @@ impl Emulator {
         let result = accumulator | value;
         self.set_flags(result);
         self.reg['a'] = result;
+        Ok(())
+    }
+    
+    pub fn cmp(&mut self, opcode: u8) -> EResult<()> {
+        let index = ((opcode - 8) & 0xF) as usize;
+        let register = REGISTERS[index];
+        if register == 'm' {
+            let address = self.reg["hl"];
+            self.cmp_value(self.ram[address])
+        } else {
+            self.cmp_value(self.reg[register])
+        }
+    }
+    
+    fn cmp_value(&mut self, value: u8) -> EResult<()> {
+        // Perform SUB but restore accumulator afterwards
+        let accumulator = self.reg['a'];
+        self.sub_value(value as u16)?;
+        self.reg['a'] = accumulator; 
         Ok(())
     }
     
@@ -137,5 +156,40 @@ mod tests {
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
         assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
+    }
+    
+    #[test]
+    fn cmp() {
+        let mut e = Emulator::new();
+
+        // CMP B
+        e.ram.load_vec(vec![0xB8], 0);
+
+        e.reg['b'] = 0x05;
+        e.reg['a'] = 0x0A;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 0x0A);
+        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+        
+        e.pc = 0;
+        e.reg['b'] = 0x05;
+        e.reg['a'] = 0x02;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+        
+        e.pc = 0;
+        e.reg['b'] = 0x05;
+        e.reg['a'] = 0xE5;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
     }
 }

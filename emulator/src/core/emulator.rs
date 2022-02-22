@@ -52,6 +52,10 @@ impl Emulator {
                 // ORA
                 self.or(opcode)?;
             }
+            0xB8..=0xBF => {
+                // CMP
+                self.cmp(opcode)?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;

@@ -76,7 +76,7 @@ impl Emulator {
         self.sub_value(register_value)
     }
     
-    fn sub_value(&mut self, value: u16) -> EResult<()> {
+    pub fn sub_value(&mut self, value: u16) -> EResult<()> {
         let accumulator = self.reg['a'] as u16;
         let result = accumulator + (!value & 0xFF) + 1;
         let result_byte = (result & 0xff) as u8;
