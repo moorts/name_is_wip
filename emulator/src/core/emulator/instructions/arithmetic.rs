@@ -17,7 +17,7 @@ impl Emulator {
     }
 
     fn add_memory(&mut self, use_carry: bool) -> EResult<()> {
-        let address = self.read_addr()?;
+        let address = self.reg["hl"];
         let mut memoryValue = self.ram[address] as u16;
         if use_carry && self.reg.get_flag("carry") {
             memoryValue += 1;
@@ -75,8 +75,9 @@ mod tests {
     fn add_mem() {
         let mut e = Emulator::new();
 
-        // ADD M with address 0x03
-        e.ram.load_vec(vec![0x86, 0x03, 0x00, 69], 0);
+        // ADD M with address 0x01
+        e.ram.load_vec(vec![0x86, 69], 0);
+        e.reg["hl"] = 0x01;
 
         e.reg['a'] = 42;
 
@@ -119,7 +120,7 @@ mod tests {
         assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
 
-        // Test auxiliary carry flag
+        // Test auxiliary carry flag with example from manual
         // ADD B
         e.ram.load_vec(vec![0x80], 0);
 
