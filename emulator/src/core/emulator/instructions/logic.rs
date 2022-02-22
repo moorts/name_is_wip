@@ -36,19 +36,24 @@ mod tests {
     fn and() {
         let mut e = Emulator::new();
 
-        // ANA B
-        e.ram.load_vec(vec![0xA0], 0);
+        // ANA B, ANA M
+        e.ram.load_vec(vec![0xA0, 0xA6], 0);
 
-        e.reg['b'] = 0xFC;
-        e.reg['a'] = 0x0F;
+        e.reg['b'] = 0b1111_1100;
+        e.reg['a'] = 0b0000_1111;
+        e.reg["hl"] = 0x01;
 
         e.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 0x0C);
+        assert_eq!(e.reg['a'], 0b0000_1100);
         assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
         assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
         assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
+        
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg['a'], 0b0000_0100);
     }
 }
