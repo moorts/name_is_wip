@@ -310,15 +310,13 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
 }
 
 fn generate_label_name(taken_names: &Vec<String>) -> Result<String, &'static str> {
-    let mut new_label = String::new();
     let mut label_base = 'A';
     let mut label_count = 0;
 
-    new_label = format!("{}{}", label_base, label_count);
+    let mut new_label = format!("{}{}", label_base, label_count);
     while taken_names.contains(&new_label) {
         label_count += 1;
         if label_count == 10000 {
-            println!("{}", label_base as u32);
             label_base = char::from_u32(label_base as u32 + 1).unwrap();
             // the symbol after 'Z'
             if label_base == '[' {
