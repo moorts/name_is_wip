@@ -26,6 +26,10 @@ impl Emulator {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         match opcode {
+            0x01 => {
+                // LXI B, D16
+                self.lxi("bc")?;
+            }
             0x06 => {
                 // MVI B, D8
                 self.mvi('b')?;
@@ -33,6 +37,10 @@ impl Emulator {
             0x0e => {
                 // MVI C, D8
                 self.mvi('c')?;
+            }
+            0x11 => {
+                // LXI D, D16
+                self.lxi("de")?;
             }
             0x16 => {
                 // MVI D, D8
@@ -42,6 +50,10 @@ impl Emulator {
                 // MVI E, D8
                 self.mvi('e')?;
             }
+            0x21 => {
+                // LXI H, D16
+                self.lxi("hl")?;
+            }
             0x26 => {
                 // MVI H, D8
                 self.mvi('h')?;
@@ -49,6 +61,10 @@ impl Emulator {
             0x2e => {
                 // MVI L, D8
                 self.mvi('l')?;
+            }
+            0x31 => {
+                // LXI SP, D16
+                self.sp = self.read_addr()?;
             }
             0x36 => {
                 // MVI M, D8
@@ -359,6 +375,11 @@ impl Emulator {
         Ok(())
     }
 
+    fn lxi(&mut self, dst: &str) -> EResult<()> {
+        self.reg[dst] = self.read_addr()?;
+        Ok(())
+    }
+
     fn jmp_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
             self.pc = self.read_addr()?;
@@ -534,7 +555,19 @@ mod tests {
     }
 
     #[test]
-    fn mov_adr() {}
+    fn lxi() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/lxi.s")?;
+
+        let regs = ["bc", "de", "hl"];
+        for i in 1..4 {
+            emu.execute_next().expect("Fuck");
+            assert_eq!(emu.reg[regs[i-1]], (i * 256 + i + 4) as u16);
+        }
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.sp, 0x0408);
+        Ok(())
+    }
 
     #[test]
     fn push_pop() {
