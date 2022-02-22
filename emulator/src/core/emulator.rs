@@ -44,6 +44,10 @@ impl Emulator {
                 // ANA
                 self.and(opcode)?;
             }
+            0xA8..=0xAF => {
+                // XRA
+                self.xor(opcode)?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
