@@ -8,6 +8,7 @@ pub struct Emulator {
     sp: u16,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
+    running: bool,
 }
 
 impl Emulator {
@@ -17,6 +18,7 @@ impl Emulator {
             sp: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
+            running: true,
         }
     }
 
@@ -57,13 +59,13 @@ impl Emulator {
                 self.mvi('a')?;
             }
             0x40..=0x7f => {
-                // MOV DST, SRC
                 if opcode == 0x76 {
                     // HLT
-                    // TODO: Implement this
-                    unimplemented!("HLT not yet supported");
+                    self.running = false;
+                } else {
+                    // MOV DST, SRC
+                    self.resolve_mov(opcode)?;
                 }
-                self.resolve_mov(opcode)?;
             }
             0xc0 => {
                 // RNZ
@@ -317,7 +319,7 @@ impl Emulator {
                 // RST 7
                 self.call(0x38)?;
             }
-            _ => unimplemented!("Opcode not yet implemented")
+            _ => unimplemented!("Opcode not yet implemented"),
         }
         Ok(())
     }
@@ -449,7 +451,6 @@ impl Emulator {
         let high = self.ram[self.sp] as u16;
         self.sp += 1;
         Ok((high << 8) | low)
-
     }
 
     fn read_byte(&mut self) -> EResult<u8> {
@@ -457,7 +458,7 @@ impl Emulator {
             return Err("READ_BYTE: Not enough bytes available");
         }
         self.pc += 1;
-        Ok(self.ram[self.pc-1])
+        Ok(self.ram[self.pc - 1])
     }
 
     fn read_addr(&mut self) -> EResult<u16> {
@@ -475,9 +476,12 @@ impl Emulator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kreator::assembler::Assembler;
-    use std::{fs::*, io::{self, Read}};
     use crate::core::ram::*;
+    use crate::kreator::assembler::Assembler;
+    use std::{
+        fs::*,
+        io::{self, Read},
+    };
 
     fn load_asm_file(emulator: &mut Emulator, path: &str) -> io::Result<()> {
         let mut file = File::open(path)?;
@@ -522,13 +526,15 @@ mod tests {
         // Test MOV M, SRC
         emu.execute_next().expect("Fuck");
         assert_eq!(emu.ram[emu.reg["hl"]], emu.reg['b']);
+
+        // Test HLT
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.running, false);
         Ok(())
     }
 
     #[test]
-    fn mov_adr() {
-        
-    }
+    fn mov_adr() {}
 
     #[test]
     fn push_pop() {
@@ -571,7 +577,7 @@ mod tests {
         // b) one succeeding jmp (pc = ram[pc] = ram[2] -> 0)
         // c) Back in starting position
         // -> Repeat for each flag
-        for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.jmp_if(flag).expect("");
             assert_eq!(e.pc, 2);
             e.reg.set_flag(flag);
@@ -588,7 +594,7 @@ mod tests {
         e.reg.set_flags(0xff);
 
         // same as tests::jmp_if
-        for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.jmp_not(flag).expect("");
             assert_eq!(e.pc, 2);
             e.reg.flip_flag(flag);
@@ -664,12 +670,12 @@ mod tests {
         e.pc = 0x1111;
         e.sp = 0x3fff;
 
-        e.ram.load_vec(vec![0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff], e.pc);
+        e.ram
+            .load_vec(vec![0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff], e.pc);
         for i in 0x1111..0x1119 {
             e.pc = i as u16;
             e.execute_next().expect("Fuck");
             assert_eq!(e.pc, (i - 0x1111) * 8);
         }
-
     }
 }
