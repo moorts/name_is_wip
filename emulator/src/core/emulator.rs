@@ -40,6 +40,10 @@ impl Emulator {
                 // SBB
                 self.sub(opcode, true)?;
             }
+            0xA0..=0xA7 => {
+                // ANA
+                self.and(opcode)?;
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;

@@ -1,6 +1,6 @@
 use super::super::{Emulator, EResult};
 
-const registers: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
 impl Emulator {
     pub fn add(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
@@ -8,7 +8,7 @@ impl Emulator {
         if use_carry {
             index -= 8;
         }
-        let register = registers[index];
+        let register = REGISTERS[index];
         if register == 'm' {
             self.add_memory(use_carry)
         } else {
@@ -18,11 +18,11 @@ impl Emulator {
 
     fn add_memory(&mut self, use_carry: bool) -> EResult<()> {
         let address = self.reg["hl"];
-        let mut memoryValue = self.ram[address] as u16;
+        let mut memory_value = self.ram[address] as u16;
         if use_carry && self.reg.get_flag("carry") {
-            memoryValue += 1;
+            memory_value += 1;
         }
-        self.add_value(memoryValue)
+        self.add_value(memory_value)
     }
 
     fn add_register(&mut self, register: char, use_carry: bool) -> EResult<()> {
@@ -36,11 +36,11 @@ impl Emulator {
     fn add_value(&mut self, value: u16) -> EResult<()> {
         let accumulator = self.reg['a'] as u16;
         let result = accumulator + value;
-        let resultByte = (result & 0xff) as u8;
+        let result_byte = (result & 0xff) as u8;
         self.reg.set_flag("zero", (result & 0xff) == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
         self.reg.set_flag("carry", result > 0xff);
-        self.reg.set_flag("parity", resultByte.count_ones() & 1 == 0);
+        self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
         self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
         self.reg['a'] = (result & 0xff) as u8;
         Ok(())
@@ -51,7 +51,7 @@ impl Emulator {
         if use_carry {
             index -= 8;
         }
-        let register = registers[index];
+        let register = REGISTERS[index];
         if register == 'm' {
             self.sub_memory(use_carry)
         } else {
