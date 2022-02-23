@@ -1,7 +1,7 @@
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
-type EResult<T> = Result<T, &'static str>;
+pub type EResult<T> = Result<T, &'static str>;
 
 pub struct Emulator {
     pc: u16,
@@ -82,6 +82,38 @@ impl Emulator {
                     // MOV DST, SRC
                     self.resolve_mov(opcode)?;
                 }
+            }
+            0x80..=0x87 => {
+                // ADD
+                self.add(opcode, false)?;
+            }
+            0x88..=0x8F => {
+                // ADC
+                self.add(opcode, true)?;
+            }
+            0x90..=0x97 => {
+                // SUB
+                self.sub(opcode, false)?;
+            }
+            0x98..=0x9F => {
+                // SBB
+                self.sub(opcode, true)?;
+            }
+            0xA0..=0xA7 => {
+                // ANA
+                self.and(opcode)?;
+            }
+            0xA8..=0xAF => {
+                // XRA
+                self.xor(opcode)?;
+            }
+            0xB0..=0xB7 => {
+                // ORA
+                self.or(opcode)?;
+            }
+            0xB8..=0xBF => {
+                // CMP
+                self.cmp(opcode)?;
             }
             0xc0 => {
                 // RNZ
@@ -494,6 +526,8 @@ impl Emulator {
     }
 }
 
+mod instructions;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -613,7 +647,7 @@ mod tests {
         for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.jmp_if(flag).expect("");
             assert_eq!(e.pc, 2);
-            e.reg.set_flag(flag);
+            e.reg.set_flag(flag, true);
             e.jmp_if(flag).expect("");
             assert_eq!(e.pc, 0);
         }
@@ -649,7 +683,7 @@ mod tests {
             assert_eq!(e.pc, 2);
             e.ret_if(flag).expect("");
             assert_eq!(e.pc, 2);
-            e.reg.set_flag(flag);
+            e.reg.set_flag(flag, true);
             e.call_if(flag).expect("");
             assert_eq!(e.pc, 0x1111);
             e.ret_if(flag).expect("");
@@ -690,7 +724,7 @@ mod tests {
         assert_eq!(e.pc, 0x0);
         e.call_if("carry").expect("Fuck");
         assert_eq!(e.pc, 0x2);
-        e.reg.set_flag("carry");
+        e.reg.set_flag("carry", true);
         e.ram.load_vec(vec![0x34, 0x12], 2);
         e.call_if("carry").expect("Fuck");
         assert_eq!(e.pc, 0x1234);
