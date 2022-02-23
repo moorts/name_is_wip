@@ -42,7 +42,7 @@ impl Emulator {
         self.reg.set_flag("carry", result > 0xff);
         self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
         self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
-        self.reg['a'] = (result & 0xff) as u8;
+        self.reg['a'] = result_byte;
         Ok(())
     }
     
@@ -85,7 +85,7 @@ impl Emulator {
         self.reg.set_flag("carry", !(result > 0xff));
         self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
         self.reg.set_flag("aux", ((accumulator & 0x0F) + (!value & 0x0F) + 1) > 0x0F);
-        self.reg['a'] = (result & 0xff) as u8;
+        self.reg['a'] = result_byte;
         Ok(())
     }
 }
