@@ -8,6 +8,7 @@ pub struct Emulator {
     sp: u16,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
+    running: bool,
 }
 
 impl Emulator {
@@ -17,6 +18,7 @@ impl Emulator {
             sp: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
+            running: true,
         }
     }
 
@@ -24,6 +26,63 @@ impl Emulator {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         match opcode {
+            0x01 => {
+                // LXI B, D16
+                self.lxi("bc")?;
+            }
+            0x06 => {
+                // MVI B, D8
+                self.mvi('b')?;
+            }
+            0x0e => {
+                // MVI C, D8
+                self.mvi('c')?;
+            }
+            0x11 => {
+                // LXI D, D16
+                self.lxi("de")?;
+            }
+            0x16 => {
+                // MVI D, D8
+                self.mvi('d')?;
+            }
+            0x1e => {
+                // MVI E, D8
+                self.mvi('e')?;
+            }
+            0x21 => {
+                // LXI H, D16
+                self.lxi("hl")?;
+            }
+            0x26 => {
+                // MVI H, D8
+                self.mvi('h')?;
+            }
+            0x2e => {
+                // MVI L, D8
+                self.mvi('l')?;
+            }
+            0x31 => {
+                // LXI SP, D16
+                self.sp = self.read_addr()?;
+            }
+            0x36 => {
+                // MVI M, D8
+                self.mvi_adr()?;
+            }
+            0x3e => {
+                // MVI A, D8
+                self.mvi('a')?;
+            }
+            0x40..=0x7f => {
+                if opcode == 0x76 {
+                    // HLT
+                    self.running = false;
+                } else {
+                    // MOV DST, SRC
+                    self.resolve_mov(opcode)?;
+                }
+            }
             0xc0 => {
                 // RNZ
                 self.ret_not("zero")?;
@@ -276,8 +335,48 @@ impl Emulator {
                 // RST 7
                 self.call(0x38)?;
             }
-            _ => unimplemented!("Opcode not yet implemented")
+            _ => unimplemented!("Opcode not yet implemented"),
         }
+        Ok(())
+    }
+
+    fn mvi(&mut self, r: char) -> EResult<()> {
+        self.reg[r] = self.read_byte()?;
+        Ok(())
+    }
+
+    fn mvi_adr(&mut self) -> EResult<()> {
+        // Move byte 2 to address in HL
+        let byte = self.read_byte()?;
+        let adr = self.reg["hl"];
+        self.ram[adr] = byte;
+        Ok(())
+    }
+
+    fn resolve_mov(&mut self, opcode: u8) -> EResult<()> {
+        let registers = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
+        let opcode_rel = opcode - 0x40;
+        let dst_idx = opcode_rel >> 3;
+        let src_idx = opcode_rel - (dst_idx << 3);
+        if dst_idx == 6 {
+            self.ram[self.reg["hl"]] = self.reg[registers[src_idx as usize]];
+        } else {
+            if src_idx == 6 {
+                self.reg[registers[dst_idx as usize]] = self.ram[self.reg["hl"]];
+            } else {
+                self.mov(registers[dst_idx as usize], registers[src_idx as usize])?;
+            }
+        }
+        Ok(())
+    }
+
+    fn mov(&mut self, dst: char, src: char) -> EResult<()> {
+        self.reg[dst] = self.reg[src];
+        Ok(())
+    }
+
+    fn lxi(&mut self, dst: &str) -> EResult<()> {
+        self.reg[dst] = self.read_addr()?;
         Ok(())
     }
 
@@ -373,7 +472,14 @@ impl Emulator {
         let high = self.ram[self.sp] as u16;
         self.sp += 1;
         Ok((high << 8) | low)
+    }
 
+    fn read_byte(&mut self) -> EResult<u8> {
+        if self.pc + 1 > self.ram.size() as u16 {
+            return Err("READ_BYTE: Not enough bytes available");
+        }
+        self.pc += 1;
+        Ok(self.ram[self.pc - 1])
     }
 
     fn read_addr(&mut self) -> EResult<u16> {
@@ -391,6 +497,77 @@ impl Emulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::ram::*;
+    use crate::kreator::assembler::Assembler;
+    use std::{
+        fs::*,
+        io::{self, Read},
+    };
+
+    fn load_asm_file(emulator: &mut Emulator, path: &str) -> io::Result<()> {
+        let mut file = File::open(path)?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)?;
+        let asmblr = Assembler::new(&buf);
+        let mc = asmblr.assemble().expect("Fuck");
+        emulator.ram.load_vec(mc, 0);
+        Ok(())
+    }
+
+    #[test]
+    fn mvi() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/mvi.s")?;
+
+        // Check MVI reg, D8
+        let regs = ['b', 'c', 'd', 'e', 'h', 'l', 'a'];
+        for i in 0..7 {
+            emu.execute_next().expect("Fuck");
+            assert_eq!(emu.reg[regs[i]], (0x1d + i) as u8);
+        }
+        emu.execute_next().expect("Fuck");
+
+        // Check MVI M, D8
+        assert_eq!(emu.ram[emu.reg["hl"]], 0x24);
+        Ok(())
+    }
+
+    #[test]
+    fn mov() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/mov.s")?;
+        for _ in 0..8 {
+            emu.execute_next().expect("Fuck");
+        }
+        for i in 0..8 {
+            emu.execute_next().expect("Fuck");
+            assert_eq!(emu.reg['b'], (0x1d + i) as u8);
+        }
+
+        // Test MOV M, SRC
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.ram[emu.reg["hl"]], emu.reg['b']);
+
+        // Test HLT
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.running, false);
+        Ok(())
+    }
+
+    #[test]
+    fn lxi() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/lxi.s")?;
+
+        let regs = ["bc", "de", "hl"];
+        for i in 1..4 {
+            emu.execute_next().expect("Fuck");
+            assert_eq!(emu.reg[regs[i-1]], (i * 256 + i + 4) as u16);
+        }
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.sp, 0x0408);
+        Ok(())
+    }
 
     #[test]
     fn push_pop() {
@@ -433,7 +610,7 @@ mod tests {
         // b) one succeeding jmp (pc = ram[pc] = ram[2] -> 0)
         // c) Back in starting position
         // -> Repeat for each flag
-        for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.jmp_if(flag).expect("");
             assert_eq!(e.pc, 2);
             e.reg.set_flag(flag);
@@ -450,7 +627,7 @@ mod tests {
         e.reg.set_flags(0xff);
 
         // same as tests::jmp_if
-        for flag in vec!["zero", "carry", "sign", "parity", "aux"] { 
+        for flag in vec!["zero", "carry", "sign", "parity", "aux"] {
             e.jmp_not(flag).expect("");
             assert_eq!(e.pc, 2);
             e.reg.flip_flag(flag);
@@ -526,12 +703,12 @@ mod tests {
         e.pc = 0x1111;
         e.sp = 0x3fff;
 
-        e.ram.load_vec(vec![0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff], e.pc);
+        e.ram
+            .load_vec(vec![0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff], e.pc);
         for i in 0x1111..0x1119 {
             e.pc = i as u16;
             e.execute_next().expect("Fuck");
             assert_eq!(e.pc, (i - 0x1111) * 8);
         }
-
     }
 }

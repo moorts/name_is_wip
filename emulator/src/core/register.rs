@@ -87,8 +87,8 @@ impl Index<char> for RegisterArray {
                 'c' => &self.bc.bytes.0,
                 'd' => &self.de.bytes.1,
                 'e' => &self.de.bytes.0,
-                'h' => &self.de.bytes.1,
-                'l' => &self.de.bytes.0,
+                'h' => &self.hl.bytes.1,
+                'l' => &self.hl.bytes.0,
                 'a' => &self.psw.bytes.0,
                 _ => panic!("Invalid register"),
             }
@@ -106,8 +106,8 @@ impl IndexMut<char> for RegisterArray {
                 'c' => &mut self.bc.bytes.0,
                 'd' => &mut self.de.bytes.1,
                 'e' => &mut self.de.bytes.0,
-                'h' => &mut self.de.bytes.1,
-                'l' => &mut self.de.bytes.0,
+                'h' => &mut self.hl.bytes.1,
+                'l' => &mut self.hl.bytes.0,
                 'a' => &mut self.psw.bytes.0,
                 _ => panic!("Invalid register"),
             }
