@@ -402,8 +402,11 @@ impl Emulator {
     }
 
     pub fn interrupt(&mut self, opcode: u8) -> EResult<()> {
-        self.interrupts_enabled = false;
-        self.execute_instruction(opcode)
+        if self.interrupts_enabled {
+            self.interrupts_enabled = false;
+            return self.execute_instruction(opcode);
+        }
+        Err("Interrupts disabled")
     }
 }
 
@@ -435,6 +438,8 @@ mod tests {
         emu.interrupt(0xc7).expect("");
         assert_eq!(emu.pc, 0);
         assert!(!emu.interrupts_enabled);
+
+        assert_eq!(emu.interrupt(0x0), Err("Interrupts disabled"));
 
         emu.execute_next().expect("");
         emu.execute_next().expect("");
