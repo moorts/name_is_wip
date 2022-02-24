@@ -1,0 +1,5 @@
+MVI B, 45H
+RET
+MVI C, 45H
+MVI H, 45H 
+END
