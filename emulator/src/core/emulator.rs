@@ -9,6 +9,7 @@ pub struct Emulator {
     ram: Box<dyn RAM>,
     reg: RegisterArray,
     running: bool,
+    interrupts_enabled: bool
 }
 
 impl Emulator {
@@ -19,12 +20,11 @@ impl Emulator {
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
             running: true,
+            interrupts_enabled: true // INTE
         }
     }
 
-    pub fn execute_next(&mut self) -> EResult<()> {
-        let opcode = self.ram[self.pc];
-        self.pc += 1;
+    fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
         match opcode {
             0x01 => {
                 // LXI B, D16
@@ -316,8 +316,8 @@ impl Emulator {
                 self.jmp_not("sign")?;
             }
             0xf3 => {
-                // Unimplemented
-                unimplemented!()
+                // DI
+                self.interrupts_enabled = false;
             }
             0xf4 => {
                 // CP adr
@@ -348,8 +348,8 @@ impl Emulator {
                 self.jmp_if("sign")?;
             }
             0xfb => {
-                // Unimplemented
-                unimplemented!()
+                // EI
+                self.interrupts_enabled = true;
             }
             0xfc => {
                 // CM adr
@@ -370,6 +370,12 @@ impl Emulator {
             _ => unimplemented!("Opcode not yet implemented"),
         }
         Ok(())
+    }
+
+    fn execute_next(&mut self) -> EResult<()> {
+        let opcode = self.ram[self.pc];
+        self.pc += 1;
+        self.execute_instruction(opcode)
     }
 
     fn read_byte(&mut self) -> EResult<u8> {
@@ -394,6 +400,60 @@ impl Emulator {
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
     }
+
+    pub fn interrupt(&mut self, opcode: u8) -> EResult<()> {
+        if self.interrupts_enabled {
+            self.interrupts_enabled = false;
+            return self.execute_instruction(opcode);
+        }
+        Err("Interrupts disabled")
+    }
 }
 
 mod instructions;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+    use crate::utils::load_asm_file;
+
+    #[test]
+    fn int() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/int.s")?;
+
+        emu.pc = 0x03;
+        emu.sp = 0x3fff;
+
+        // Test DI and EI
+        emu.execute_next().expect("");
+        assert!(!emu.interrupts_enabled);
+        emu.execute_next().expect("");
+        assert!(emu.interrupts_enabled);
+
+        emu.execute_next().expect("");
+        assert_eq!(emu.reg['c'], 69);
+
+        emu.interrupt(0xc7).expect("");
+        assert_eq!(emu.pc, 0);
+        assert!(!emu.interrupts_enabled);
+
+        assert_eq!(emu.interrupt(0x0), Err("Interrupts disabled"));
+
+        emu.execute_next().expect("");
+        emu.execute_next().expect("");
+
+        assert_eq!(emu.reg['b'], 69);
+        assert_eq!(emu.pc, 0x07);
+
+
+        emu.execute_next().expect("");
+
+        assert_eq!(emu.reg['h'], 69);
+
+        // TODO: Add another test for non RST instruction interrupts
+        Ok(())
+    }
+}
+
