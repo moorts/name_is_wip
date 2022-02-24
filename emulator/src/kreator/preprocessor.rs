@@ -203,6 +203,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
 fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let loc_label_regex = Regex::new(LABEL_DECL).unwrap();
     let glob_label_regex = Regex::new(&format!("{}:", LABEL_DECL)).unwrap();
+    let var_name_regex = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4} )").unwrap();
 
     let mut label_count: u32 = 0;
     let mut handled_code: Vec<String> = Vec::new();
@@ -234,6 +235,9 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
         }
         if !in_macro && line.contains(" EQU ") {
             let (var, _) = line.split_once(" EQU ").unwrap();
+            if !var_name_regex.is_match(line) {
+                return Err("Illegal variable name!");
+            }
             if !equ_names.contains(&var.to_string()) {
                 equ_names.push(var.to_string());
                 label_count += 1;
@@ -263,6 +267,9 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
         // find set assignments outside of macros
         if owned_line.contains(" SET ") && !in_macro {
             let (name, _) = owned_line.split_once(" SET ").unwrap();
+            if !var_name_regex.is_match(line) {
+                return Err("Illegal variable name!");
+            }
             if !found_set_names.contains(&name.to_string()) {
                 found_set_names.push(name.to_string());
                 all_existing_names.push(name.to_string());
