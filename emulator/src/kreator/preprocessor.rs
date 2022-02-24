@@ -204,6 +204,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
     let loc_label_regex = Regex::new(LABEL_DECL).unwrap();
     let glob_label_regex = Regex::new(&format!("{}:", LABEL_DECL)).unwrap();
 
+    let mut label_count: u32 = 0;
     let mut handled_code: Vec<String> = Vec::new();
     let mut label_names: Vec<String> = Vec::new();
     let mut label_map: HashMap<String, String> = HashMap::new();
@@ -226,15 +227,22 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
         }
         if !in_macro && loc_label_regex.is_match(line) {
             let (label, _) = line.split_once(":").unwrap();
-            label_names.push(label.to_string());
+            if !label_names.contains(&label.to_string()) {
+                label_names.push(label.to_string());
+                label_count += 1;
+            }
         }
         if !in_macro && line.contains(" EQU ") {
             let (var, _) = line.split_once(" EQU ").unwrap();
-            equ_names.push(var.to_string());
+            if !equ_names.contains(&var.to_string()) {
+                equ_names.push(var.to_string());
+                label_count += 1;
+            }
         }
-        all_existing_names.append(&mut equ_names.clone());
-        all_existing_names.append(&mut label_names.clone());
     }
+
+    all_existing_names.append(&mut equ_names.clone());
+    all_existing_names.append(&mut label_names.clone());
 
     for line in code {
         let mut owned_line = line.clone();
@@ -255,8 +263,11 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
         // find set assignments outside of macros
         if owned_line.contains(" SET ") && !in_macro {
             let (name, _) = owned_line.split_once(" SET ").unwrap();
-            found_set_names.push(name.to_string());
-            all_existing_names.push(name.to_string());
+            if !found_set_names.contains(&name.to_string()) {
+                found_set_names.push(name.to_string());
+                all_existing_names.push(name.to_string());
+                label_count += 1;
+            }
         }
 
         // change line of macro according to principles of locality
@@ -265,7 +276,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             // map local labels in macros
             if loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
                 let (label, _) = owned_line.split_once(":").unwrap();
-                let gen_name = generate_label_name(&all_existing_names).unwrap();
+                let (gen_name, generations) = generate_label_name(&all_existing_names, &label_count).unwrap();
+                label_count += generations as u32;
                 all_existing_names.push(gen_name.clone());
                 label_map.insert(label.to_string(), gen_name);
             }
@@ -278,7 +290,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             // map local equ assignments
             if line.contains(" EQU ") {
                 let (name, _) = owned_line.split_once(" EQU ").unwrap();
-                let gen_name = generate_label_name(&all_existing_names).unwrap();
+                let (gen_name, generations) = generate_label_name(&all_existing_names, &label_count).unwrap();
+                label_count += generations as u32;
                 all_existing_names.push(gen_name.clone());
                 equ_map.insert(name.to_string(), gen_name);
             }
@@ -295,7 +308,8 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             if owned_line.contains(" SET ") {
                 let (name, _) = owned_line.split_once(" SET ").unwrap();
                 if !found_set_names.contains(&name.to_string()) {
-                    let gen_name = generate_label_name(&all_existing_names).unwrap();
+                    let (gen_name, generations) = generate_label_name(&all_existing_names, &label_count).unwrap();
+                    label_count += generations as u32;
                     all_existing_names.push(gen_name.clone());
                     set_map.insert(name.to_string(), gen_name);
                 }
@@ -309,23 +323,26 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
     Ok(handled_code)
 }
 
-fn generate_label_name(taken_names: &Vec<String>) -> Result<String, &'static str> {
-    let mut label_base = 'A';
-    let mut label_count = 0;
+fn generate_label_name(taken_names: &Vec<String>, global_label_amount: &u32) -> Result<(String, usize), &'static str> {
+    let mut generations: usize = 0;
+    let mut label_char_val = (taken_names.len() / 10000) as u32 + 'A' as u32;
+    let mut label_count = (taken_names.len() % 10000) as u32 - global_label_amount;
 
-    let mut new_label = format!("{}{}", label_base, label_count);
-    while taken_names.contains(&new_label) {
+    loop {
+        if char::from_u32(label_char_val).unwrap().eq(&'[') {
+            return Err("Exceeded maximum amount of local labels!")
+        }
+        let new_label = format!("{}{}", char::from_u32(label_char_val).unwrap(), label_count);
+        if !taken_names.contains(&new_label) {
+            return Ok((new_label, generations))
+        }
+        generations += 1;
         label_count += 1;
         if label_count == 10000 {
-            label_base = char::from_u32(label_base as u32 + 1).unwrap();
-            // the symbol after 'Z'
-            if label_base == '[' {
-                return Err("Exceeded maximum amount of local labels!");
-            }
+            label_count = 0;
+            label_char_val += 1;
         }
-        new_label = format!("{}{}", label_base, label_count);
     }
-    Ok(new_label)
 }
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
@@ -580,21 +597,34 @@ mod tests {
 
     #[test]
     fn labels_in_macros() {
+        println!("0");
         let code = convert_input(vec![MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END, MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[0], "A0:");
         assert_eq!(ppc[2], "JMP A0");
         assert_eq!(ppc[3], "A1:");
+        println!("1");
 
         let code = convert_input(vec!["@LAB:", "MOV A,B", MACRO_START, "@LAB: JMP @LAB", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[0], "@LAB:");
         assert_eq!(ppc[2], "A0: JMP A0");
 
+        println!("2");
         let code = convert_input(vec!["GLOB: MOV A,B", MACRO_START, "GLOB2::", "NOP", "JMP GLOB2", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[1], "GLOB2:");
         assert_eq!(ppc[3], "JMP GLOB2");
+
+        println!("3");
+        let code = convert_input(vec!["A0: MOV A,B", MACRO_START, "LAB:", "MOV A,B", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "A1:");
+
+        println!("4");
+        let code = convert_input(vec!["A2: JMP A1", MACRO_START, "LAB:", "JMP LAB", MACRO_END, "A0:", "MOV A,B"]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "A1:");
     }
 
     #[test]
