@@ -1,6 +1,6 @@
-use std::{convert::TryInto, iter::Peekable, str::Chars};
+use std::{iter::Peekable, str::Chars};
 #[derive(Debug, PartialEq)]
-pub enum Token {
+enum Token {
     Number(i32),
     Operator(Op),
     Parenthesis(char),
@@ -8,7 +8,7 @@ pub enum Token {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Op {
+enum Op {
     Add,
     Sub,
     Mul,
@@ -47,14 +47,18 @@ impl Op {
     }
 }
 
+pub fn eval(expression: &str) -> i32 {
+    to_expression_tree(tokenize(expression.to_string())).evaluate()
+}
+
 #[derive(Debug)]
-pub enum Item {
+enum Item {
     Number(i32),
     Operator(Op),
 }
 
 #[derive(Debug)]
-pub struct BinaryExpressionTree {
+struct BinaryExpressionTree {
     root: Item,
     left: Option<Box<BinaryExpressionTree>>,
     right: Option<Box<BinaryExpressionTree>>,
@@ -91,7 +95,7 @@ impl BinaryExpressionTree {
     }
 }
 
-pub fn tokenize(expr: String) -> Vec<Token> {
+fn tokenize(expr: String) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut chars = expr.chars().peekable();
     'outer: while let Some(c) = chars.next() {
@@ -251,7 +255,7 @@ impl<'a> Iterator for Tokenizer<'a> {
 * Convert Token vector to binary expression tree using the shunning yard algorithm
 * RANGIERBAHNHOF
  */
-pub fn to_expression_tree(tokens: Vec<Token>) -> BinaryExpressionTree {
+fn to_expression_tree(tokens: Vec<Token>) -> BinaryExpressionTree {
     let mut stack: Vec<Token> = Vec::new();
     let mut trees: Vec<BinaryExpressionTree> = Vec::new();
     for t in tokens {
