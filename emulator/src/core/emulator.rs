@@ -398,25 +398,18 @@ impl Emulator {
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
     }
-}
 
-mod instructions;
-
-impl Emulator {
     pub fn interrupt(&mut self, opcode: u8) -> EResult<()> {
         self.execute_instruction(opcode)
     }
 }
 
+mod instructions;
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::ram::*;
-    use crate::kreator::assembler::Assembler;
-    use std::{
-        fs::*,
-        io::{self, Read},
-    };
+    use std::io;
     use crate::utils::load_asm_file;
 
     #[test]
@@ -430,7 +423,7 @@ mod tests {
         emu.execute_next().expect("");
         assert_eq!(emu.reg['c'], 69);
 
-        emu.interrupt(0xc7);
+        emu.interrupt(0xc7).expect("");
         assert_eq!(emu.pc, 0);
 
         emu.execute_next().expect("");
