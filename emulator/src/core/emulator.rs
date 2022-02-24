@@ -370,6 +370,12 @@ impl Emulator {
         Ok(())
     }
 
+    fn execute_next(&mut self) -> EResult<()> {
+        let opcode = self.ram[self.pc];
+        self.pc += 1;
+        self.execute_instruction(opcode)
+    }
+
     fn read_byte(&mut self) -> EResult<u8> {
         if self.pc + 1 > self.ram.size() as u16 {
             return Err("READ_BYTE: Not enough bytes available");
@@ -391,6 +397,7 @@ impl Emulator {
     
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
+    }
 }
 
 mod instructions;
@@ -410,6 +417,7 @@ mod tests {
         fs::*,
         io::{self, Read},
     };
+    use crate::utils::load_asm_file;
 
     #[test]
     fn int() -> io::Result<()> {
@@ -441,4 +449,3 @@ mod tests {
     }
 }
 
-mod instructions;
