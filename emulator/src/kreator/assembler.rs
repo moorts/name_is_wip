@@ -1,4 +1,4 @@
-use super::parser::*;
+use super::parser::eval;
 use super::preprocessor::get_preprocessed_code;
 use core::fmt;
 use regex::Regex;
@@ -277,8 +277,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
 }
 
 fn evaluate_str(str: &str) -> u16 {
-    let tokens = tokenize(str.to_string());
-    to_expression_tree(tokens).evaluate() as u16
+    eval(str) as u16
 }
 
 fn convert_mov_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
@@ -368,7 +367,7 @@ fn convert_mvi_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     if args.len() != 2 {
         return Err("wrong arg amount!");
     }
-    let immediate_value = to_expression_tree(tokenize(String::from(args[1]))).evaluate() as u8;
+    let immediate_value = eval(args[1]) as u8;
     match args[0] {
         "B" => return Ok(vec![0x06, immediate_value]),
         "C" => return Ok(vec![0x0e, immediate_value]),
