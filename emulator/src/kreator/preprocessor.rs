@@ -597,31 +597,26 @@ mod tests {
 
     #[test]
     fn labels_in_macros() {
-        println!("0");
         let code = convert_input(vec![MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END, MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[0], "A0:");
         assert_eq!(ppc[2], "JMP A0");
         assert_eq!(ppc[3], "A1:");
-        println!("1");
 
         let code = convert_input(vec!["@LAB:", "MOV A,B", MACRO_START, "@LAB: JMP @LAB", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[0], "@LAB:");
         assert_eq!(ppc[2], "A0: JMP A0");
 
-        println!("2");
         let code = convert_input(vec!["GLOB: MOV A,B", MACRO_START, "GLOB2::", "NOP", "JMP GLOB2", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[1], "GLOB2:");
         assert_eq!(ppc[3], "JMP GLOB2");
 
-        println!("3");
         let code = convert_input(vec!["A0: MOV A,B", MACRO_START, "LAB:", "MOV A,B", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[1], "A1:");
 
-        println!("4");
         let code = convert_input(vec!["A2: JMP A1", MACRO_START, "LAB:", "JMP LAB", MACRO_END, "A0:", "MOV A,B"]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[1], "A1:");
