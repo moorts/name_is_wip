@@ -22,9 +22,7 @@ impl Emulator {
         }
     }
 
-    pub fn execute_next(&mut self) -> EResult<()> {
-        let opcode = self.ram[self.pc];
-        self.pc += 1;
+    fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
         match opcode {
             0x01 => {
                 // LXI B, D16
@@ -393,6 +391,53 @@ impl Emulator {
     
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
+}
+
+mod instructions;
+
+impl Emulator {
+    pub fn interrupt(&mut self, opcode: u8) -> EResult<()> {
+        self.execute_instruction(opcode)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::ram::*;
+    use crate::kreator::assembler::Assembler;
+    use std::{
+        fs::*,
+        io::{self, Read},
+    };
+
+    #[test]
+    fn int() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file(&mut emu, "./src/core/asm/int.s")?;
+
+        emu.pc = 0x03;
+        emu.sp = 0x3fff;
+
+        emu.execute_next().expect("");
+        assert_eq!(emu.reg['c'], 69);
+
+        emu.interrupt(0xc7);
+        assert_eq!(emu.pc, 0);
+
+        emu.execute_next().expect("");
+        emu.execute_next().expect("");
+
+        assert_eq!(emu.reg['b'], 69);
+        assert_eq!(emu.pc, 0x05);
+
+
+        emu.execute_next().expect("");
+
+        assert_eq!(emu.reg['h'], 69);
+
+        // TODO: Add another test for non RST instruction interrupts
+        Ok(())
     }
 }
 
