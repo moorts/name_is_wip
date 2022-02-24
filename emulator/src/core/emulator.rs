@@ -390,6 +390,10 @@ impl Emulator {
         self.pc += 1;
         Ok((high << 8) | low)
     }
+    
+    pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
+        self.ram.load_vec(data, start)
+    }
 }
 
 mod instructions;

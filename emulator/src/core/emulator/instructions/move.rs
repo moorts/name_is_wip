@@ -46,25 +46,9 @@ impl Emulator {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::load_asm_file;
     use super::*;
-    
-    
-    use crate::core::emulator::Emulator;
-    use crate::kreator::assembler::Assembler;
-    use std::{
-        fs::*,
-        io::{self, Read},
-    };
-
-    fn load_asm_file(emulator: &mut Emulator, path: &str) -> io::Result<()> {
-        let mut file = File::open(path)?;
-        let mut buf = String::new();
-        file.read_to_string(&mut buf)?;
-        let asmblr = Assembler::new(&buf);
-        let mc = asmblr.assemble().expect("Fuck");
-        emulator.ram.load_vec(mc, 0);
-        Ok(())
-    }
+    use std::io;
     
     #[test]
     fn mvi() -> io::Result<()> {
