@@ -41,9 +41,17 @@ impl Emulator {
                 // INX B
                 self.inx("bc")?;
             }
+            0x04 => {
+                // INR B
+                self.inr('b')?;
+            }
             0x06 => {
                 // MVI B, D8
                 self.mvi('b')?;
+            }
+            0x0C => {
+                // INR C
+                self.inr('c')?;
             }
             0x0e => {
                 // MVI C, D8
@@ -61,9 +69,17 @@ impl Emulator {
                 // INX D
                 self.inx("de")?;
             }
+            0x14 => {
+                // INR D
+                self.inr('d')?;
+            }
             0x16 => {
                 // MVI D, D8
                 self.mvi('d')?;
+            }
+            0x1C => {
+                // INR E
+                self.inr('e')?;
             }
             0x1e => {
                 // MVI E, D8
@@ -77,9 +93,17 @@ impl Emulator {
                 // INX H
                 self.inx("hl")?;
             }
+            0x24 => {
+                // INR H
+                self.inr('h')?;
+            }
             0x26 => {
                 // MVI H, D8
                 self.mvi('h')?;
+            }
+            0x2C => {
+                // INR L
+                self.inr('l')?;
             }
             0x2e => {
                 // MVI L, D8
@@ -94,9 +118,17 @@ impl Emulator {
                 let prev = self.sp;
                 self.sp = prev.wrapping_add(1);
             }
+            0x34 => {
+                // INR M
+                self.inr('m')?;
+            }
             0x36 => {
                 // MVI M, D8
                 self.mvi_adr()?;
+            }
+            0x3C => {
+                // INR A
+                self.inr('a')?;
             }
             0x3e => {
                 // MVI A, D8

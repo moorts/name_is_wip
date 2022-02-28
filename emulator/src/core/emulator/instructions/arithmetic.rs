@@ -94,6 +94,26 @@ impl Emulator {
         self.reg[register] = prev.wrapping_add(1);
         Ok(())
     }
+    
+    pub fn inr(&mut self, register: char) -> EResult<()> {
+        let prev: u8;
+        if register == 'm' {
+            prev = self.ram[self.reg["hl"]];
+        } else {
+            prev = self.reg[register];
+        }
+        let result = prev.wrapping_add(1);
+        self.reg.set_flag("zero", (result & 0xff) == 0);
+        self.reg.set_flag("sign", (result & 0x80) != 0);
+        self.reg.set_flag("parity", result.count_ones() & 1 == 0);
+        self.reg.set_flag("aux", ((prev & 0x0F) + 1) > 0x0F);
+        if register == 'm' {
+            self.ram[self.reg["hl"]] = result;
+        } else {
+            self.reg[register] = result;
+        }
+        Ok(())
+    }
 }
 
 
@@ -296,6 +316,23 @@ mod tests {
         e.execute_next().expect("Fuck");
         
         assert_eq!(e.reg["bc"], 0);
+    }
+    
+    #[test]
+    fn inr() {
+        let mut e = Emulator::new();
+
+        // INR A
+        e.ram.load_vec(vec![0x3C], 0);
+        e.reg['a'] = 69;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 70);
+        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
+        assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
     }
 }
 
