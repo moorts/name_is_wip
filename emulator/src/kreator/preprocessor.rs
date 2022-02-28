@@ -280,7 +280,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             // map local labels in macros
             if loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
                 let (label, _) = owned_line.split_once(":").unwrap();
-                let gen_name = generate_label_name(&all_existing_names, &generated_label_count).unwrap();
+                let gen_name = generate_label_name(&all_existing_names, &mut generated_label_count).unwrap();
                 generated_label_count += 1;
                 all_existing_names.push(gen_name.clone());
                 label_map.insert(label.to_string(), gen_name);
@@ -294,7 +294,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             // map local equ assignments
             if line.contains(" EQU ") {
                 let (name, _) = owned_line.split_once(" EQU ").unwrap();
-                let gen_name = generate_label_name(&all_existing_names, &generated_label_count).unwrap();
+                let gen_name = generate_label_name(&all_existing_names, &mut generated_label_count).unwrap();
                 generated_label_count += 1;
                 all_existing_names.push(gen_name.clone());
                 equ_map.insert(name.to_string(), gen_name);
@@ -312,7 +312,7 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
             if owned_line.contains(" SET ") {
                 let (name, _) = owned_line.split_once(" SET ").unwrap();
                 if !found_set_names.contains(&name.to_string()) {
-                    let gen_name = generate_label_name(&all_existing_names, &generated_label_count).unwrap();
+                    let gen_name = generate_label_name(&all_existing_names, &mut generated_label_count).unwrap();
                     generated_label_count += 1;
                     all_existing_names.push(gen_name.clone());
                     set_map.insert(name.to_string(), gen_name);
@@ -327,11 +327,11 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
     Ok(handled_code)
 }
 
-fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &u32) -> Result<String, &'static str> {
-    let mut label_char_val = (generated_label_count / 10000) as u32 + 'A' as u32;
-    let mut label_num_val = (generated_label_count % 10000) as u32 - generated_label_count;
-
+fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u32) -> Result<String, &'static str> {
     loop {
+        let label_char_val = (*generated_label_count / 10000) as u32 + 'A' as u32;
+        let label_num_val = (*generated_label_count % 10000) as u32;
+
         if char::from_u32(label_char_val).unwrap().eq(&'[') {
             return Err("Exceeded maximum amount of local labels!")
         }
@@ -339,11 +339,7 @@ fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &u32) -
         if !taken_names.contains(&new_label) {
             return Ok(new_label)
         }
-        label_num_val += 1;
-        if label_num_val == 10000 {
-            label_num_val = 0;
-            label_char_val += 1;
-        }
+        *generated_label_count += 1;
     }
 }
 
