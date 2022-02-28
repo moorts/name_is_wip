@@ -134,6 +134,15 @@ impl Emulator {
         }
         Ok(())
     }
+    
+    pub fn dad(&mut self, value: u16) -> EResult<()> {
+        let left = self.reg["hl"] as u32;
+        let right = value as u32;
+        let result = left + right;
+        self.reg.set_flag("carry", result > 0xffff);
+        self.reg["hl"] = (result & 0xffff) as u16;
+        Ok(())
+    }
 }
 
 
@@ -370,6 +379,21 @@ mod tests {
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
         assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+    }
+    
+    #[test]
+    fn dad() {
+        let mut e = Emulator::new();
+
+        // DAD B
+        e.ram.load_vec(vec![0x09], 0);
+        e.reg["hl"] = 4200;
+        e.reg["bc"] = 6900;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg["hl"], 11100);
+        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
     }
 }
 

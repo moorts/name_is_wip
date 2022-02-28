@@ -57,6 +57,13 @@ impl Emulator {
                 // RLC
                 self.rlc()?;
             }
+            0x08 => {
+                // NOP
+            }
+            0x09 => {
+                // DAD B
+                self.dad(self.reg["bc"])?;
+            }
             0x0C => {
                 // INR C
                 self.inr('c')?;
@@ -93,6 +100,10 @@ impl Emulator {
                 // MVI D, D8
                 self.mvi('d')?;
             }
+            0x19 => {
+                // DAD D
+                self.dad(self.reg["de"])?;
+            }
             0x1C => {
                 // INR E
                 self.inr('e')?;
@@ -124,6 +135,10 @@ impl Emulator {
             0x26 => {
                 // MVI H, D8
                 self.mvi('h')?;
+            }
+            0x29 => {
+                // DAD H
+                self.dad(self.reg["hl"])?;
             }
             0x2C => {
                 // INR L
@@ -157,6 +172,10 @@ impl Emulator {
             0x36 => {
                 // MVI M, D8
                 self.mvi_adr()?;
+            }
+            0x39 => {
+                // DAD SP
+                self.dad(self.sp)?;
             }
             0x3C => {
                 // INR A
