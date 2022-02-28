@@ -340,6 +340,7 @@ fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u3
         }
         *generated_label_count += 1;
     }
+}
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
