@@ -45,6 +45,10 @@ impl Emulator {
                 // INR B
                 self.inr('b')?;
             }
+            0x05 => {
+                // DCR B
+                self.dcr('b')?;
+            }
             0x06 => {
                 // MVI B, D8
                 self.mvi('b')?;
@@ -52,6 +56,10 @@ impl Emulator {
             0x0C => {
                 // INR C
                 self.inr('c')?;
+            }
+            0x0D => {
+                // DCR C
+                self.dcr('c')?;
             }
             0x0e => {
                 // MVI C, D8
@@ -73,6 +81,10 @@ impl Emulator {
                 // INR D
                 self.inr('d')?;
             }
+            0x15 => {
+                // DCR D
+                self.dcr('d')?;
+            }
             0x16 => {
                 // MVI D, D8
                 self.mvi('d')?;
@@ -80,6 +92,10 @@ impl Emulator {
             0x1C => {
                 // INR E
                 self.inr('e')?;
+            }
+            0x1D => {
+                // DCR E
+                self.dcr('e')?;
             }
             0x1e => {
                 // MVI E, D8
@@ -97,6 +113,10 @@ impl Emulator {
                 // INR H
                 self.inr('h')?;
             }
+            0x25 => {
+                // DCR H
+                self.dcr('h')?;
+            }
             0x26 => {
                 // MVI H, D8
                 self.mvi('h')?;
@@ -104,6 +124,10 @@ impl Emulator {
             0x2C => {
                 // INR L
                 self.inr('l')?;
+            }
+            0x2D => {
+                // DCR L
+                self.dcr('l')?;
             }
             0x2e => {
                 // MVI L, D8
@@ -122,6 +146,10 @@ impl Emulator {
                 // INR M
                 self.inr('m')?;
             }
+            0x35 => {
+                // DCR M
+                self.dcr('m')?;
+            }
             0x36 => {
                 // MVI M, D8
                 self.mvi_adr()?;
@@ -129,6 +157,10 @@ impl Emulator {
             0x3C => {
                 // INR A
                 self.inr('a')?;
+            }
+            0x3D => {
+                // DCR A
+                self.dcr('a')?;
             }
             0x3e => {
                 // MVI A, D8
