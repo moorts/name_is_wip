@@ -329,13 +329,13 @@ fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> 
 
 fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u32) -> Result<String, &'static str> {
     loop {
-        let label_char_val = (*generated_label_count / 10000) as u32 + 'A' as u32;
-        let label_num_val = (*generated_label_count % 10000) as u32;
+        let label_char = char::from_u32((*generated_label_count / 10000) as u32 + 'A' as u32).unwrap();
+        let label_num = (*generated_label_count % 10000) as u32;
 
-        if char::from_u32(label_char_val).unwrap().eq(&'[') {
+        if label_char.eq(&'[') {
             return Err("Exceeded maximum amount of local labels!")
         }
-        let new_label = format!("{}{}", char::from_u32(label_char_val).unwrap(), label_num_val);
+        let new_label = format!("{}{}", label_char, label_num);
         if !taken_names.contains(&new_label) {
             return Ok(new_label)
         }
