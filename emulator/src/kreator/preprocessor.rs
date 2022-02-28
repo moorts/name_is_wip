@@ -1,5 +1,5 @@
 use super::assembler::{get_reserved_names, LABEL_DECL};
-use super::parser::*;
+use super::parser::eval;
 use std::collections::HashMap;
 use regex::Regex;
 
@@ -107,8 +107,7 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
 }
 
 fn eval_str(str: String) -> u16 {
-    let tokens = tokenize(str.to_string());
-    to_expression_tree(tokens).evaluate() as u16
+    eval(&str) as u16
 }
 
 fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
@@ -341,7 +340,6 @@ fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u3
         }
         *generated_label_count += 1;
     }
-}
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
