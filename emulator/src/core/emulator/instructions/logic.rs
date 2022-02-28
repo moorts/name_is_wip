@@ -86,6 +86,13 @@ impl Emulator {
         self.reg.set_flag("parity", result.count_ones() & 1 == 0);
         self.reg.set_flag("aux", false);
     }
+    
+    pub fn rlc(&mut self) -> EResult<()> {
+        let acc = self.reg['a'];
+        self.reg.set_flag("carry", (acc & 0x80) != 0);
+        self.reg['a'] = acc.rotate_left(1);
+        Ok(())
+    }
 }
 
 
@@ -191,5 +198,20 @@ mod tests {
 
         assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
+    }
+    
+    #[test]
+    fn rlc() {
+        let mut e = Emulator::new();
+
+        // RLC
+        e.ram.load_vec(vec![0x07], 0);
+
+        e.reg['a'] = 0b1111_0000;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 0b1110_0001);
+        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
     }
 }

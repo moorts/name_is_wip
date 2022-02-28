@@ -53,6 +53,10 @@ impl Emulator {
                 // MVI B, D8
                 self.mvi('b')?;
             }
+            0x07 => {
+                // RLC
+                self.rlc()?;
+            }
             0x0C => {
                 // INR C
                 self.inr('c')?;
