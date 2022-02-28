@@ -786,7 +786,7 @@ mod tests {
         ENDM\n
         \n
         macr0 input\n
-        IF NOM\n
+        IF 20\n
         EI\n
         ENDIF\n
         END\n";
