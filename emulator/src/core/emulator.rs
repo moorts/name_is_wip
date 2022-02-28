@@ -26,9 +26,20 @@ impl Emulator {
 
     fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
         match opcode {
+            0x00 => {
+                // NOP
+            }
             0x01 => {
                 // LXI B, D16
                 self.lxi("bc")?;
+            }
+            0x02 => {
+                // STAX B
+                self.stax("bc")?;
+            }
+            0x03 => {
+                // INX B
+                self.inx("bc")?;
             }
             0x06 => {
                 // MVI B, D8
@@ -42,6 +53,14 @@ impl Emulator {
                 // LXI D, D16
                 self.lxi("de")?;
             }
+            0x12 => {
+                // STAX D
+                self.stax("de")?;
+            }
+            0x13 => {
+                // INX D
+                self.inx("de")?;
+            }
             0x16 => {
                 // MVI D, D8
                 self.mvi('d')?;
@@ -54,6 +73,10 @@ impl Emulator {
                 // LXI H, D16
                 self.lxi("hl")?;
             }
+            0x23 => {
+                // INX H
+                self.inx("hl")?;
+            }
             0x26 => {
                 // MVI H, D8
                 self.mvi('h')?;
@@ -65,6 +88,11 @@ impl Emulator {
             0x31 => {
                 // LXI SP, D16
                 self.sp = self.read_addr()?;
+            }
+            0x33 => {
+                // INX SP
+                let prev = self.sp;
+                self.sp = prev.wrapping_add(1);
             }
             0x36 => {
                 // MVI M, D8

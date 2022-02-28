@@ -88,6 +88,12 @@ impl Emulator {
         self.reg['a'] = result_byte;
         Ok(())
     }
+    
+    pub fn inx(&mut self, register: &str) -> EResult<()> {
+        let prev = self.reg[register];
+        self.reg[register] = prev.wrapping_add(1);
+        Ok(())
+    }
 }
 
 
@@ -270,6 +276,26 @@ mod tests {
         e.execute_next().expect("Fuck");
 
         assert_eq!(e.reg['a'], 69-43);
+    }
+    
+    #[test]
+    fn inx() {
+        let mut e = Emulator::new();
+
+        // INX B
+        e.ram.load_vec(vec![0x03, 0x03], 0);
+
+        e.reg["bc"] = 42;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg["bc"], 43);
+        
+        e.reg["bc"] = 0xFFFF;
+
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg["bc"], 0);
     }
 }
 
