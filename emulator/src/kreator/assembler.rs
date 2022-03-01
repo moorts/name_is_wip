@@ -52,7 +52,7 @@ impl Assembler {
         for line in preprocessed_code {
             let line = label_regex.replace(&line, "").trim().to_string();
 
-            if !line.is_empty() {
+            if !line.is_empty() && !line.contains("ORG ") {
                 machine_code.extend(to_machine_code(line)?);
             }
         }
@@ -789,6 +789,7 @@ mod tests {
         IF 20\n
         EI\n
         ENDIF\n
+        ORG 100H\n
         END\n";
 
         let result = vec![0xc3, 0x6, 0x0, 0x81, 0xC1, 0xC8, 0xFB];
