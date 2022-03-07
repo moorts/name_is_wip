@@ -243,9 +243,21 @@ impl Emulator {
                 // MVI M, D8
                 self.mvi_adr()?;
             }
+            0x37 => {
+                // STC
+                self.reg.set_flag("carry", true);
+            }
+            0x38 => {
+                // NOP
+            }
             0x39 => {
                 // DAD SP
                 self.dad(self.sp)?;
+            }
+            0x3A => {
+                // LDA A16
+                let address = self.read_addr()?;
+                self.lda(address)?;
             }
             0x3B => {
                 // DCX SP

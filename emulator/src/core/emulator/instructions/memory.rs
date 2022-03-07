@@ -53,6 +53,11 @@ impl Emulator {
         self.ram[address] = self.reg['a'];
         Ok(())
     }
+    
+    pub fn lda(&mut self, address: u16) -> EResult<()> {
+        self.reg['a'] = self.ram[address];
+        Ok(())
+    }
 }
 
 
@@ -148,6 +153,20 @@ mod tests {
         e.execute_next().expect("Fuck");
 
         assert_eq!(e.ram[0x1200], 69);
+    }
+    
+    #[test]
+    fn lda() {
+        let mut e = Emulator::new();
+        
+        // LDA
+        e.ram.load_vec(vec![0x3A, 0x00, 0x12], 0);
+
+        e.ram[0x1200] = 69;
+        
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 69);
     }
 }
 
