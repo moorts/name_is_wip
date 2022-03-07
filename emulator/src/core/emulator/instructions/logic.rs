@@ -100,6 +100,32 @@ impl Emulator {
         self.reg['a'] = acc.rotate_right(1);
         Ok(())
     }
+    
+    pub fn ral(&mut self) -> EResult<()> {
+        let acc = self.reg['a'];
+        let carry = self.reg.get_flag("carry");
+        self.reg.set_flag("carry", (acc & 0x80) != 0);
+        self.reg['a'] = acc << 1;
+        if carry {
+            self.reg['a'] |= 0x01;
+        } else {
+            self.reg['a'] &= !0x01;
+        }
+        Ok(())
+    }
+    
+    pub fn rar(&mut self) -> EResult<()> {
+        let acc = self.reg['a'];
+        let carry = self.reg.get_flag("carry");
+        self.reg.set_flag("carry", (acc & 0x01) != 0);
+        self.reg['a'] = acc >> 1;
+        if carry {
+            self.reg['a'] |= 0x80;
+        } else {
+            self.reg['a'] &= !0x80;
+        }
+        Ok(())
+    }
 }
 
 
@@ -234,6 +260,38 @@ mod tests {
         e.execute_next().expect("Fuck");
 
         assert_eq!(e.reg['a'], 0b1000_0111);
+        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
+    }
+    
+    #[test]
+    fn ral() {
+        let mut e = Emulator::new();
+
+        // RAL
+        e.ram.load_vec(vec![0x17], 0);
+
+        e.reg['a'] = 0b1011_0101;
+        e.reg.set_flag("carry", false);
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 0b0110_1010);
+        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
+    }
+    
+    #[test]
+    fn rar() {
+        let mut e = Emulator::new();
+
+        // RAR
+        e.ram.load_vec(vec![0x1F], 0);
+
+        e.reg['a'] = 0b1011_0101;
+        e.reg.set_flag("carry", false);
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 0b0101_1010);
         assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
     }
 }

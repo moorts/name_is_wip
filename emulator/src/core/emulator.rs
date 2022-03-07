@@ -88,6 +88,9 @@ impl Emulator {
                 // RRC
                 self.rrc()?;
             }
+            0x10 => {
+                // NOP
+            }
             0x11 => {
                 // LXI D, D16
                 self.lxi("de")?;
@@ -112,6 +115,10 @@ impl Emulator {
                 // MVI D, D8
                 self.mvi('d')?;
             }
+            0x17 => {
+                // RAL
+                self.ral()?;
+            }
             0x19 => {
                 // DAD D
                 self.dad(self.reg["de"])?;
@@ -132,9 +139,13 @@ impl Emulator {
                 // DCR E
                 self.dcr('e')?;
             }
-            0x1e => {
+            0x1E => {
                 // MVI E, D8
                 self.mvi('e')?;
+            }
+            0x1F => {
+                // RAR
+                self.rar()?;
             }
             0x21 => {
                 // LXI H, D16
