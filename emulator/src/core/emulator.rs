@@ -68,6 +68,10 @@ impl Emulator {
                 // LDAX B
                 self.ldax("bc")?;
             }
+            0x0B => {
+                // DCX B
+                self.dcx("bc")?;
+            }
             0x0C => {
                 // INR C
                 self.inr('c')?;
@@ -112,6 +116,10 @@ impl Emulator {
                 // LDAX D
                 self.ldax("de")?;
             }
+            0x1B => {
+                // DCX D
+                self.dcx("de")?;
+            }
             0x1C => {
                 // INR E
                 self.inr('e')?;
@@ -147,6 +155,10 @@ impl Emulator {
             0x29 => {
                 // DAD H
                 self.dad(self.reg["hl"])?;
+            }
+            0x2B => {
+                // DCX H
+                self.dcx("hl")?;
             }
             0x2C => {
                 // INR L
@@ -184,6 +196,11 @@ impl Emulator {
             0x39 => {
                 // DAD SP
                 self.dad(self.sp)?;
+            }
+            0x3B => {
+                // DCX SP
+                let prev = self.sp;
+                self.sp = prev.wrapping_sub(1);
             }
             0x3C => {
                 // INR A

@@ -95,6 +95,12 @@ impl Emulator {
         Ok(())
     }
     
+    pub fn dcx(&mut self, register: &str) -> EResult<()> {
+        let prev = self.reg[register];
+        self.reg[register] = prev.wrapping_sub(1);
+        Ok(())
+    }
+    
     pub fn inr(&mut self, register: char) -> EResult<()> {
         let prev: u8;
         if register == 'm' {
@@ -345,6 +351,26 @@ mod tests {
         e.execute_next().expect("Fuck");
         
         assert_eq!(e.reg["bc"], 0);
+    }
+    
+    #[test]
+    fn dcx() {
+        let mut e = Emulator::new();
+
+        // DCX B
+        e.ram.load_vec(vec![0x0B, 0x0B], 0);
+
+        e.reg["bc"] = 42;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg["bc"], 41);
+        
+        e.reg["bc"] = 0x0000;
+
+        e.execute_next().expect("Fuck");
+        
+        assert_eq!(e.reg["bc"], 0xFFFF);
     }
     
     #[test]
