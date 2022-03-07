@@ -190,7 +190,7 @@ impl Emulator {
                 self.dad(self.reg["hl"])?;
             }
             0x2A => {
-                // LHLD a16
+                // LHLD A16
                 let address = self.read_addr()?;
                 self.lhld(address)?;
             }
@@ -214,9 +214,17 @@ impl Emulator {
                 // CMA
                 self.cma()?;
             }
+            0x30 => {
+                // NOP
+            }
             0x31 => {
                 // LXI SP, D16
                 self.sp = self.read_addr()?;
+            }
+            0x32 => {
+                // STA A16
+                let address = self.read_addr()?;
+                self.sta(address)?;
             }
             0x33 => {
                 // INX SP

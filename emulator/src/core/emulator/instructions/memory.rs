@@ -48,6 +48,11 @@ impl Emulator {
         self.reg['h'] = self.ram[address+1];
         Ok(())
     }
+    
+    pub fn sta(&mut self, address: u16) -> EResult<()> {
+        self.ram[address] = self.reg['a'];
+        Ok(())
+    }
 }
 
 
@@ -129,6 +134,20 @@ mod tests {
 
         assert_eq!(e.reg['h'], 69);
         assert_eq!(e.reg['l'], 42);
+    }
+    
+    #[test]
+    fn sta() {
+        let mut e = Emulator::new();
+        
+        // STA
+        e.ram.load_vec(vec![0x32, 0x00, 0x12], 0);
+
+        e.reg['a'] = 69;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.ram[0x1200], 69);
     }
 }
 
