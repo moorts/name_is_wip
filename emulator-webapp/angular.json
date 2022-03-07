@@ -30,13 +30,12 @@
               "src/favicon.ico",
               "src/assets",
               { "glob": "**/*", "input": "node_modules/monaco-editor", "output": "assets/monaco-editor/" },
+              { "glob": "**/*", "input": "node_modules/onigasm", "output": "assets/onigasm/" },
               { "glob": "**/*", "input": "../emulator/pkg", "output": "assets/emulator/" }
             ],
             "styles": [
-              "src/styles.less",
-              "node_modules/primeicons/primeicons.css",
-              "node_modules/primeng/resources/themes/lara-light-blue/theme.css",
-              "node_modules/primeng/resources/primeng.min.css"
+              "./node_modules/@angular/material/prebuilt-themes/purple-green.css",
+              "src/styles.less"
             ],
             "scripts": []
           },
@@ -104,6 +103,7 @@
               "src/assets"
             ],
             "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/purple-green.css",
               "src/styles.less"
             ],
             "scripts": []

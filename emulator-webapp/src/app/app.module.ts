@@ -1,11 +1,13 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
-import { ToolbarModule } from 'primeng/toolbar';
-import { ButtonModule } from 'primeng/button';
-import { SplitButtonModule } from 'primeng/splitbutton';
+import { MonacoEditorModule, MONACO_PATH } from '@materia-ui/ngx-monaco-editor';
+
+import {MatToolbarModule} from '@angular/material/toolbar';
+import {MatGridListModule} from '@angular/material/grid-list';
 
 import { AppComponent } from './app.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { AngularSplitModule } from 'angular-split';
 
 @NgModule({
   declarations: [
@@ -14,11 +16,15 @@ import { AppComponent } from './app.component';
   imports: [
     BrowserModule,
     MonacoEditorModule,
-    ToolbarModule,
-    ButtonModule,
-    SplitButtonModule
+    BrowserAnimationsModule,
+    MatToolbarModule,
+    MatGridListModule,
+    AngularSplitModule 
   ],
-  providers: [],
+  providers: [{
+    provide: MONACO_PATH,
+    useValue: 'https://unpkg.com/monaco-editor@0.32.1/min/vs'
+  }],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}
