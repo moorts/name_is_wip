@@ -14,7 +14,7 @@ export class AppComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     console.log("AppComponent OnInit!");
-    let a = await init("assets/emulator/emulator_bg.wasm");
-    a.greet();
+    let emulator = await init("assets/emulator/emulator_bg.wasm");
+    //a.greet();
   }
 }
