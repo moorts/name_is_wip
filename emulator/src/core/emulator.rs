@@ -64,6 +64,10 @@ impl Emulator {
                 // DAD B
                 self.dad(self.reg["bc"])?;
             }
+            0x0A => {
+                // LDAX B
+                self.ldax("bc")?;
+            }
             0x0C => {
                 // INR C
                 self.inr('c')?;
@@ -103,6 +107,10 @@ impl Emulator {
             0x19 => {
                 // DAD D
                 self.dad(self.reg["de"])?;
+            }
+            0x1A => {
+                // LDAX D
+                self.ldax("de")?;
             }
             0x1C => {
                 // INR E
