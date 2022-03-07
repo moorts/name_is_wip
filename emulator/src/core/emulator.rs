@@ -546,8 +546,9 @@ impl Emulator {
                 self.push_reg("psw")?;
             }
             0xF6 => {
-                // Unimplemented
-                unimplemented!()
+                // ORI d8
+                let value = self.read_byte()?;
+                self.or_value(value)?;
             }
             0xF7 => {
                 // RST 6
@@ -558,8 +559,8 @@ impl Emulator {
                 self.ret_if("sign")?;
             }
             0xF9 => {
-                // Unimplemented
-                unimplemented!()
+                // SPHL
+                self.sp = self.reg["hl"];
             }
             0xFA => {
                 // JM adr
@@ -578,8 +579,9 @@ impl Emulator {
                 self.call_imm()?;
             }
             0xFE => {
-                // Unimplemented
-                unimplemented!()
+                // CPI d8
+                let value = self.read_byte()?;
+                self.cmp_value(value)?;
             }
             0xFF => {
                 // RST 7

@@ -52,7 +52,7 @@ impl Emulator {
         }
     }
     
-    fn or_value(&mut self, value: u8) -> EResult<()> {
+    pub fn or_value(&mut self, value: u8) -> EResult<()> {
         let accumulator = self.reg['a'];
         let result = accumulator | value;
         self.set_flags(result);
@@ -71,7 +71,7 @@ impl Emulator {
         }
     }
     
-    fn cmp_value(&mut self, value: u8) -> EResult<()> {
+    pub fn cmp_value(&mut self, value: u8) -> EResult<()> {
         // Perform SUB but restore accumulator afterwards
         let accumulator = self.reg['a'];
         self.sub_value(value as u16)?;
