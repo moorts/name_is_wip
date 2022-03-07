@@ -33,7 +33,7 @@ impl Emulator {
         self.add_value(register_value)
     }
 
-    fn add_value(&mut self, value: u16) -> EResult<()> {
+    pub fn add_value(&mut self, value: u16) -> EResult<()> {
         let accumulator = self.reg['a'] as u16;
         let result = accumulator + value;
         let result_byte = (result & 0xff) as u8;

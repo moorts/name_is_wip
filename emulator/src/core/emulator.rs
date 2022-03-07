@@ -338,16 +338,17 @@ impl Emulator {
                 self.pc = self.read_addr()?;
             }
             0xC4 => {
-                // Unimplemented
-                unimplemented!();
+                // CNZ adr
+                self.call_not("zero")?;
             }
             0xC5 => {
                 // PUSH B
                 self.push_reg("bc")?;
             }
             0xC6 => {
-                // Unimplemented
-                unimplemented!();
+                // ADI d8
+                let value = self.read_byte()?;
+                self.add_value(value as u16)?;
             }
             0xC7 => {
                 // RST 0
@@ -366,7 +367,8 @@ impl Emulator {
                 self.jmp_if("zero")?;
             }
             0xCB => {
-                unimplemented!()
+                // JMP adr
+                self.pc = self.read_addr()?;
             }
             0xCC => {
                 // CZ addr
@@ -377,8 +379,9 @@ impl Emulator {
                 self.call_imm()?;
             }
             0xCE => {
-                // Unimplemented
-                unimplemented!()
+                // ACI d8
+                let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
+                self.add_value(value)?;
             }
             0xCF => {
                 // RST 1
@@ -397,7 +400,7 @@ impl Emulator {
                 self.jmp_not("carry")?;
             }
             0xD3 => {
-                // OUT
+                // OUT d8
                 unimplemented!()
             }
             0xD4 => {
