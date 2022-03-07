@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { MonacoEditorModule, MONACO_PATH } from '@materia-ui/ngx-monaco-editor';
+import { MonacoEditorModule } from '@materia-ui/ngx-monaco-editor';
 
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatGridListModule} from '@angular/material/grid-list';
@@ -8,10 +8,12 @@ import {MatGridListModule} from '@angular/material/grid-list';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AngularSplitModule } from 'angular-split';
+import { CodeEditorComponent } from './code-editor/code-editor.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    CodeEditorComponent
   ],
   imports: [
     BrowserModule,
@@ -19,12 +21,9 @@ import { AngularSplitModule } from 'angular-split';
     BrowserAnimationsModule,
     MatToolbarModule,
     MatGridListModule,
-    AngularSplitModule 
+    AngularSplitModule
   ],
-  providers: [{
-    provide: MONACO_PATH,
-    useValue: 'https://unpkg.com/monaco-editor@0.32.1/min/vs'
-  }],
+  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule {}

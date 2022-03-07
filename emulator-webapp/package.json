@@ -23,7 +23,7 @@
     "@materia-ui/ngx-monaco-editor": "^6.0.0",
     "angular-split": "^13.2.0",
     "emulator": "file:../emulator/pkg",
-    "onigasm": "^2.2.5",
+    "monaco-editor": "^0.32.1",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.11.4"
