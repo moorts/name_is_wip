@@ -29,7 +29,8 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
-              { "glob": "**/*", "input": "node_modules/monaco-editor", "output": "assets/monaco-editor/" }
+              { "glob": "**/*", "input": "node_modules/monaco-editor", "output": "assets/monaco-editor/" },
+              { "glob": "**/*", "input": "../emulator/pkg", "output": "assets/emulator/" }
             ],
             "styles": [
               "src/styles.less"
