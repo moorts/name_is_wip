@@ -1,8 +1,8 @@
-use super::super::{Emulator, EResult};
+use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl Emulator {
+impl<'a> Emulator<'a> {
     pub fn mvi(&mut self, r: char) -> EResult<()> {
         self.reg[r] = self.read_byte()?;
         Ok(())
@@ -43,13 +43,12 @@ impl Emulator {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::utils::load_asm_file;
     use super::*;
+    use crate::utils::load_asm_file;
     use std::io;
-    
+
     #[test]
     fn mvi() -> io::Result<()> {
         let mut emu = Emulator::new();
@@ -98,11 +97,10 @@ mod tests {
         let regs = ["bc", "de", "hl"];
         for i in 1..4 {
             emu.execute_next().expect("Fuck");
-            assert_eq!(emu.reg[regs[i-1]], (i * 256 + i + 4) as u16);
+            assert_eq!(emu.reg[regs[i - 1]], (i * 256 + i + 4) as u16);
         }
         emu.execute_next().expect("Fuck");
         assert_eq!(emu.sp, 0x0408);
         Ok(())
     }
 }
-

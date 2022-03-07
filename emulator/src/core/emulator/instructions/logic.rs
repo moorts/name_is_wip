@@ -2,7 +2,7 @@ use crate::core::emulator::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl Emulator {
+impl<'a> Emulator<'a> {
     pub fn and(&mut self, opcode: u8) -> EResult<()> {
         let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];
@@ -13,7 +13,7 @@ impl Emulator {
             self.and_value(self.reg[register])
         }
     }
-    
+
     fn and_value(&mut self, value: u8) -> EResult<()> {
         let accumulator = self.reg['a'];
         let result = accumulator & value;
@@ -21,7 +21,7 @@ impl Emulator {
         self.reg['a'] = result;
         Ok(())
     }
-    
+
     pub fn xor(&mut self, opcode: u8) -> EResult<()> {
         let index = ((opcode - 8) & 0xF) as usize;
         let register = REGISTERS[index];
@@ -32,7 +32,7 @@ impl Emulator {
             self.xor_value(self.reg[register])
         }
     }
-    
+
     fn xor_value(&mut self, value: u8) -> EResult<()> {
         let accumulator = self.reg['a'];
         let result = accumulator ^ value;
@@ -40,7 +40,7 @@ impl Emulator {
         self.reg['a'] = result;
         Ok(())
     }
-    
+
     pub fn or(&mut self, opcode: u8) -> EResult<()> {
         let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];
@@ -51,7 +51,7 @@ impl Emulator {
             self.or_value(self.reg[register])
         }
     }
-    
+
     fn or_value(&mut self, value: u8) -> EResult<()> {
         let accumulator = self.reg['a'];
         let result = accumulator | value;
@@ -59,7 +59,7 @@ impl Emulator {
         self.reg['a'] = result;
         Ok(())
     }
-    
+
     pub fn cmp(&mut self, opcode: u8) -> EResult<()> {
         let index = ((opcode - 8) & 0xF) as usize;
         let register = REGISTERS[index];
@@ -70,15 +70,15 @@ impl Emulator {
             self.cmp_value(self.reg[register])
         }
     }
-    
+
     fn cmp_value(&mut self, value: u8) -> EResult<()> {
         // Perform SUB but restore accumulator afterwards
         let accumulator = self.reg['a'];
         self.sub_value(value as u16)?;
-        self.reg['a'] = accumulator; 
+        self.reg['a'] = accumulator;
         Ok(())
     }
-    
+
     fn set_flags(&mut self, result: u8) {
         self.reg.set_flag("zero", (result & 0xff) == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
@@ -87,7 +87,6 @@ impl Emulator {
         self.reg.set_flag("aux", false);
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -112,12 +111,12 @@ mod tests {
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
         assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
-        
+
         e.execute_next().expect("Fuck");
-        
+
         assert_eq!(e.reg['a'], 0b0000_0100);
     }
-    
+
     #[test]
     fn xor() {
         let mut e = Emulator::new();
@@ -137,7 +136,7 @@ mod tests {
         assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
     }
-    
+
     #[test]
     fn or() {
         let mut e = Emulator::new();
@@ -157,7 +156,7 @@ mod tests {
         assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
     }
-    
+
     #[test]
     fn cmp() {
         let mut e = Emulator::new();
@@ -173,7 +172,7 @@ mod tests {
         assert_eq!(e.reg['a'], 0x0A);
         assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        
+
         e.pc = 0;
         e.reg['b'] = 0x05;
         e.reg['a'] = 0x02;
@@ -182,7 +181,7 @@ mod tests {
 
         assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
         assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        
+
         e.pc = 0;
         e.reg['b'] = 0x05;
         e.reg['a'] = 0xE5;

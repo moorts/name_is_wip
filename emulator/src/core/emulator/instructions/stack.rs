@@ -1,8 +1,8 @@
-use super::super::{Emulator, EResult};
+use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl Emulator {
+impl<'a> Emulator<'a> {
     pub fn push(&mut self, val: u16) -> EResult<()> {
         if self.sp < 2 {
             return Err("PUSH: No more stack space");
@@ -30,11 +30,10 @@ impl Emulator {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn push_pop() {
         let mut e = Emulator::new();
@@ -50,4 +49,3 @@ mod tests {
         assert_eq!(e.push(0x1234), Err("PUSH: No more stack space"));
     }
 }
-

@@ -1,26 +1,31 @@
+use crate::core::io::*;
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
 pub type EResult<T> = Result<T, &'static str>;
 
-pub struct Emulator {
+pub struct Emulator<'a> {
     pc: u16,
     sp: u16,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
+    input_devices: [Option<Box<&'a dyn InputDevice>>; 8],
+    output_devices: [Option<Box<&'a mut dyn OutputDevice>>; 8],
     running: bool,
-    interrupts_enabled: bool
+    interrupts_enabled: bool,
 }
 
-impl Emulator {
+impl<'a> Emulator<'a> {
     pub fn new() -> Self {
         Emulator {
             pc: 0,
             sp: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
+            input_devices: [None, None, None, None, None, None, None, None],
+            output_devices: [None, None, None, None, None, None, None, None],
             running: true,
-            interrupts_enabled: true // INTE
+            interrupts_enabled: true, // INTE
         }
     }
 
@@ -189,7 +194,8 @@ impl Emulator {
             }
             0xd3 => {
                 // OUT
-                unimplemented!()
+                let port = self.read_byte()?;
+                self.output(port)?;
             }
             0xd4 => {
                 // CNC adr
@@ -220,8 +226,9 @@ impl Emulator {
                 self.jmp_if("carry")?;
             }
             0xdb => {
-                // Unimplemented
-                unimplemented!()
+                // IN
+                let port = self.read_byte()?;
+                self.input(port)?;
             }
             0xdc => {
                 // CC adr
@@ -396,7 +403,7 @@ impl Emulator {
         self.pc += 1;
         Ok((high << 8) | low)
     }
-    
+
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
     }
@@ -411,12 +418,13 @@ impl Emulator {
 }
 
 mod instructions;
+mod devices;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
     use crate::utils::load_asm_file;
+    use std::io;
 
     #[test]
     fn int() -> io::Result<()> {
@@ -447,7 +455,6 @@ mod tests {
         assert_eq!(emu.reg['b'], 69);
         assert_eq!(emu.pc, 0x07);
 
-
         emu.execute_next().expect("");
 
         assert_eq!(emu.reg['h'], 69);
@@ -456,4 +463,3 @@ mod tests {
         Ok(())
     }
 }
-

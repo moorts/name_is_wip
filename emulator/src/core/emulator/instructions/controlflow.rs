@@ -1,8 +1,8 @@
-use super::super::{Emulator, EResult};
+use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl Emulator {
+impl<'a> Emulator<'a> {
     pub fn jmp_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
             self.pc = self.read_addr()?;
@@ -72,12 +72,10 @@ impl Emulator {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     #[test]
     fn call_ret() {
         let mut e = Emulator::new();
@@ -206,4 +204,3 @@ mod tests {
         }
     }
 }
-

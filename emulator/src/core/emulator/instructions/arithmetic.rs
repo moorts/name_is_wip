@@ -1,8 +1,8 @@
-use super::super::{Emulator, EResult};
+use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl Emulator {
+impl<'a> Emulator<'a> {
     pub fn add(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
         let mut index = (opcode & 0xF) as usize;
         if use_carry {
@@ -40,12 +40,14 @@ impl Emulator {
         self.reg.set_flag("zero", (result & 0xff) == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
         self.reg.set_flag("carry", result > 0xff);
-        self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
-        self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
+        self.reg
+            .set_flag("parity", result_byte.count_ones() & 1 == 0);
+        self.reg
+            .set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
         self.reg['a'] = result_byte;
         Ok(())
     }
-    
+
     pub fn sub(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
         let mut index = (opcode & 0xF) as usize;
         if use_carry {
@@ -58,7 +60,7 @@ impl Emulator {
             self.sub_register(register, use_carry)
         }
     }
-    
+
     fn sub_memory(&mut self, use_carry: bool) -> EResult<()> {
         let address = self.reg["hl"];
         let mut memory_value = self.ram[address] as u16;
@@ -75,7 +77,7 @@ impl Emulator {
         }
         self.sub_value(register_value)
     }
-    
+
     pub fn sub_value(&mut self, value: u16) -> EResult<()> {
         let accumulator = self.reg['a'] as u16;
         let result = accumulator + (!value & 0xFF) + 1;
@@ -83,13 +85,14 @@ impl Emulator {
         self.reg.set_flag("zero", (result & 0xff) == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
         self.reg.set_flag("carry", !(result > 0xff));
-        self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
-        self.reg.set_flag("aux", ((accumulator & 0x0F) + (!value & 0x0F) + 1) > 0x0F);
+        self.reg
+            .set_flag("parity", result_byte.count_ones() & 1 == 0);
+        self.reg
+            .set_flag("aux", ((accumulator & 0x0F) + (!value & 0x0F) + 1) > 0x0F);
         self.reg['a'] = result_byte;
         Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -204,7 +207,7 @@ mod tests {
 
         assert_eq!(e.reg['a'], 112);
     }
-    
+
     #[test]
     fn sub_reg() {
         let mut e = Emulator::new();
@@ -220,11 +223,11 @@ mod tests {
 
         e.execute_next().expect("Fuck");
         assert_eq!(e.reg['a'], 0);
-        
+
         e.execute_next().expect("Fuck");
         assert_eq!(e.reg['a'], 214);
     }
-    
+
     #[test]
     fn sub_flags() {
         let mut e = Emulator::new();
@@ -243,7 +246,7 @@ mod tests {
         assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
         assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
     }
-    
+
     #[test]
     fn sbb() {
         let mut e = Emulator::new();
@@ -257,7 +260,7 @@ mod tests {
 
         e.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 69-42);
+        assert_eq!(e.reg['a'], 69 - 42);
 
         // SBB B with carry
         e.ram.load_vec(vec![0x98], 0);
@@ -269,7 +272,6 @@ mod tests {
 
         e.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 69-43);
+        assert_eq!(e.reg['a'], 69 - 43);
     }
 }
-
