@@ -93,6 +93,13 @@ impl Emulator {
         self.reg['a'] = acc.rotate_left(1);
         Ok(())
     }
+    
+    pub fn rrc(&mut self) -> EResult<()> {
+        let acc = self.reg['a'];
+        self.reg.set_flag("carry", (acc & 0x01) != 0);
+        self.reg['a'] = acc.rotate_right(1);
+        Ok(())
+    }
 }
 
 
@@ -212,6 +219,21 @@ mod tests {
         e.execute_next().expect("Fuck");
 
         assert_eq!(e.reg['a'], 0b1110_0001);
+        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
+    }
+    
+    #[test]
+    fn rrc() {
+        let mut e = Emulator::new();
+
+        // RRC
+        e.ram.load_vec(vec![0x0F], 0);
+
+        e.reg['a'] = 0b0000_1111;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 0b1000_0111);
         assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
     }
 }

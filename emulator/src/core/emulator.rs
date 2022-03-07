@@ -80,9 +80,13 @@ impl Emulator {
                 // DCR C
                 self.dcr('c')?;
             }
-            0x0e => {
+            0x0E => {
                 // MVI C, D8
                 self.mvi('c')?;
+            }
+            0x0F => {
+                // RRC
+                self.rrc()?;
             }
             0x11 => {
                 // LXI D, D16
