@@ -119,6 +119,9 @@ impl Emulator {
                 // RAL
                 self.ral()?;
             }
+            0x18 => {
+                // NOP
+            }
             0x19 => {
                 // DAD D
                 self.dad(self.reg["de"])?;
@@ -147,9 +150,16 @@ impl Emulator {
                 // RAR
                 self.rar()?;
             }
+            0x20 => {
+                // NOP
+            }
             0x21 => {
                 // LXI H, D16
                 self.lxi("hl")?;
+            }
+            0x22 => {
+                // SHLD A16
+                self.shld()?;
             }
             0x23 => {
                 // INX H
