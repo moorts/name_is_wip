@@ -326,8 +326,8 @@ impl Emulator {
                 self.ret_not("zero")?;
             }
             0xC1 => {
-                // Unimplemented
-                unimplemented!();
+                // POP B
+                self.pop_reg("bc")?;
             }
             0xC2 => {
                 // JNZ adr
@@ -390,7 +390,7 @@ impl Emulator {
             }
             0xD1 => {
                 // POP D
-                self.reg["de"] = self.pop()?;
+                self.pop_reg("de")?;
             }
             0xD2 => {
                 // JNC adr
@@ -453,8 +453,8 @@ impl Emulator {
                 self.ret_not("parity")?;
             }
             0xE1 => {
-                // Unimplemented
-                unimplemented!()
+                // POP H
+                self.pop_reg("hl")?;
             }
             0xE2 => {
                 // JPO adr
@@ -517,8 +517,8 @@ impl Emulator {
                 self.ret_not("sign")?;
             }
             0xF1 => {
-                // Unimplemented
-                unimplemented!()
+                // POP PSW
+                self.pop_reg("psw")?;
             }
             0xF2 => {
                 // JP adr

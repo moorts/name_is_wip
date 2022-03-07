@@ -37,6 +37,11 @@ impl Emulator {
         Ok((high << 8) | low)
     }
     
+    pub fn pop_reg(&mut self, reg: &str) -> EResult<()> {
+        self.reg[reg] = self.pop()?;
+        Ok(())
+    }
+    
     pub fn shld(&mut self, address: u16) -> EResult<()> {
         self.ram[address] = self.reg['l'];
         self.ram[address+1] = self.reg['h'];
