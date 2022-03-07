@@ -9,6 +9,7 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AngularSplitModule } from 'angular-split';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
+import { FormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [
@@ -21,7 +22,8 @@ import { CodeEditorComponent } from './code-editor/code-editor.component';
     BrowserAnimationsModule,
     MatToolbarModule,
     MatGridListModule,
-    AngularSplitModule
+    AngularSplitModule,
+    FormsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

@@ -1,8 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { MonacoEditorLoaderService, MonacoStandaloneCodeEditor } from '@materia-ui/ngx-monaco-editor';
 import init from "emulator";
-import { loadWASM } from 'onigasm';
-import { filter, take } from 'rxjs';
 
 @Component({
   selector: 'app-root',

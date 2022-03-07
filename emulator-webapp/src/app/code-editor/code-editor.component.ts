@@ -10,7 +10,7 @@ import { filter, take } from 'rxjs';
 export class CodeEditorComponent implements OnInit {
 
   editorOptions = {theme: 'vs-dark', language: ''};
-  code: string = 'function x() {\nconsole.log("Hello world!");\n}';
+  code: string = 'MOV A, B';
 
   constructor(private monacoLoaderService: MonacoEditorLoaderService) {
     this.monacoLoaderService.isMonacoLoaded$.pipe(
