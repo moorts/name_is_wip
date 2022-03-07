@@ -321,259 +321,261 @@ impl Emulator {
                 // CMP
                 self.cmp(opcode)?;
             }
-            0xc0 => {
+            0xC0 => {
                 // RNZ
                 self.ret_not("zero")?;
             }
-            0xc1 => {
+            0xC1 => {
                 // Unimplemented
                 unimplemented!();
             }
-            0xc2 => {
+            0xC2 => {
                 // JNZ adr
                 self.jmp_not("zero")?;
             }
-            0xc3 => {
+            0xC3 => {
                 // JMP adr
                 self.pc = self.read_addr()?;
             }
-            0xc4 => {
+            0xC4 => {
                 // Unimplemented
                 unimplemented!();
             }
-            0xc5 => {
+            0xC5 => {
                 // PUSH B
                 self.push_reg("bc")?;
             }
-            0xc6 => {
+            0xC6 => {
                 // Unimplemented
                 unimplemented!();
             }
-            0xc7 => {
+            0xC7 => {
                 // RST 0
                 self.call(0x0)?;
             }
-            0xc8 => {
+            0xC8 => {
                 // RZ
                 self.ret_if("zero")?;
             }
-            0xc9 => {
+            0xC9 => {
                 // RET
                 self.ret()?;
             }
-            0xca => {
+            0xCA => {
                 // JZ adr
                 self.jmp_if("zero")?;
             }
-            0xcc => {
+            0xCB => {
+                unimplemented!()
+            }
+            0xCC => {
                 // CZ addr
                 self.call_if("zero")?;
             }
-            0xcd => {
+            0xCD => {
                 // CALL addr
                 self.call_imm()?;
             }
-            0xce => {
+            0xCE => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xcf => {
+            0xCF => {
                 // RST 1
                 self.call(0x8)?;
             }
-            0xd0 => {
+            0xD0 => {
                 // RNC
                 self.ret_not("carry")?;
             }
-            0xd1 => {
+            0xD1 => {
                 // POP D
                 self.reg["de"] = self.pop()?;
             }
-            0xd2 => {
+            0xD2 => {
                 // JNC adr
                 self.jmp_not("carry")?;
             }
-            0xd3 => {
+            0xD3 => {
                 // OUT
                 unimplemented!()
             }
-            0xd4 => {
+            0xD4 => {
                 // CNC adr
                 self.call_not("carry")?;
             }
-            0xd5 => {
+            0xD5 => {
                 // PUSH D
                 self.push_reg("de")?;
             }
-            0xd6 => {
+            0xD6 => {
                 // SUI D8
                 unimplemented!()
             }
-            0xd7 => {
+            0xD7 => {
                 // RST 2
                 self.call(0x10)?;
             }
-            0xd8 => {
+            0xD8 => {
                 // RC
                 self.ret_if("carry")?;
             }
-            0xd9 => {
+            0xD9 => {
                 // no-op
                 unimplemented!()
             }
-            0xda => {
+            0xDA => {
                 // JC adr
                 self.jmp_if("carry")?;
             }
-            0xdb => {
+            0xDB => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xdc => {
+            0xDC => {
                 // CC adr
                 self.call_if("carry")?;
             }
-            0xdd => {
+            0xDD => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xde => {
+            0xDE => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xdf => {
+            0xDF => {
                 // RST 3
                 self.call(0x18)?;
             }
-            0xe0 => {
+            0xE0 => {
                 // RPO
                 self.ret_not("parity")?;
             }
-            0xe1 => {
+            0xE1 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xe2 => {
+            0xE2 => {
                 // JPO adr
                 self.jmp_not("parity")?;
             }
-            0xe3 => {
+            0xE3 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xe4 => {
+            0xE4 => {
                 // CPO adr
                 self.call_not("parity")?;
             }
-            0xe5 => {
+            0xE5 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xe6 => {
+            0xE6 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xe7 => {
+            0xE7 => {
                 // RST 4
                 self.call(0x20)?;
             }
-            0xe8 => {
+            0xE8 => {
                 // RPE
                 self.ret_if("parity")?;
             }
-            0xe9 => {
+            0xE9 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xea => {
+            0xEA => {
                 // JPE adr
                 self.jmp_if("parity")?;
             }
-            0xeb => {
+            0xEB => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xec => {
+            0xEC => {
                 // CPE
                 self.call_if("parity")?;
             }
-            0xed => {
+            0xED => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xee => {
+            0xEE => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xef => {
+            0xEF => {
                 // RST 5
                 self.call(0x28)?;
             }
-            0xf0 => {
+            0xF0 => {
                 // RP
                 self.ret_not("sign")?;
             }
-            0xf1 => {
+            0xF1 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xf2 => {
+            0xF2 => {
                 // JP adr
                 self.jmp_not("sign")?;
             }
-            0xf3 => {
+            0xF3 => {
                 // DI
                 self.interrupts_enabled = false;
             }
-            0xf4 => {
+            0xF4 => {
                 // CP adr
                 self.call_not("sign")?;
             }
-            0xf5 => {
+            0xF5 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xf6 => {
+            0xF6 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xf7 => {
+            0xF7 => {
                 // RST 6
                 self.call(0x30)?;
             }
-            0xf8 => {
+            0xF8 => {
                 // RM
                 self.ret_if("sign")?;
             }
-            0xf9 => {
+            0xF9 => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xfa => {
+            0xFA => {
                 // JM adr
                 self.jmp_if("sign")?;
             }
-            0xfb => {
+            0xFB => {
                 // EI
                 self.interrupts_enabled = true;
             }
-            0xfc => {
+            0xFC => {
                 // CM adr
                 self.call_if("sign")?;
             }
-            0xfd => {
+            0xFD => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xfe => {
+            0xFE => {
                 // Unimplemented
                 unimplemented!()
             }
-            0xff => {
+            0xFF => {
                 // RST 7
                 self.call(0x38)?;
             }
-            _ => unimplemented!("Opcode not yet implemented"),
         }
         Ok(())
     }
@@ -641,7 +643,7 @@ mod tests {
         emu.execute_next().expect("");
         assert_eq!(emu.reg['c'], 69);
 
-        emu.interrupt(0xc7).expect("");
+        emu.interrupt(0xC7).expect("");
         assert_eq!(emu.pc, 0);
         assert!(!emu.interrupts_enabled);
 
