@@ -126,6 +126,11 @@ impl Emulator {
         }
         Ok(())
     }
+    
+    pub fn cma(&mut self) -> EResult<()> {
+        self.reg['a'] = !self.reg['a'];
+        Ok(())
+    }
 }
 
 
@@ -293,5 +298,19 @@ mod tests {
 
         assert_eq!(e.reg['a'], 0b0101_1010);
         assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
+    }
+    
+    #[test]
+    fn cma() {
+        let mut e = Emulator::new();
+
+        // CMA
+        e.ram.load_vec(vec![0x2F], 0);
+
+        e.reg['a'] = 0b1011_0101;
+        
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['a'], 0b0100_1010);
     }
 }

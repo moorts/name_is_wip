@@ -37,10 +37,15 @@ impl Emulator {
         Ok((high << 8) | low)
     }
     
-    pub fn shld(&mut self) -> EResult<()> {
-        let address: u16 = self.read_addr()?;
+    pub fn shld(&mut self, address: u16) -> EResult<()> {
         self.ram[address] = self.reg['l'];
         self.ram[address+1] = self.reg['h'];
+        Ok(())
+    }
+    
+    pub fn lhld(&mut self, address: u16) -> EResult<()> {
+        self.reg['l'] = self.ram[address];
+        self.reg['h'] = self.ram[address+1];
         Ok(())
     }
 }
@@ -99,7 +104,7 @@ mod tests {
     fn shld() {
         let mut e = Emulator::new();
         
-        // STAX B
+        // SHLD
         e.ram.load_vec(vec![0x22, 0x0A, 0x01], 0);
 
         e.reg['h'] = 0xAE;
@@ -109,6 +114,21 @@ mod tests {
 
         assert_eq!(e.ram[0x010A], 0x29);
         assert_eq!(e.ram[0x010B], 0xAE);
+    }
+    
+    #[test]
+    fn lhld() {
+        let mut e = Emulator::new();
+        
+        // LHLD
+        e.ram.load_vec(vec![0x2A, 0x0A, 0x01], 0);
+        e.ram[0x010A] = 42;
+        e.ram[0x010B] = 69;
+
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg['h'], 69);
+        assert_eq!(e.reg['l'], 42);
     }
 }
 

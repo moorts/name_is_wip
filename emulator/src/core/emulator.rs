@@ -159,7 +159,8 @@ impl Emulator {
             }
             0x22 => {
                 // SHLD A16
-                self.shld()?;
+                let address = self.read_addr()?;
+                self.shld(address)?;
             }
             0x23 => {
                 // INX H
@@ -181,9 +182,17 @@ impl Emulator {
                 // DAA
                 self.daa()?;
             }
+            0x28 => {
+                // NOP
+            }
             0x29 => {
                 // DAD H
                 self.dad(self.reg["hl"])?;
+            }
+            0x2A => {
+                // LHLD a16
+                let address = self.read_addr()?;
+                self.lhld(address)?;
             }
             0x2B => {
                 // DCX H
@@ -197,9 +206,13 @@ impl Emulator {
                 // DCR L
                 self.dcr('l')?;
             }
-            0x2e => {
+            0x2E => {
                 // MVI L, D8
                 self.mvi('l')?;
+            }
+            0x2F => {
+                // CMA
+                self.cma()?;
             }
             0x31 => {
                 // LXI SP, D16
