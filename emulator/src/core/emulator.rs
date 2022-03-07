@@ -177,6 +177,10 @@ impl Emulator {
                 // MVI H, D8
                 self.mvi('h')?;
             }
+            0x27 => {
+                // DAA
+                self.daa()?;
+            }
             0x29 => {
                 // DAD H
                 self.dad(self.reg["hl"])?;
