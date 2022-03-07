@@ -413,7 +413,8 @@ impl Emulator {
             }
             0xD6 => {
                 // SUI D8
-                unimplemented!()
+                let value = self.read_byte()?;
+                self.sub_value(value as u16)?;
             }
             0xD7 => {
                 // RST 2
@@ -424,15 +425,15 @@ impl Emulator {
                 self.ret_if("carry")?;
             }
             0xD9 => {
-                // no-op
-                unimplemented!()
+                // RET
+                self.ret()?;
             }
             0xDA => {
                 // JC adr
                 self.jmp_if("carry")?;
             }
             0xDB => {
-                // Unimplemented
+                // IN d8
                 unimplemented!()
             }
             0xDC => {
@@ -440,12 +441,13 @@ impl Emulator {
                 self.call_if("carry")?;
             }
             0xDD => {
-                // Unimplemented
-                unimplemented!()
+                // CALL addr
+                self.call_imm()?;
             }
             0xDE => {
-                // Unimplemented
-                unimplemented!()
+                // SBI d8
+                let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
+                self.sub_value(value)?;
             }
             0xDF => {
                 // RST 3
@@ -504,8 +506,8 @@ impl Emulator {
                 self.call_if("parity")?;
             }
             0xED => {
-                // Unimplemented
-                unimplemented!()
+                // CALL addr
+                self.call_imm()?;
             }
             0xEE => {
                 // Unimplemented
@@ -568,8 +570,8 @@ impl Emulator {
                 self.call_if("sign")?;
             }
             0xFD => {
-                // Unimplemented
-                unimplemented!()
+                // CALL addr
+                self.call_imm()?;
             }
             0xFE => {
                 // Unimplemented
