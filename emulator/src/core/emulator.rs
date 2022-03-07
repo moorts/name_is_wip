@@ -466,8 +466,8 @@ impl Emulator {
                 self.jmp_not("parity")?;
             }
             0xE3 => {
-                // Unimplemented
-                unimplemented!()
+                // XTHL
+                self.xthl()?;
             }
             0xE4 => {
                 // CPO adr

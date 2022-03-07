@@ -63,6 +63,16 @@ impl Emulator {
         self.reg['a'] = self.ram[address];
         Ok(())
     }
+    
+    pub fn xthl(&mut self) -> EResult<()> {
+        let tempL = self.reg['l'];
+        let tempH = self.reg['h'];
+        self.reg['l'] = self.ram[self.sp];
+        self.reg['h'] = self.ram[self.sp+1];
+        self.ram[self.sp] = tempL;
+        self.ram[self.sp+1] = tempH;
+        Ok(())
+    }
 }
 
 
@@ -172,6 +182,22 @@ mod tests {
         e.execute_next().expect("Fuck");
 
         assert_eq!(e.reg['a'], 69);
+    }
+    
+    #[test]
+    fn xthl() {
+        let mut e = Emulator::new();
+        
+        // XTHL
+        e.ram.load_vec(vec![0xE3, 0x00, 0x12], 0);
+
+        e.reg["hl"] = 69;
+        e.sp = 0x01;
+        
+        e.execute_next().expect("Fuck");
+
+        assert_eq!(e.reg["hl"], 0x1200);
+        assert_eq!(e.ram[0x01], 69);
     }
 }
 
