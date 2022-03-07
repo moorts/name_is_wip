@@ -272,9 +272,13 @@ impl Emulator {
                 // DCR A
                 self.dcr('a')?;
             }
-            0x3e => {
+            0x3E => {
                 // MVI A, D8
                 self.mvi('a')?;
+            }
+            0x3F => {
+                // CMC
+                self.reg.flip_flag("carry");
             }
             0x40..=0x7f => {
                 if opcode == 0x76 {
