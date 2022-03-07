@@ -474,12 +474,13 @@ impl Emulator {
                 self.call_not("parity")?;
             }
             0xE5 => {
-                // Unimplemented
-                unimplemented!()
+                // PUSH H
+                self.push_reg("hl")?;
             }
             0xE6 => {
-                // Unimplemented
-                unimplemented!()
+                // ANI d8
+                let value = self.read_byte()?;
+                self.and_value(value)?;
             }
             0xE7 => {
                 // RST 4
@@ -490,8 +491,8 @@ impl Emulator {
                 self.ret_if("parity")?;
             }
             0xE9 => {
-                // Unimplemented
-                unimplemented!()
+                // PCHL
+                self.pc = self.reg["hl"];
             }
             0xEA => {
                 // JPE adr
@@ -538,8 +539,8 @@ impl Emulator {
                 self.call_not("sign")?;
             }
             0xF5 => {
-                // Unimplemented
-                unimplemented!()
+                // PUSH PSW
+                self.push_reg("psw")?;
             }
             0xF6 => {
                 // Unimplemented
