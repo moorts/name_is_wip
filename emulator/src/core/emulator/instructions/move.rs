@@ -2,7 +2,7 @@ use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl<'a> Emulator<'a> {
+impl Emulator {
     pub fn mvi(&mut self, r: char) -> EResult<()> {
         self.reg[r] = self.read_byte()?;
         Ok(())

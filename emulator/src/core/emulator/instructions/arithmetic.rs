@@ -2,7 +2,7 @@ use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl<'a> Emulator<'a> {
+impl Emulator {
     pub fn add(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
         let mut index = (opcode & 0xF) as usize;
         if use_carry {

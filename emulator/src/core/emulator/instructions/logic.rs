@@ -2,7 +2,7 @@ use crate::core::emulator::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl<'a> Emulator<'a> {
+impl Emulator {
     pub fn and(&mut self, opcode: u8) -> EResult<()> {
         let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];

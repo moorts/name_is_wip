@@ -1,29 +1,32 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::core::io::*;
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
 pub type EResult<T> = Result<T, &'static str>;
 
-pub struct Emulator<'a> {
+pub struct Emulator {
     pc: u16,
     sp: u16,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
-    input_devices: [Option<Box<&'a dyn InputDevice>>; 8],
-    output_devices: [Option<Box<&'a mut dyn OutputDevice>>; 8],
+    input_devices: [Option<Rc<RefCell<dyn InputDevice>>>; 256],
+    output_devices: [Option<Rc<RefCell<dyn OutputDevice>>>; 256],
     running: bool,
     interrupts_enabled: bool,
 }
 
-impl<'a> Emulator<'a> {
+impl Emulator {
     pub fn new() -> Self {
         Emulator {
             pc: 0,
             sp: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
-            input_devices: [None, None, None, None, None, None, None, None],
-            output_devices: [None, None, None, None, None, None, None, None],
+            input_devices: unsafe { std::mem::zeroed() },
+            output_devices: unsafe { std::mem::zeroed() },
             running: true,
             interrupts_enabled: true, // INTE
         }

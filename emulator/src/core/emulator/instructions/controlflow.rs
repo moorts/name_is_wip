@@ -2,7 +2,7 @@ use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl<'a> Emulator<'a> {
+impl Emulator {
     pub fn jmp_not(&mut self, flag: &str) -> EResult<()> {
         if !self.reg.get_flag(flag) {
             self.pc = self.read_addr()?;

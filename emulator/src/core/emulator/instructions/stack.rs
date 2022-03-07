@@ -2,7 +2,7 @@ use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
-impl<'a> Emulator<'a> {
+impl Emulator {
     pub fn push(&mut self, val: u16) -> EResult<()> {
         if self.sp < 2 {
             return Err("PUSH: No more stack space");

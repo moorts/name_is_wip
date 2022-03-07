@@ -1,5 +1,5 @@
 
-pub trait InputDevice: 'static {
+pub trait InputDevice: {
     fn read(&self) -> u8;
 }
 
