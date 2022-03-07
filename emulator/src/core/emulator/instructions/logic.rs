@@ -33,7 +33,7 @@ impl Emulator {
         }
     }
     
-    fn xor_value(&mut self, value: u8) -> EResult<()> {
+    pub fn xor_value(&mut self, value: u8) -> EResult<()> {
         let accumulator = self.reg['a'];
         let result = accumulator ^ value;
         self.set_flags(result);

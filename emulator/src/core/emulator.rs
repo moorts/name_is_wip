@@ -499,8 +499,10 @@ impl Emulator {
                 self.jmp_if("parity")?;
             }
             0xEB => {
-                // Unimplemented
-                unimplemented!()
+                // XCHG
+                let temp = self.reg["hl"];
+                self.reg["hl"] = self.reg["de"];
+                self.reg["de"] = temp;
             }
             0xEC => {
                 // CPE
@@ -511,8 +513,9 @@ impl Emulator {
                 self.call_imm()?;
             }
             0xEE => {
-                // Unimplemented
-                unimplemented!()
+                // XRI d8
+                let value = self.read_byte()?;
+                self.xor_value(value)?;
             }
             0xEF => {
                 // RST 5
