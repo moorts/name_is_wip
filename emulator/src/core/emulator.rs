@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::core::io::*;
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
@@ -8,8 +12,10 @@ pub struct Emulator {
     sp: u16,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
+    input_devices: [Option<Rc<RefCell<dyn InputDevice>>>; 256],
+    output_devices: [Option<Rc<RefCell<dyn OutputDevice>>>; 256],
     running: bool,
-    interrupts_enabled: bool
+    interrupts_enabled: bool,
 }
 
 impl Emulator {
@@ -19,8 +25,10 @@ impl Emulator {
             sp: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
+            input_devices: unsafe { std::mem::zeroed() },
+            output_devices: unsafe { std::mem::zeroed() },
             running: true,
-            interrupts_enabled: true // INTE
+            interrupts_enabled: true, // INTE
         }
     }
 
@@ -189,7 +197,8 @@ impl Emulator {
             }
             0xd3 => {
                 // OUT
-                unimplemented!()
+                let port = self.read_byte()?;
+                self.output(port)?;
             }
             0xd4 => {
                 // CNC adr
@@ -220,8 +229,9 @@ impl Emulator {
                 self.jmp_if("carry")?;
             }
             0xdb => {
-                // Unimplemented
-                unimplemented!()
+                // IN
+                let port = self.read_byte()?;
+                self.input(port)?;
             }
             0xdc => {
                 // CC adr
@@ -396,7 +406,7 @@ impl Emulator {
         self.pc += 1;
         Ok((high << 8) | low)
     }
-    
+
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
     }
@@ -411,12 +421,13 @@ impl Emulator {
 }
 
 mod instructions;
+mod devices;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
     use crate::utils::load_asm_file;
+    use std::io;
 
     #[test]
     fn int() -> io::Result<()> {
@@ -447,7 +458,6 @@ mod tests {
         assert_eq!(emu.reg['b'], 69);
         assert_eq!(emu.pc, 0x07);
 
-
         emu.execute_next().expect("");
 
         assert_eq!(emu.reg['h'], 69);
@@ -456,4 +466,3 @@ mod tests {
         Ok(())
     }
 }
-

@@ -1,4 +1,4 @@
-use super::super::{Emulator, EResult};
+use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
@@ -72,12 +72,10 @@ impl Emulator {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
+
     #[test]
     fn call_ret() {
         let mut e = Emulator::new();
@@ -206,4 +204,3 @@ mod tests {
         }
     }
 }
-
