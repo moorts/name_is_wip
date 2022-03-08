@@ -65,7 +65,7 @@ export class CodeEditorComponent implements OnInit {
 
     monaco.editor.defineTheme('i8080theme', {
       base: 'vs-dark',
-      inherit: false,
+      inherit: true,
       rules: [
         { token: 'comment', foreground: '#6A9955' },
         { token: 'register', foreground: '#ce9178' },
