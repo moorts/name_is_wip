@@ -51,5 +51,6 @@ Entwicklung eines Intel 8080 Emulators in Rust, kompiliert nach Web-Assembly. Da
   * Performance
   * Benutzbarkeit
   * Vollstaendigkeit
+* Future Work
 * Fazit
 
