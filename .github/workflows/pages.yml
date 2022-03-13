@@ -16,11 +16,10 @@ jobs:
         cd ./emulator
         curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         wasm-pack build -t web
-    - name: Build docs
-      run: |
-        cd ./emulator-webapp
+        cd ../emulator-webapp
         npm install
-        npm run build-docs
+    - name: Build docs
+      run: npm run build-docs
     - name: Commit files
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
