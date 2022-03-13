@@ -1,0 +1,34 @@
+name: Push to gh-pages
+
+on:
+  push:
+    branches: [ main, actions/pages ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Get dependencies
+      run: |
+        cd ./emulator
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        wasm-pack build -t web
+    - name: Build docs
+      run: |
+        cd ./emulator-webapp
+        npm install
+        npm run build-docs
+    - name: Commit files
+      run: |
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add *
+        git commit -m "Create new Docs" -a
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
