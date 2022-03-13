@@ -20,7 +20,7 @@ jobs:
         npm install --legacy-peer-deps
     - name: Build docs
       run: |
-        cd ./webapp-frontend
+        cd ./emulator-webapp
         npm run build-docs
     - name: Commit files
       run: |
