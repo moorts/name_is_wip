@@ -151,268 +151,268 @@ mod tests {
 
     #[test]
     fn add_reg() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // ADD B, ADD A
-        e.ram.load_vec(vec![0x80, 0x87], 0);
+        emu.ram.load_vec(vec![0x80, 0x87], 0);
 
-        e.reg['b'] = 69;
-        e.reg['a'] = 42;
+        emu.reg['b'] = 69;
+        emu.reg['a'] = 42;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 111);
+        assert_eq!(emu.reg['a'], 111);
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 222);
+        assert_eq!(emu.reg['a'], 222);
     }
 
     #[test]
     fn add_mem() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // ADD M with address 0x01
-        e.ram.load_vec(vec![0x86, 69], 0);
-        e.reg["hl"] = 0x01;
+        emu.ram.load_vec(vec![0x86, 69], 0);
+        emu.reg["hl"] = 0x01;
 
-        e.reg['a'] = 42;
+        emu.reg['a'] = 42;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 111);
+        assert_eq!(emu.reg['a'], 111);
     }
 
     #[test]
     fn add_flags() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // ADD B, ADD A, ADD A
-        e.ram.load_vec(vec![0x80, 0x87, 0x87], 0);
+        emu.ram.load_vec(vec![0x80, 0x87, 0x87], 0);
 
-        e.reg['b'] = 69;
-        e.reg['a'] = 42;
+        emu.reg['b'] = 69;
+        emu.reg['a'] = 42;
 
-        e.execute_next().expect("Fuck"); // Result is 111
+        emu.execute_next().expect("Fuck"); // Result is 111
 
-        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
-        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
-        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
-        assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
+        assert_eq!(emu.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(emu.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(emu.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(emu.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(emu.reg.get_flag("aux"), false, "Auxiliary Carry bit");
 
-        e.execute_next().expect("Fuck"); // Result is 222 -> sign is true
+        emu.execute_next().expect("Fuck"); // Result is 222 -> sign is true
 
-        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
-        assert_eq!(e.reg.get_flag("sign"), true, "Sign bit");
-        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
-        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+        assert_eq!(emu.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(emu.reg.get_flag("sign"), true, "Sign bit");
+        assert_eq!(emu.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(emu.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(emu.reg.get_flag("aux"), true, "Auxiliary Carry bit");
 
-        e.execute_next().expect("Fuck"); // Result is 444 -> overflow to 188
+        emu.execute_next().expect("Fuck"); // Result is 444 -> overflow to 188
 
-        assert_eq!(e.reg.get_flag("carry"), true, "Carry bit");
-        assert_eq!(e.reg.get_flag("sign"), true, "Sign bit");
-        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
-        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+        assert_eq!(emu.reg.get_flag("carry"), true, "Carry bit");
+        assert_eq!(emu.reg.get_flag("sign"), true, "Sign bit");
+        assert_eq!(emu.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(emu.reg.get_flag("parity"), false, "Parity bit");
+        assert_eq!(emu.reg.get_flag("aux"), true, "Auxiliary Carry bit");
 
         // Test auxiliary carry flag with example from manual
         // ADD B
-        e.ram.load_vec(vec![0x80], 0);
+        emu.ram.load_vec(vec![0x80], 0);
 
-        e.pc = 0;
-        e.reg['b'] = 0x2E;
-        e.reg['a'] = 0x74;
+        emu.pc = 0;
+        emu.reg['b'] = 0x2E;
+        emu.reg['a'] = 0x74;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 0xA2);
-        assert_eq!(e.reg.get_flag("aux"), true);
+        assert_eq!(emu.reg['a'], 0xA2);
+        assert_eq!(emu.reg.get_flag("aux"), true);
     }
 
     #[test]
     fn adc() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // ADC B without carry
-        e.ram.load_vec(vec![0x88], 0);
+        emu.ram.load_vec(vec![0x88], 0);
 
-        e.reg['b'] = 69;
-        e.reg['a'] = 42;
-        e.reg.set_flag("carry", false);
+        emu.reg['b'] = 69;
+        emu.reg['a'] = 42;
+        emu.reg.set_flag("carry", false);
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 111);
+        assert_eq!(emu.reg['a'], 111);
 
         // ADC B with carry
-        e.ram.load_vec(vec![0x88], 0);
-        e.pc = 0;
+        emu.ram.load_vec(vec![0x88], 0);
+        emu.pc = 0;
 
-        e.reg['b'] = 69;
-        e.reg['a'] = 42;
-        e.reg.set_flag("carry", true);
+        emu.reg['b'] = 69;
+        emu.reg['a'] = 42;
+        emu.reg.set_flag("carry", true);
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 112);
+        assert_eq!(emu.reg['a'], 112);
     }
     
     #[test]
     fn sub_reg() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // SUB B, SUB A, SUB B
-        e.ram.load_vec(vec![0x90, 0x97, 0x90], 0);
+        emu.ram.load_vec(vec![0x90, 0x97, 0x90], 0);
 
-        e.reg['a'] = 69;
-        e.reg['b'] = 42;
+        emu.reg['a'] = 69;
+        emu.reg['b'] = 42;
 
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.reg['a'], 27);
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.reg['a'], 27);
 
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.reg['a'], 0);
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.reg['a'], 0);
         
-        e.execute_next().expect("Fuck");
-        assert_eq!(e.reg['a'], 214);
+        emu.execute_next().expect("Fuck");
+        assert_eq!(emu.reg['a'], 214);
     }
     
     #[test]
     fn sub_flags() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // SUB A
-        e.ram.load_vec(vec![0x97], 0);
-        e.pc = 0;
-        e.reg['a'] = 0x3E;
+        emu.ram.load_vec(vec![0x97], 0);
+        emu.pc = 0;
+        emu.reg['a'] = 0x3E;
 
-        e.execute_next().expect("Fuck"); // Result is 0
+        emu.execute_next().expect("Fuck"); // Result is 0
 
-        assert_eq!(e.reg['a'], 0);
-        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
-        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
-        assert_eq!(e.reg.get_flag("zero"), true, "Zero bit");
-        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
-        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+        assert_eq!(emu.reg['a'], 0);
+        assert_eq!(emu.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(emu.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(emu.reg.get_flag("zero"), true, "Zero bit");
+        assert_eq!(emu.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(emu.reg.get_flag("aux"), true, "Auxiliary Carry bit");
     }
     
     #[test]
     fn sbb() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // SBB B without carry
-        e.ram.load_vec(vec![0x98], 0);
+        emu.ram.load_vec(vec![0x98], 0);
 
-        e.reg['b'] = 42;
-        e.reg['a'] = 69;
-        e.reg.set_flag("carry", false);
+        emu.reg['b'] = 42;
+        emu.reg['a'] = 69;
+        emu.reg.set_flag("carry", false);
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 69-42);
+        assert_eq!(emu.reg['a'], 69-42);
 
         // SBB B with carry
-        e.ram.load_vec(vec![0x98], 0);
-        e.pc = 0;
+        emu.ram.load_vec(vec![0x98], 0);
+        emu.pc = 0;
 
-        e.reg['b'] = 42;
-        e.reg['a'] = 69;
-        e.reg.set_flag("carry", true);
+        emu.reg['b'] = 42;
+        emu.reg['a'] = 69;
+        emu.reg.set_flag("carry", true);
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 69-43);
+        assert_eq!(emu.reg['a'], 69-43);
     }
     
     #[test]
     fn inx() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // INX B
-        e.ram.load_vec(vec![0x03, 0x03], 0);
+        emu.ram.load_vec(vec![0x03, 0x03], 0);
 
-        e.reg["bc"] = 42;
+        emu.reg["bc"] = 42;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg["bc"], 43);
+        assert_eq!(emu.reg["bc"], 43);
         
-        e.reg["bc"] = 0xFFFF;
+        emu.reg["bc"] = 0xFFFF;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
         
-        assert_eq!(e.reg["bc"], 0);
+        assert_eq!(emu.reg["bc"], 0);
     }
     
     #[test]
     fn dcx() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // DCX B
-        e.ram.load_vec(vec![0x0B, 0x0B], 0);
+        emu.ram.load_vec(vec![0x0B, 0x0B], 0);
 
-        e.reg["bc"] = 42;
+        emu.reg["bc"] = 42;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg["bc"], 41);
+        assert_eq!(emu.reg["bc"], 41);
         
-        e.reg["bc"] = 0x0000;
+        emu.reg["bc"] = 0x0000;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
         
-        assert_eq!(e.reg["bc"], 0xFFFF);
+        assert_eq!(emu.reg["bc"], 0xFFFF);
     }
     
     #[test]
     fn inr() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // INR A
-        e.ram.load_vec(vec![0x3C], 0);
-        e.reg['a'] = 69;
+        emu.ram.load_vec(vec![0x3C], 0);
+        emu.reg['a'] = 69;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 70);
-        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
-        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        assert_eq!(e.reg.get_flag("parity"), false, "Parity bit");
-        assert_eq!(e.reg.get_flag("aux"), false, "Auxiliary Carry bit");
+        assert_eq!(emu.reg['a'], 70);
+        assert_eq!(emu.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(emu.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(emu.reg.get_flag("parity"), false, "Parity bit");
+        assert_eq!(emu.reg.get_flag("aux"), false, "Auxiliary Carry bit");
     }
     
     #[test]
     fn dcr() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // DCR A
-        e.ram.load_vec(vec![0x3D], 0);
-        e.reg['a'] = 69;
+        emu.ram.load_vec(vec![0x3D], 0);
+        emu.reg['a'] = 69;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 68);
-        assert_eq!(e.reg.get_flag("sign"), false, "Sign bit");
-        assert_eq!(e.reg.get_flag("zero"), false, "Zero bit");
-        assert_eq!(e.reg.get_flag("parity"), true, "Parity bit");
-        assert_eq!(e.reg.get_flag("aux"), true, "Auxiliary Carry bit");
+        assert_eq!(emu.reg['a'], 68);
+        assert_eq!(emu.reg.get_flag("sign"), false, "Sign bit");
+        assert_eq!(emu.reg.get_flag("zero"), false, "Zero bit");
+        assert_eq!(emu.reg.get_flag("parity"), true, "Parity bit");
+        assert_eq!(emu.reg.get_flag("aux"), true, "Auxiliary Carry bit");
     }
     
     #[test]
     fn dad() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
         // DAD B
-        e.ram.load_vec(vec![0x09], 0);
-        e.reg["hl"] = 4200;
-        e.reg["bc"] = 6900;
+        emu.ram.load_vec(vec![0x09], 0);
+        emu.reg["hl"] = 4200;
+        emu.reg["bc"] = 6900;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg["hl"], 11100);
-        assert_eq!(e.reg.get_flag("carry"), false, "Carry bit");
+        assert_eq!(emu.reg["hl"], 11100);
+        assert_eq!(emu.reg.get_flag("carry"), false, "Carry bit");
     }
 }
 

@@ -75,122 +75,122 @@ mod tests {
 
     #[test]
     fn stax() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // STAX B
-        e.ram.load_vec(vec![0x02], 0);
+        emu.ram.load_vec(vec![0x02], 0);
 
-        e.reg["bc"] = 0x01;
-        e.reg['a'] = 69;
+        emu.reg["bc"] = 0x01;
+        emu.reg['a'] = 69;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.ram[0x01], 69);
+        assert_eq!(emu.ram[0x01], 69);
     }
     
     #[test]
     fn ldax() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // STAX B
-        e.ram.load_vec(vec![0x0A, 42], 0);
+        emu.ram.load_vec(vec![0x0A, 42], 0);
 
-        e.reg["bc"] = 0x01;
-        e.reg['a'] = 69;
+        emu.reg["bc"] = 0x01;
+        emu.reg['a'] = 69;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 42);
+        assert_eq!(emu.reg['a'], 42);
     }
     
     #[test]
     fn push_pop() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
 
-        e.sp = 0x3fff;
-        e.push(0xabcd).expect("Push failed");
-        assert_eq!(e.sp, 0x3ffd);
-        assert_eq!(0xabcd, e.pop().expect("Fuck"));
-        assert_eq!(e.sp, 0x3fff);
-        assert_eq!(e.pop(), Err("POP: No return address on the stack"));
+        emu.sp = 0x3fff;
+        emu.push(0xabcd).expect("Push failed");
+        assert_eq!(emu.sp, 0x3ffd);
+        assert_eq!(0xabcd, emu.pop().expect("Fuck"));
+        assert_eq!(emu.sp, 0x3fff);
+        assert_eq!(emu.pop(), Err("POP: No return address on the stack"));
 
-        e.sp = 0x1;
-        assert_eq!(e.push(0x1234), Err("PUSH: No more stack space"));
+        emu.sp = 0x1;
+        assert_eq!(emu.push(0x1234), Err("PUSH: No more stack space"));
     }
     
     #[test]
     fn shld() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // SHLD
-        e.ram.load_vec(vec![0x22, 0x0A, 0x01], 0);
+        emu.ram.load_vec(vec![0x22, 0x0A, 0x01], 0);
 
-        e.reg['h'] = 0xAE;
-        e.reg['l'] = 0x29;
+        emu.reg['h'] = 0xAE;
+        emu.reg['l'] = 0x29;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.ram[0x010A], 0x29);
-        assert_eq!(e.ram[0x010B], 0xAE);
+        assert_eq!(emu.ram[0x010A], 0x29);
+        assert_eq!(emu.ram[0x010B], 0xAE);
     }
     
     #[test]
     fn lhld() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // LHLD
-        e.ram.load_vec(vec![0x2A, 0x0A, 0x01], 0);
-        e.ram[0x010A] = 42;
-        e.ram[0x010B] = 69;
+        emu.ram.load_vec(vec![0x2A, 0x0A, 0x01], 0);
+        emu.ram[0x010A] = 42;
+        emu.ram[0x010B] = 69;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['h'], 69);
-        assert_eq!(e.reg['l'], 42);
+        assert_eq!(emu.reg['h'], 69);
+        assert_eq!(emu.reg['l'], 42);
     }
     
     #[test]
     fn sta() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // STA
-        e.ram.load_vec(vec![0x32, 0x00, 0x12], 0);
+        emu.ram.load_vec(vec![0x32, 0x00, 0x12], 0);
 
-        e.reg['a'] = 69;
+        emu.reg['a'] = 69;
 
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.ram[0x1200], 69);
+        assert_eq!(emu.ram[0x1200], 69);
     }
     
     #[test]
     fn lda() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // LDA
-        e.ram.load_vec(vec![0x3A, 0x00, 0x12], 0);
+        emu.ram.load_vec(vec![0x3A, 0x00, 0x12], 0);
 
-        e.ram[0x1200] = 69;
+        emu.ram[0x1200] = 69;
         
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg['a'], 69);
+        assert_eq!(emu.reg['a'], 69);
     }
     
     #[test]
     fn xthl() {
-        let mut e = Emulator::new();
+        let mut emu = Emulator::new();
         
         // XTHL
-        e.ram.load_vec(vec![0xE3, 0x00, 0x12], 0);
+        emu.ram.load_vec(vec![0xE3, 0x00, 0x12], 0);
 
-        e.reg["hl"] = 69;
-        e.sp = 0x01;
+        emu.reg["hl"] = 69;
+        emu.sp = 0x01;
         
-        e.execute_next().expect("Fuck");
+        emu.execute_next().expect("Fuck");
 
-        assert_eq!(e.reg["hl"], 0x1200);
-        assert_eq!(e.ram[0x01], 69);
+        assert_eq!(emu.reg["hl"], 0x1200);
+        assert_eq!(emu.ram[0x01], 69);
     }
 }
 
