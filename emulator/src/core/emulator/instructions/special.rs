@@ -1,7 +1,7 @@
-use super::super::{Emulator, EResult};
+use super::super::{Emulator};
 
 impl Emulator {
-    pub fn daa(&mut self) -> EResult<()> {
+    pub fn daa(&mut self) {
         let mut acc = self.reg['a'];
         let mut low = acc & 0x0F;
         if low > 9 || self.reg.get_flag("aux") {
@@ -19,7 +19,6 @@ impl Emulator {
         self.reg.set_flag("sign", (result & 0x80) != 0);
         self.reg.set_flag("parity", result.count_ones() & 1 == 0);
         self.reg['a'] = result;
-        Ok(())
     }
 }
 

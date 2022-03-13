@@ -1,14 +1,12 @@
 use super::super::{Emulator, EResult};
 
 impl Emulator {
-    pub fn stax(&mut self, register: &str) -> EResult<()> {
+    pub fn stax(&mut self, register: &str) {
         self.ram[self.reg[register]] = self.reg['a'];
-        Ok(())
     }
     
-    pub fn ldax(&mut self, register: &str) -> EResult<()> {
+    pub fn ldax(&mut self, register: &str) {
         self.reg['a'] = self.ram[self.reg[register]];
-        Ok(())
     }
     
     pub fn push(&mut self, val: u16) -> EResult<()> {
@@ -42,36 +40,31 @@ impl Emulator {
         Ok(())
     }
     
-    pub fn shld(&mut self, address: u16) -> EResult<()> {
+    pub fn shld(&mut self, address: u16) {
         self.ram[address] = self.reg['l'];
         self.ram[address+1] = self.reg['h'];
-        Ok(())
     }
     
-    pub fn lhld(&mut self, address: u16) -> EResult<()> {
+    pub fn lhld(&mut self, address: u16) {
         self.reg['l'] = self.ram[address];
         self.reg['h'] = self.ram[address+1];
-        Ok(())
     }
     
-    pub fn sta(&mut self, address: u16) -> EResult<()> {
+    pub fn sta(&mut self, address: u16) {
         self.ram[address] = self.reg['a'];
-        Ok(())
     }
     
-    pub fn lda(&mut self, address: u16) -> EResult<()> {
+    pub fn lda(&mut self, address: u16) {
         self.reg['a'] = self.ram[address];
-        Ok(())
     }
     
-    pub fn xthl(&mut self) -> EResult<()> {
+    pub fn xthl(&mut self) {
         let tempL = self.reg['l'];
         let tempH = self.reg['h'];
         self.reg['l'] = self.ram[self.sp];
         self.reg['h'] = self.ram[self.sp+1];
         self.ram[self.sp] = tempL;
         self.ram[self.sp+1] = tempH;
-        Ok(())
     }
 }
 

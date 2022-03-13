@@ -35,19 +35,19 @@ impl Emulator {
             }
             0x02 => {
                 // STAX B
-                self.stax("bc")?;
+                self.stax("bc");
             }
             0x03 => {
                 // INX B
-                self.inx("bc")?;
+                self.inx("bc");
             }
             0x04 => {
                 // INR B
-                self.inr('b')?;
+                self.inr('b');
             }
             0x05 => {
                 // DCR B
-                self.dcr('b')?;
+                self.dcr('b');
             }
             0x06 => {
                 // MVI B, D8
@@ -55,30 +55,30 @@ impl Emulator {
             }
             0x07 => {
                 // RLC
-                self.rlc()?;
+                self.rlc();
             }
             0x08 => {
                 // NOP
             }
             0x09 => {
                 // DAD B
-                self.dad(self.reg["bc"])?;
+                self.dad(self.reg["bc"]);
             }
             0x0A => {
                 // LDAX B
-                self.ldax("bc")?;
+                self.ldax("bc");
             }
             0x0B => {
                 // DCX B
-                self.dcx("bc")?;
+                self.dcx("bc");
             }
             0x0C => {
                 // INR C
-                self.inr('c')?;
+                self.inr('c');
             }
             0x0D => {
                 // DCR C
-                self.dcr('c')?;
+                self.dcr('c');
             }
             0x0E => {
                 // MVI C, D8
@@ -86,7 +86,7 @@ impl Emulator {
             }
             0x0F => {
                 // RRC
-                self.rrc()?;
+                self.rrc();
             }
             0x10 => {
                 // NOP
@@ -97,19 +97,19 @@ impl Emulator {
             }
             0x12 => {
                 // STAX D
-                self.stax("de")?;
+                self.stax("de");
             }
             0x13 => {
                 // INX D
-                self.inx("de")?;
+                self.inx("de");
             }
             0x14 => {
                 // INR D
-                self.inr('d')?;
+                self.inr('d');
             }
             0x15 => {
                 // DCR D
-                self.dcr('d')?;
+                self.dcr('d');
             }
             0x16 => {
                 // MVI D, D8
@@ -117,30 +117,30 @@ impl Emulator {
             }
             0x17 => {
                 // RAL
-                self.ral()?;
+                self.ral();
             }
             0x18 => {
                 // NOP
             }
             0x19 => {
                 // DAD D
-                self.dad(self.reg["de"])?;
+                self.dad(self.reg["de"]);
             }
             0x1A => {
                 // LDAX D
-                self.ldax("de")?;
+                self.ldax("de");
             }
             0x1B => {
                 // DCX D
-                self.dcx("de")?;
+                self.dcx("de");
             }
             0x1C => {
                 // INR E
-                self.inr('e')?;
+                self.inr('e');
             }
             0x1D => {
                 // DCR E
-                self.dcr('e')?;
+                self.dcr('e');
             }
             0x1E => {
                 // MVI E, D8
@@ -148,7 +148,7 @@ impl Emulator {
             }
             0x1F => {
                 // RAR
-                self.rar()?;
+                self.rar();
             }
             0x20 => {
                 // NOP
@@ -160,19 +160,19 @@ impl Emulator {
             0x22 => {
                 // SHLD A16
                 let address = self.read_addr()?;
-                self.shld(address)?;
+                self.shld(address);
             }
             0x23 => {
                 // INX H
-                self.inx("hl")?;
+                self.inx("hl");
             }
             0x24 => {
                 // INR H
-                self.inr('h')?;
+                self.inr('h');
             }
             0x25 => {
                 // DCR H
-                self.dcr('h')?;
+                self.dcr('h');
             }
             0x26 => {
                 // MVI H, D8
@@ -180,31 +180,31 @@ impl Emulator {
             }
             0x27 => {
                 // DAA
-                self.daa()?;
+                self.daa();
             }
             0x28 => {
                 // NOP
             }
             0x29 => {
                 // DAD H
-                self.dad(self.reg["hl"])?;
+                self.dad(self.reg["hl"]);
             }
             0x2A => {
                 // LHLD A16
                 let address = self.read_addr()?;
-                self.lhld(address)?;
+                self.lhld(address);
             }
             0x2B => {
                 // DCX H
-                self.dcx("hl")?;
+                self.dcx("hl");
             }
             0x2C => {
                 // INR L
-                self.inr('l')?;
+                self.inr('l');
             }
             0x2D => {
                 // DCR L
-                self.dcr('l')?;
+                self.dcr('l');
             }
             0x2E => {
                 // MVI L, D8
@@ -212,7 +212,7 @@ impl Emulator {
             }
             0x2F => {
                 // CMA
-                self.cma()?;
+                self.cma();
             }
             0x30 => {
                 // NOP
@@ -224,7 +224,7 @@ impl Emulator {
             0x32 => {
                 // STA A16
                 let address = self.read_addr()?;
-                self.sta(address)?;
+                self.sta(address);
             }
             0x33 => {
                 // INX SP
@@ -233,11 +233,11 @@ impl Emulator {
             }
             0x34 => {
                 // INR M
-                self.inr('m')?;
+                self.inr('m');
             }
             0x35 => {
                 // DCR M
-                self.dcr('m')?;
+                self.dcr('m');
             }
             0x36 => {
                 // MVI M, D8
@@ -252,12 +252,12 @@ impl Emulator {
             }
             0x39 => {
                 // DAD SP
-                self.dad(self.sp)?;
+                self.dad(self.sp);
             }
             0x3A => {
                 // LDA A16
                 let address = self.read_addr()?;
-                self.lda(address)?;
+                self.lda(address);
             }
             0x3B => {
                 // DCX SP
@@ -266,11 +266,11 @@ impl Emulator {
             }
             0x3C => {
                 // INR A
-                self.inr('a')?;
+                self.inr('a');
             }
             0x3D => {
                 // DCR A
-                self.dcr('a')?;
+                self.dcr('a');
             }
             0x3E => {
                 // MVI A, D8
@@ -286,40 +286,40 @@ impl Emulator {
                     self.running = false;
                 } else {
                     // MOV DST, SRC
-                    self.resolve_mov(opcode)?;
+                    self.resolve_mov(opcode);
                 }
             }
             0x80..=0x87 => {
                 // ADD
-                self.add(opcode, false)?;
+                self.add(opcode, false);
             }
             0x88..=0x8F => {
                 // ADC
-                self.add(opcode, true)?;
+                self.add(opcode, true);
             }
             0x90..=0x97 => {
                 // SUB
-                self.sub(opcode, false)?;
+                self.sub(opcode, false);
             }
             0x98..=0x9F => {
                 // SBB
-                self.sub(opcode, true)?;
+                self.sub(opcode, true);
             }
             0xA0..=0xA7 => {
                 // ANA
-                self.and(opcode)?;
+                self.and(opcode);
             }
             0xA8..=0xAF => {
                 // XRA
-                self.xor(opcode)?;
+                self.xor(opcode);
             }
             0xB0..=0xB7 => {
                 // ORA
-                self.or(opcode)?;
+                self.or(opcode);
             }
             0xB8..=0xBF => {
                 // CMP
-                self.cmp(opcode)?;
+                self.cmp(opcode);
             }
             0xC0 => {
                 // RNZ
@@ -348,7 +348,7 @@ impl Emulator {
             0xC6 => {
                 // ADI d8
                 let value = self.read_byte()?;
-                self.add_value(value as u16)?;
+                self.add_value(value as u16);
             }
             0xC7 => {
                 // RST 0
@@ -381,7 +381,7 @@ impl Emulator {
             0xCE => {
                 // ACI d8
                 let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
-                self.add_value(value)?;
+                self.add_value(value);
             }
             0xCF => {
                 // RST 1
@@ -414,7 +414,7 @@ impl Emulator {
             0xD6 => {
                 // SUI D8
                 let value = self.read_byte()?;
-                self.sub_value(value as u16)?;
+                self.sub_value(value as u16);
             }
             0xD7 => {
                 // RST 2
@@ -447,7 +447,7 @@ impl Emulator {
             0xDE => {
                 // SBI d8
                 let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
-                self.sub_value(value)?;
+                self.sub_value(value);
             }
             0xDF => {
                 // RST 3
@@ -467,7 +467,7 @@ impl Emulator {
             }
             0xE3 => {
                 // XTHL
-                self.xthl()?;
+                self.xthl();
             }
             0xE4 => {
                 // CPO adr
@@ -480,7 +480,7 @@ impl Emulator {
             0xE6 => {
                 // ANI d8
                 let value = self.read_byte()?;
-                self.and_value(value)?;
+                self.and_value(value);
             }
             0xE7 => {
                 // RST 4
@@ -515,7 +515,7 @@ impl Emulator {
             0xEE => {
                 // XRI d8
                 let value = self.read_byte()?;
-                self.xor_value(value)?;
+                self.xor_value(value);
             }
             0xEF => {
                 // RST 5
@@ -548,7 +548,7 @@ impl Emulator {
             0xF6 => {
                 // ORI d8
                 let value = self.read_byte()?;
-                self.or_value(value)?;
+                self.or_value(value);
             }
             0xF7 => {
                 // RST 6
@@ -581,7 +581,7 @@ impl Emulator {
             0xFE => {
                 // CPI d8
                 let value = self.read_byte()?;
-                self.cmp_value(value)?;
+                self.cmp_value(value);
             }
             0xFF => {
                 // RST 7

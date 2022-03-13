@@ -16,7 +16,7 @@ impl Emulator {
         Ok(())
     }
 
-    pub fn resolve_mov(&mut self, opcode: u8) -> EResult<()> {
+    pub fn resolve_mov(&mut self, opcode: u8) {
         let opcode_rel = opcode - 0x40;
         let dst_idx = opcode_rel >> 3;
         let src_idx = opcode_rel - (dst_idx << 3);
@@ -26,15 +26,13 @@ impl Emulator {
             if src_idx == 6 {
                 self.reg[REGISTERS[dst_idx as usize]] = self.ram[self.reg["hl"]];
             } else {
-                self.mov(REGISTERS[dst_idx as usize], REGISTERS[src_idx as usize])?;
+                self.mov(REGISTERS[dst_idx as usize], REGISTERS[src_idx as usize]);
             }
         }
-        Ok(())
     }
 
-    pub fn mov(&mut self, dst: char, src: char) -> EResult<()> {
+    pub fn mov(&mut self, dst: char, src: char) {
         self.reg[dst] = self.reg[src];
-        Ok(())
     }
 
     pub fn lxi(&mut self, dst: &str) -> EResult<()> {

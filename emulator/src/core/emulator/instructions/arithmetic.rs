@@ -1,39 +1,39 @@
-use super::super::{Emulator, EResult};
+use super::super::{Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
 impl Emulator {
-    pub fn add(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
+    pub fn add(&mut self, opcode: u8, use_carry: bool) {
         let mut index = (opcode & 0xF) as usize;
         if use_carry {
             index -= 8;
         }
         let register = REGISTERS[index];
         if register == 'm' {
-            self.add_memory(use_carry)
+            self.add_memory(use_carry);
         } else {
-            self.add_register(register, use_carry)
+            self.add_register(register, use_carry);
         }
     }
 
-    fn add_memory(&mut self, use_carry: bool) -> EResult<()> {
+    fn add_memory(&mut self, use_carry: bool) {
         let address = self.reg["hl"];
         let mut memory_value = self.ram[address] as u16;
         if use_carry && self.reg.get_flag("carry") {
             memory_value += 1;
         }
-        self.add_value(memory_value)
+        self.add_value(memory_value);
     }
 
-    fn add_register(&mut self, register: char, use_carry: bool) -> EResult<()> {
+    fn add_register(&mut self, register: char, use_carry: bool) {
         let mut register_value = self.reg[register] as u16;
         if use_carry && self.reg.get_flag("carry") {
             register_value += 1;
         }
-        self.add_value(register_value)
+        self.add_value(register_value);
     }
 
-    pub fn add_value(&mut self, value: u16) -> EResult<()> {
+    pub fn add_value(&mut self, value: u16) {
         let accumulator = self.reg['a'] as u16;
         let result = accumulator + value;
         let result_byte = (result & 0xff) as u8;
@@ -43,40 +43,39 @@ impl Emulator {
         self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
         self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
         self.reg['a'] = result_byte;
-        Ok(())
     }
     
-    pub fn sub(&mut self, opcode: u8, use_carry: bool) -> EResult<()> {
+    pub fn sub(&mut self, opcode: u8, use_carry: bool) {
         let mut index = (opcode & 0xF) as usize;
         if use_carry {
             index -= 8;
         }
         let register = REGISTERS[index];
         if register == 'm' {
-            self.sub_memory(use_carry)
+            self.sub_memory(use_carry);
         } else {
-            self.sub_register(register, use_carry)
+            self.sub_register(register, use_carry);
         }
     }
     
-    fn sub_memory(&mut self, use_carry: bool) -> EResult<()> {
+    fn sub_memory(&mut self, use_carry: bool) {
         let address = self.reg["hl"];
         let mut memory_value = self.ram[address] as u16;
         if use_carry && self.reg.get_flag("carry") {
             memory_value += 1;
         }
-        self.sub_value(memory_value)
+        self.sub_value(memory_value);
     }
 
-    fn sub_register(&mut self, register: char, use_carry: bool) -> EResult<()> {
+    fn sub_register(&mut self, register: char, use_carry: bool) {
         let mut register_value = self.reg[register] as u16;
         if use_carry && self.reg.get_flag("carry") {
             register_value += 1;
         }
-        self.sub_value(register_value)
+        self.sub_value(register_value);
     }
     
-    pub fn sub_value(&mut self, value: u16) -> EResult<()> {
+    pub fn sub_value(&mut self, value: u16) {
         let accumulator = self.reg['a'] as u16;
         let result = accumulator + (!value & 0xFF) + 1;
         let result_byte = (result & 0xff) as u8;
@@ -86,22 +85,19 @@ impl Emulator {
         self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
         self.reg.set_flag("aux", ((accumulator & 0x0F) + (!value & 0x0F) + 1) > 0x0F);
         self.reg['a'] = result_byte;
-        Ok(())
     }
     
-    pub fn inx(&mut self, register: &str) -> EResult<()> {
+    pub fn inx(&mut self, register: &str) {
         let prev = self.reg[register];
         self.reg[register] = prev.wrapping_add(1);
-        Ok(())
     }
     
-    pub fn dcx(&mut self, register: &str) -> EResult<()> {
+    pub fn dcx(&mut self, register: &str) {
         let prev = self.reg[register];
         self.reg[register] = prev.wrapping_sub(1);
-        Ok(())
     }
     
-    pub fn inr(&mut self, register: char) -> EResult<()> {
+    pub fn inr(&mut self, register: char) {
         let prev: u8;
         if register == 'm' {
             prev = self.ram[self.reg["hl"]];
@@ -118,10 +114,9 @@ impl Emulator {
         } else {
             self.reg[register] = result;
         }
-        Ok(())
     }
     
-    pub fn dcr(&mut self, register: char) -> EResult<()> {
+    pub fn dcr(&mut self, register: char) {
         let prev: u8;
         if register == 'm' {
             prev = self.ram[self.reg["hl"]];
@@ -138,16 +133,14 @@ impl Emulator {
         } else {
             self.reg[register] = result;
         }
-        Ok(())
     }
     
-    pub fn dad(&mut self, value: u16) -> EResult<()> {
+    pub fn dad(&mut self, value: u16) {
         let left = self.reg["hl"] as u32;
         let right = value as u32;
         let result = left + right;
         self.reg.set_flag("carry", result > 0xffff);
         self.reg["hl"] = (result & 0xffff) as u16;
-        Ok(())
     }
 }
 

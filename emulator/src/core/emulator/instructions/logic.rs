@@ -1,82 +1,78 @@
-use crate::core::emulator::{EResult, Emulator};
+use crate::core::emulator::{Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
 impl Emulator {
-    pub fn and(&mut self, opcode: u8) -> EResult<()> {
+    pub fn and(&mut self, opcode: u8) {
         let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
-            self.and_value(self.ram[address])
+            self.and_value(self.ram[address]);
         } else {
-            self.and_value(self.reg[register])
+            self.and_value(self.reg[register]);
         }
     }
     
-    pub fn and_value(&mut self, value: u8) -> EResult<()> {
+    pub fn and_value(&mut self, value: u8) {
         let accumulator = self.reg['a'];
         let result = accumulator & value;
         self.set_flags(result);
         self.reg['a'] = result;
-        Ok(())
     }
     
-    pub fn xor(&mut self, opcode: u8) -> EResult<()> {
+    pub fn xor(&mut self, opcode: u8) {
         let index = ((opcode - 8) & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
-            self.xor_value(self.ram[address])
+            self.xor_value(self.ram[address]);
         } else {
-            self.xor_value(self.reg[register])
+            self.xor_value(self.reg[register]);
         }
     }
     
-    pub fn xor_value(&mut self, value: u8) -> EResult<()> {
+    pub fn xor_value(&mut self, value: u8) {
         let accumulator = self.reg['a'];
         let result = accumulator ^ value;
         self.set_flags(result);
         self.reg['a'] = result;
-        Ok(())
     }
     
-    pub fn or(&mut self, opcode: u8) -> EResult<()> {
+    pub fn or(&mut self, opcode: u8) {
         let index = (opcode & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
-            self.or_value(self.ram[address])
+            self.or_value(self.ram[address]);
         } else {
-            self.or_value(self.reg[register])
+            self.or_value(self.reg[register]);
         }
     }
     
-    pub fn or_value(&mut self, value: u8) -> EResult<()> {
+    pub fn or_value(&mut self, value: u8) {
         let accumulator = self.reg['a'];
         let result = accumulator | value;
         self.set_flags(result);
         self.reg['a'] = result;
-        Ok(())
     }
     
-    pub fn cmp(&mut self, opcode: u8) -> EResult<()> {
+    pub fn cmp(&mut self, opcode: u8) {
         let index = ((opcode - 8) & 0xF) as usize;
         let register = REGISTERS[index];
         if register == 'm' {
             let address = self.reg["hl"];
-            self.cmp_value(self.ram[address])
+            self.cmp_value(self.ram[address]);
         } else {
-            self.cmp_value(self.reg[register])
+            self.cmp_value(self.reg[register]);
         }
     }
     
-    pub fn cmp_value(&mut self, value: u8) -> EResult<()> {
+    pub fn cmp_value(&mut self, value: u8) {
         // Perform SUB but restore accumulator afterwards
         let accumulator = self.reg['a'];
-        self.sub_value(value as u16)?;
+        self.sub_value(value as u16);
         self.reg['a'] = accumulator; 
-        Ok(())
     }
     
     fn set_flags(&mut self, result: u8) {
@@ -87,21 +83,19 @@ impl Emulator {
         self.reg.set_flag("aux", false);
     }
     
-    pub fn rlc(&mut self) -> EResult<()> {
+    pub fn rlc(&mut self) {
         let acc = self.reg['a'];
         self.reg.set_flag("carry", (acc & 0x80) != 0);
         self.reg['a'] = acc.rotate_left(1);
-        Ok(())
     }
     
-    pub fn rrc(&mut self) -> EResult<()> {
+    pub fn rrc(&mut self) {
         let acc = self.reg['a'];
         self.reg.set_flag("carry", (acc & 0x01) != 0);
         self.reg['a'] = acc.rotate_right(1);
-        Ok(())
     }
     
-    pub fn ral(&mut self) -> EResult<()> {
+    pub fn ral(&mut self) {
         let acc = self.reg['a'];
         let carry = self.reg.get_flag("carry");
         self.reg.set_flag("carry", (acc & 0x80) != 0);
@@ -111,10 +105,9 @@ impl Emulator {
         } else {
             self.reg['a'] &= !0x01;
         }
-        Ok(())
     }
     
-    pub fn rar(&mut self) -> EResult<()> {
+    pub fn rar(&mut self) {
         let acc = self.reg['a'];
         let carry = self.reg.get_flag("carry");
         self.reg.set_flag("carry", (acc & 0x01) != 0);
@@ -124,12 +117,10 @@ impl Emulator {
         } else {
             self.reg['a'] &= !0x80;
         }
-        Ok(())
     }
     
-    pub fn cma(&mut self) -> EResult<()> {
+    pub fn cma(&mut self) {
         self.reg['a'] = !self.reg['a'];
-        Ok(())
     }
 }
 
