@@ -79,10 +79,8 @@ mod tests {
         
         // STAX B
         emu.ram.load_vec(vec![0x02], 0);
-
         emu.reg["bc"] = 0x01;
         emu.reg['a'] = 69;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.ram[0x01], 69);
@@ -94,10 +92,8 @@ mod tests {
         
         // STAX B
         emu.ram.load_vec(vec![0x0A, 42], 0);
-
         emu.reg["bc"] = 0x01;
         emu.reg['a'] = 69;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 42);
@@ -109,12 +105,14 @@ mod tests {
 
         emu.sp = 0x3fff;
         emu.push(0xabcd).expect("Push failed");
+
         assert_eq!(emu.sp, 0x3ffd);
         assert_eq!(0xabcd, emu.pop().expect("Fuck"));
         assert_eq!(emu.sp, 0x3fff);
         assert_eq!(emu.pop(), Err("POP: No return address on the stack"));
 
         emu.sp = 0x1;
+
         assert_eq!(emu.push(0x1234), Err("PUSH: No more stack space"));
     }
     
@@ -124,10 +122,8 @@ mod tests {
         
         // SHLD
         emu.ram.load_vec(vec![0x22, 0x0A, 0x01], 0);
-
         emu.reg['h'] = 0xAE;
         emu.reg['l'] = 0x29;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.ram[0x010A], 0x29);
@@ -142,7 +138,6 @@ mod tests {
         emu.ram.load_vec(vec![0x2A, 0x0A, 0x01], 0);
         emu.ram[0x010A] = 42;
         emu.ram[0x010B] = 69;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['h'], 69);
@@ -155,9 +150,7 @@ mod tests {
         
         // STA
         emu.ram.load_vec(vec![0x32, 0x00, 0x12], 0);
-
         emu.reg['a'] = 69;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.ram[0x1200], 69);
@@ -169,9 +162,7 @@ mod tests {
         
         // LDA
         emu.ram.load_vec(vec![0x3A, 0x00, 0x12], 0);
-
         emu.ram[0x1200] = 69;
-        
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 69);
@@ -183,10 +174,8 @@ mod tests {
         
         // XTHL
         emu.ram.load_vec(vec![0xE3, 0x00, 0x12], 0);
-
         emu.reg["hl"] = 69;
         emu.sp = 0x01;
-        
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg["hl"], 0x1200);

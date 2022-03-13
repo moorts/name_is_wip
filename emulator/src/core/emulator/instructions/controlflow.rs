@@ -84,12 +84,13 @@ mod tests {
 
         emu.sp = 0x3fff;
         emu.ram[0x1234] = 0xc9;
-
         emu.call(0x1234).expect("Fuck");
+
         assert_eq!(emu.sp, 0x3fff - 2);
         assert_eq!(emu.pc, 0x1234);
 
         emu.execute_next().expect("Fuck");
+        
         assert_eq!(emu.pc, 0x0);
     }
 

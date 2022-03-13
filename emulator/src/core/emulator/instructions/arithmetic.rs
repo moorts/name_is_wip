@@ -155,10 +155,8 @@ mod tests {
 
         // ADD B, ADD A
         emu.ram.load_vec(vec![0x80, 0x87], 0);
-
         emu.reg['b'] = 69;
         emu.reg['a'] = 42;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 111);
@@ -175,9 +173,7 @@ mod tests {
         // ADD M with address 0x01
         emu.ram.load_vec(vec![0x86, 69], 0);
         emu.reg["hl"] = 0x01;
-
         emu.reg['a'] = 42;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 111);
@@ -189,10 +185,8 @@ mod tests {
 
         // ADD B, ADD A, ADD A
         emu.ram.load_vec(vec![0x80, 0x87, 0x87], 0);
-
         emu.reg['b'] = 69;
         emu.reg['a'] = 42;
-
         emu.execute_next().expect("Fuck"); // Result is 111
 
         assert_eq!(emu.reg.get_flag("carry"), false, "Carry bit");
@@ -220,11 +214,9 @@ mod tests {
         // Test auxiliary carry flag with example from manual
         // ADD B
         emu.ram.load_vec(vec![0x80], 0);
-
         emu.pc = 0;
         emu.reg['b'] = 0x2E;
         emu.reg['a'] = 0x74;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 0xA2);
@@ -237,11 +229,9 @@ mod tests {
 
         // ADC B without carry
         emu.ram.load_vec(vec![0x88], 0);
-
         emu.reg['b'] = 69;
         emu.reg['a'] = 42;
         emu.reg.set_flag("carry", false);
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 111);
@@ -249,11 +239,9 @@ mod tests {
         // ADC B with carry
         emu.ram.load_vec(vec![0x88], 0);
         emu.pc = 0;
-
         emu.reg['b'] = 69;
         emu.reg['a'] = 42;
         emu.reg.set_flag("carry", true);
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 112);
@@ -265,17 +253,18 @@ mod tests {
 
         // SUB B, SUB A, SUB B
         emu.ram.load_vec(vec![0x90, 0x97, 0x90], 0);
-
         emu.reg['a'] = 69;
         emu.reg['b'] = 42;
-
         emu.execute_next().expect("Fuck");
+
         assert_eq!(emu.reg['a'], 27);
 
         emu.execute_next().expect("Fuck");
+
         assert_eq!(emu.reg['a'], 0);
         
         emu.execute_next().expect("Fuck");
+
         assert_eq!(emu.reg['a'], 214);
     }
     
@@ -287,7 +276,6 @@ mod tests {
         emu.ram.load_vec(vec![0x97], 0);
         emu.pc = 0;
         emu.reg['a'] = 0x3E;
-
         emu.execute_next().expect("Fuck"); // Result is 0
 
         assert_eq!(emu.reg['a'], 0);
@@ -304,11 +292,9 @@ mod tests {
 
         // SBB B without carry
         emu.ram.load_vec(vec![0x98], 0);
-
         emu.reg['b'] = 42;
         emu.reg['a'] = 69;
         emu.reg.set_flag("carry", false);
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 69-42);
@@ -316,11 +302,9 @@ mod tests {
         // SBB B with carry
         emu.ram.load_vec(vec![0x98], 0);
         emu.pc = 0;
-
         emu.reg['b'] = 42;
         emu.reg['a'] = 69;
         emu.reg.set_flag("carry", true);
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 69-43);
@@ -332,15 +316,12 @@ mod tests {
 
         // INX B
         emu.ram.load_vec(vec![0x03, 0x03], 0);
-
         emu.reg["bc"] = 42;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg["bc"], 43);
         
         emu.reg["bc"] = 0xFFFF;
-
         emu.execute_next().expect("Fuck");
         
         assert_eq!(emu.reg["bc"], 0);
@@ -352,15 +333,12 @@ mod tests {
 
         // DCX B
         emu.ram.load_vec(vec![0x0B, 0x0B], 0);
-
         emu.reg["bc"] = 42;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg["bc"], 41);
         
         emu.reg["bc"] = 0x0000;
-
         emu.execute_next().expect("Fuck");
         
         assert_eq!(emu.reg["bc"], 0xFFFF);
@@ -373,7 +351,6 @@ mod tests {
         // INR A
         emu.ram.load_vec(vec![0x3C], 0);
         emu.reg['a'] = 69;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 70);
@@ -390,7 +367,6 @@ mod tests {
         // DCR A
         emu.ram.load_vec(vec![0x3D], 0);
         emu.reg['a'] = 69;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 68);
@@ -408,7 +384,6 @@ mod tests {
         emu.ram.load_vec(vec![0x09], 0);
         emu.reg["hl"] = 4200;
         emu.reg["bc"] = 6900;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg["hl"], 11100);

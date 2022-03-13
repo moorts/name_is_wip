@@ -33,9 +33,7 @@ mod tests {
         
         // DAA
         emu.ram.load_vec(vec![0x27], 0);
-
         emu.reg['a'] = 0x9B;
-
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 1);
