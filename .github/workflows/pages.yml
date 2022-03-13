@@ -19,7 +19,9 @@ jobs:
         cd ../emulator-webapp
         npm install --legacy-peer-deps
     - name: Build docs
-      run: npm run build-docs
+      run: |
+        cd ./webapp-frontend
+        npm run build-docs
     - name: Commit files
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
