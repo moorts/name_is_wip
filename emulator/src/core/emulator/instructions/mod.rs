@@ -1,5 +1,6 @@
 mod arithmetic;
-mod controlflow;
 mod logic;
 mod r#move;
-mod stack;
+mod controlflow;
+mod memory;
+mod special;
