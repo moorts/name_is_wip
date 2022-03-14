@@ -34,6 +34,30 @@ export class CodeEditorComponent implements OnInit {
       }
     });
 
+    editor.addAction({
+      id: "EMULATOR_RUN",
+      label: "Emulator: Start emulation",
+      run: () => {
+        console.log("nice cock!");
+      }
+    });
+
+    editor.addAction({
+      id: "EMULATOR_PAUSE",
+      label: "Emulator: Pause emulation",
+      run: () => {
+        console.log("nice cock!");
+      }
+    });
+
+    editor.addAction({
+      id: "EMULATOR_STOP",
+      label: "Emulator: Stop emulation",
+      run: () => {
+        console.log("nice cock!");
+      }
+    });
+
     monaco.languages.register({ id: "i8080" });
 
     const keywords = [
