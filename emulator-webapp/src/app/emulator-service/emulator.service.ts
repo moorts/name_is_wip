@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import init from "emulator";
-import { InitOutput } from '../../../dist/emulator-webapp/assets/emulator/emulator';
+import init, { InitOutput } from "emulator";
 
 @Injectable({
   providedIn: 'root'
