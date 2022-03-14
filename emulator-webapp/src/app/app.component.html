@@ -1,6 +1,6 @@
 <mat-toolbar>
   <span class="toolbar-title">Intel 8080 Emulator</span>
-  <button mat-raised-button color="primary">Load</button>
+  <button mat-raised-button color="primary" (click)="onFileOpenButtonPressed()">Load</button>
   <button mat-raised-button color="primary">Save</button>
   <button mat-raised-button color="primary" (click)="onAssembleButtonPressed()">Assemble</button>
   <button mat-raised-button color="success" class="icon-button"><mat-icon>play_arrow</mat-icon></button>
@@ -22,3 +22,5 @@
     </mat-tab-group>
   </as-split-area>
 </as-split>
+
+<input #fileDialog type="file" style="display:none;"/>
