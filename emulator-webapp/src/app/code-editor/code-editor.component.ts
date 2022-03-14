@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { MonacoEditorLoaderService, MonacoStandaloneCodeEditor } from '@materia-ui/ngx-monaco-editor';
 import { filter, take } from 'rxjs';
+import { EmulatorService } from '../emulator-service/emulator.service';
 
 @Component({
   selector: 'code-editor',
@@ -9,10 +10,17 @@ import { filter, take } from 'rxjs';
 })
 export class CodeEditorComponent implements OnInit {
 
-  editorOptions = {theme: 'vs-dark', language: ''};
-  code: string = 'MOV A, B';
+  @Output() assembleAction: EventEmitter<void> = new EventEmitter<void>();
+  @Output() startAction: EventEmitter<void> = new EventEmitter<void>();
+  @Output() pauseAction: EventEmitter<void> = new EventEmitter<void>();
+  @Output() stopAction: EventEmitter<void> = new EventEmitter<void>();
 
-  constructor(private monacoLoaderService: MonacoEditorLoaderService) {
+  public code: string = 'MOV A, B';
+
+  editorOptions = {theme: 'vs-dark', language: ''};
+
+  constructor(private readonly monacoLoaderService: MonacoEditorLoaderService,
+              private readonly emulatorService: EmulatorService) {
     this.monacoLoaderService.isMonacoLoaded$.pipe(
       filter(isLoaded => isLoaded),
       take(1),
@@ -30,7 +38,7 @@ export class CodeEditorComponent implements OnInit {
       id: "EMULATOR_ASSEMBLE",
       label: "Emulator: Assemble",
       run: () => {
-        console.log("nice cock!");
+        this.assembleAction.emit();
       }
     });
 
@@ -38,7 +46,7 @@ export class CodeEditorComponent implements OnInit {
       id: "EMULATOR_RUN",
       label: "Emulator: Start emulation",
       run: () => {
-        console.log("nice cock!");
+        this.startAction.emit();
       }
     });
 
@@ -46,7 +54,7 @@ export class CodeEditorComponent implements OnInit {
       id: "EMULATOR_PAUSE",
       label: "Emulator: Pause emulation",
       run: () => {
-        console.log("nice cock!");
+        this.pauseAction.emit();
       }
     });
 
@@ -54,7 +62,7 @@ export class CodeEditorComponent implements OnInit {
       id: "EMULATOR_STOP",
       label: "Emulator: Stop emulation",
       run: () => {
-        console.log("nice cock!");
+        this.stopAction.emit();
       }
     });
 

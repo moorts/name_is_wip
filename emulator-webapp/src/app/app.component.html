@@ -2,7 +2,7 @@
   <span class="toolbar-title">Intel 8080 Emulator</span>
   <button mat-raised-button color="primary">Load</button>
   <button mat-raised-button color="primary">Save</button>
-  <button mat-raised-button color="primary">Assemble</button>
+  <button mat-raised-button color="primary" (click)="onAssembleButtonPressed()">Assemble</button>
   <button mat-raised-button color="success" class="icon-button"><mat-icon>play_arrow</mat-icon></button>
   <button mat-raised-button color="danger" class="icon-button"><mat-icon>stop</mat-icon></button>
   <span class="toolbar-spacer"></span>
@@ -12,7 +12,7 @@
 </mat-toolbar>
 <as-split direction="horizontal" class="mat-typography mat-app-background">
   <as-split-area [minSize]="20">
-    <code-editor></code-editor>
+    <code-editor #codeEditor (assembleAction)="onAssembleButtonPressed()"></code-editor>
   </as-split-area>
   <as-split-area [minSize]="20">
     <mat-tab-group>
