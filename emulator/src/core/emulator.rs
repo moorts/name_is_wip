@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use crate::core::io::*;
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 
@@ -8,8 +12,10 @@ pub struct Emulator {
     sp: u16,
     ram: Box<dyn RAM>,
     reg: RegisterArray,
+    input_devices: [Option<Rc<RefCell<dyn InputDevice>>>; 256],
+    output_devices: [Option<Rc<RefCell<dyn OutputDevice>>>; 256],
     running: bool,
-    interrupts_enabled: bool
+    interrupts_enabled: bool,
 }
 
 impl Emulator {
@@ -19,60 +25,268 @@ impl Emulator {
             sp: 0,
             ram: Box::new(DefaultRam::new()),
             reg: RegisterArray::new(),
+            input_devices: unsafe { std::mem::zeroed() },
+            output_devices: unsafe { std::mem::zeroed() },
             running: true,
-            interrupts_enabled: true // INTE
+            interrupts_enabled: true, // INTE
         }
     }
 
     fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
         match opcode {
+            0x00 => {
+                // NOP
+            }
             0x01 => {
                 // LXI B, D16
                 self.lxi("bc")?;
+            }
+            0x02 => {
+                // STAX B
+                self.stax("bc");
+            }
+            0x03 => {
+                // INX B
+                self.inx("bc");
+            }
+            0x04 => {
+                // INR B
+                self.inr('b');
+            }
+            0x05 => {
+                // DCR B
+                self.dcr('b');
             }
             0x06 => {
                 // MVI B, D8
                 self.mvi('b')?;
             }
-            0x0e => {
+            0x07 => {
+                // RLC
+                self.rlc();
+            }
+            0x08 => {
+                // NOP
+            }
+            0x09 => {
+                // DAD B
+                self.dad(self.reg["bc"]);
+            }
+            0x0A => {
+                // LDAX B
+                self.ldax("bc");
+            }
+            0x0B => {
+                // DCX B
+                self.dcx("bc");
+            }
+            0x0C => {
+                // INR C
+                self.inr('c');
+            }
+            0x0D => {
+                // DCR C
+                self.dcr('c');
+            }
+            0x0E => {
                 // MVI C, D8
                 self.mvi('c')?;
+            }
+            0x0F => {
+                // RRC
+                self.rrc();
+            }
+            0x10 => {
+                // NOP
             }
             0x11 => {
                 // LXI D, D16
                 self.lxi("de")?;
             }
+            0x12 => {
+                // STAX D
+                self.stax("de");
+            }
+            0x13 => {
+                // INX D
+                self.inx("de");
+            }
+            0x14 => {
+                // INR D
+                self.inr('d');
+            }
+            0x15 => {
+                // DCR D
+                self.dcr('d');
+            }
             0x16 => {
                 // MVI D, D8
                 self.mvi('d')?;
             }
-            0x1e => {
+            0x17 => {
+                // RAL
+                self.ral();
+            }
+            0x18 => {
+                // NOP
+            }
+            0x19 => {
+                // DAD D
+                self.dad(self.reg["de"]);
+            }
+            0x1A => {
+                // LDAX D
+                self.ldax("de");
+            }
+            0x1B => {
+                // DCX D
+                self.dcx("de");
+            }
+            0x1C => {
+                // INR E
+                self.inr('e');
+            }
+            0x1D => {
+                // DCR E
+                self.dcr('e');
+            }
+            0x1E => {
                 // MVI E, D8
                 self.mvi('e')?;
+            }
+            0x1F => {
+                // RAR
+                self.rar();
+            }
+            0x20 => {
+                // NOP
             }
             0x21 => {
                 // LXI H, D16
                 self.lxi("hl")?;
             }
+            0x22 => {
+                // SHLD A16
+                let address = self.read_addr()?;
+                self.shld(address);
+            }
+            0x23 => {
+                // INX H
+                self.inx("hl");
+            }
+            0x24 => {
+                // INR H
+                self.inr('h');
+            }
+            0x25 => {
+                // DCR H
+                self.dcr('h');
+            }
             0x26 => {
                 // MVI H, D8
                 self.mvi('h')?;
             }
-            0x2e => {
+            0x27 => {
+                // DAA
+                self.daa();
+            }
+            0x28 => {
+                // NOP
+            }
+            0x29 => {
+                // DAD H
+                self.dad(self.reg["hl"]);
+            }
+            0x2A => {
+                // LHLD A16
+                let address = self.read_addr()?;
+                self.lhld(address);
+            }
+            0x2B => {
+                // DCX H
+                self.dcx("hl");
+            }
+            0x2C => {
+                // INR L
+                self.inr('l');
+            }
+            0x2D => {
+                // DCR L
+                self.dcr('l');
+            }
+            0x2E => {
                 // MVI L, D8
                 self.mvi('l')?;
+            }
+            0x2F => {
+                // CMA
+                self.cma();
+            }
+            0x30 => {
+                // NOP
             }
             0x31 => {
                 // LXI SP, D16
                 self.sp = self.read_addr()?;
             }
+            0x32 => {
+                // STA A16
+                let address = self.read_addr()?;
+                self.sta(address);
+            }
+            0x33 => {
+                // INX SP
+                let prev = self.sp;
+                self.sp = prev.wrapping_add(1);
+            }
+            0x34 => {
+                // INR M
+                self.inr('m');
+            }
+            0x35 => {
+                // DCR M
+                self.dcr('m');
+            }
             0x36 => {
                 // MVI M, D8
                 self.mvi_adr()?;
             }
-            0x3e => {
+            0x37 => {
+                // STC
+                self.reg.set_flag("carry", true);
+            }
+            0x38 => {
+                // NOP
+            }
+            0x39 => {
+                // DAD SP
+                self.dad(self.sp);
+            }
+            0x3A => {
+                // LDA A16
+                let address = self.read_addr()?;
+                self.lda(address);
+            }
+            0x3B => {
+                // DCX SP
+                let prev = self.sp;
+                self.sp = prev.wrapping_sub(1);
+            }
+            0x3C => {
+                // INR A
+                self.inr('a');
+            }
+            0x3D => {
+                // DCR A
+                self.dcr('a');
+            }
+            0x3E => {
                 // MVI A, D8
                 self.mvi('a')?;
+            }
+            0x3F => {
+                // CMC
+                self.reg.flip_flag("carry");
             }
             0x40..=0x7f => {
                 if opcode == 0x76 {
@@ -80,294 +294,309 @@ impl Emulator {
                     self.running = false;
                 } else {
                     // MOV DST, SRC
-                    self.resolve_mov(opcode)?;
+                    self.resolve_mov(opcode);
                 }
             }
             0x80..=0x87 => {
                 // ADD
-                self.add(opcode, false)?;
+                self.add(opcode, false);
             }
             0x88..=0x8F => {
                 // ADC
-                self.add(opcode, true)?;
+                self.add(opcode, true);
             }
             0x90..=0x97 => {
                 // SUB
-                self.sub(opcode, false)?;
+                self.sub(opcode, false);
             }
             0x98..=0x9F => {
                 // SBB
-                self.sub(opcode, true)?;
+                self.sub(opcode, true);
             }
             0xA0..=0xA7 => {
                 // ANA
-                self.and(opcode)?;
+                self.and(opcode);
             }
             0xA8..=0xAF => {
                 // XRA
-                self.xor(opcode)?;
+                self.xor(opcode);
             }
             0xB0..=0xB7 => {
                 // ORA
-                self.or(opcode)?;
+                self.or(opcode);
             }
             0xB8..=0xBF => {
                 // CMP
-                self.cmp(opcode)?;
+                self.cmp(opcode);
             }
-            0xc0 => {
+            0xC0 => {
                 // RNZ
                 self.ret_not("zero")?;
             }
-            0xc1 => {
-                // Unimplemented
-                unimplemented!();
+            0xC1 => {
+                // POP B
+                self.pop_reg("bc")?;
             }
-            0xc2 => {
+            0xC2 => {
                 // JNZ adr
                 self.jmp_not("zero")?;
             }
-            0xc3 => {
+            0xC3 => {
                 // JMP adr
                 self.pc = self.read_addr()?;
             }
-            0xc4 => {
-                // Unimplemented
-                unimplemented!();
+            0xC4 => {
+                // CNZ adr
+                self.call_not("zero")?;
             }
-            0xc5 => {
+            0xC5 => {
                 // PUSH B
                 self.push_reg("bc")?;
             }
-            0xc6 => {
-                // Unimplemented
-                unimplemented!();
+            0xC6 => {
+                // ADI d8
+                let value = self.read_byte()?;
+                self.add_value(value as u16);
             }
-            0xc7 => {
+            0xC7 => {
                 // RST 0
                 self.call(0x0)?;
             }
-            0xc8 => {
+            0xC8 => {
                 // RZ
                 self.ret_if("zero")?;
             }
-            0xc9 => {
+            0xC9 => {
                 // RET
                 self.ret()?;
             }
-            0xca => {
+            0xCA => {
                 // JZ adr
                 self.jmp_if("zero")?;
             }
-            0xcc => {
+            0xCB => {
+                // JMP adr
+                self.pc = self.read_addr()?;
+            }
+            0xCC => {
                 // CZ addr
                 self.call_if("zero")?;
             }
-            0xcd => {
+            0xCD => {
                 // CALL addr
                 self.call_imm()?;
             }
-            0xce => {
-                // Unimplemented
-                unimplemented!()
+            0xCE => {
+                // ACI d8
+                let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
+                self.add_value(value);
             }
-            0xcf => {
+            0xCF => {
                 // RST 1
                 self.call(0x8)?;
             }
-            0xd0 => {
+            0xD0 => {
                 // RNC
                 self.ret_not("carry")?;
             }
-            0xd1 => {
+            0xD1 => {
                 // POP D
-                self.reg["de"] = self.pop()?;
+                self.pop_reg("de")?;
             }
-            0xd2 => {
+            0xD2 => {
                 // JNC adr
                 self.jmp_not("carry")?;
             }
-            0xd3 => {
+            0xD3 => {
                 // OUT
-                unimplemented!()
+                let port = self.read_byte()?;
+                self.output(port)?;
             }
-            0xd4 => {
+            0xD4 => {
                 // CNC adr
                 self.call_not("carry")?;
             }
-            0xd5 => {
+            0xD5 => {
                 // PUSH D
                 self.push_reg("de")?;
             }
-            0xd6 => {
+            0xD6 => {
                 // SUI D8
-                unimplemented!()
+                let value = self.read_byte()?;
+                self.sub_value(value as u16);
             }
-            0xd7 => {
+            0xD7 => {
                 // RST 2
                 self.call(0x10)?;
             }
-            0xd8 => {
+            0xD8 => {
                 // RC
                 self.ret_if("carry")?;
             }
-            0xd9 => {
-                // no-op
-                unimplemented!()
+            0xD9 => {
+                // RET
+                self.ret()?;
             }
-            0xda => {
+            0xDA => {
                 // JC adr
                 self.jmp_if("carry")?;
             }
-            0xdb => {
-                // Unimplemented
-                unimplemented!()
+            0xDB => {
+                // IN
+                let port = self.read_byte()?;
+                self.input(port)?;
             }
-            0xdc => {
+            0xDC => {
                 // CC adr
                 self.call_if("carry")?;
             }
-            0xdd => {
-                // Unimplemented
-                unimplemented!()
+            0xDD => {
+                // CALL addr
+                self.call_imm()?;
             }
-            0xde => {
-                // Unimplemented
-                unimplemented!()
+            0xDE => {
+                // SBI d8
+                let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
+                self.sub_value(value);
             }
-            0xdf => {
+            0xDF => {
                 // RST 3
                 self.call(0x18)?;
             }
-            0xe0 => {
+            0xE0 => {
                 // RPO
                 self.ret_not("parity")?;
             }
-            0xe1 => {
-                // Unimplemented
-                unimplemented!()
+            0xE1 => {
+                // POP H
+                self.pop_reg("hl")?;
             }
-            0xe2 => {
+            0xE2 => {
                 // JPO adr
                 self.jmp_not("parity")?;
             }
-            0xe3 => {
-                // Unimplemented
-                unimplemented!()
+            0xE3 => {
+                // XTHL
+                self.xthl();
             }
-            0xe4 => {
+            0xE4 => {
                 // CPO adr
                 self.call_not("parity")?;
             }
-            0xe5 => {
-                // Unimplemented
-                unimplemented!()
+            0xE5 => {
+                // PUSH H
+                self.push_reg("hl")?;
             }
-            0xe6 => {
-                // Unimplemented
-                unimplemented!()
+            0xE6 => {
+                // ANI d8
+                let value = self.read_byte()?;
+                self.and_value(value);
             }
-            0xe7 => {
+            0xE7 => {
                 // RST 4
                 self.call(0x20)?;
             }
-            0xe8 => {
+            0xE8 => {
                 // RPE
                 self.ret_if("parity")?;
             }
-            0xe9 => {
-                // Unimplemented
-                unimplemented!()
+            0xE9 => {
+                // PCHL
+                self.pc = self.reg["hl"];
             }
-            0xea => {
+            0xEA => {
                 // JPE adr
                 self.jmp_if("parity")?;
             }
-            0xeb => {
-                // Unimplemented
-                unimplemented!()
+            0xEB => {
+                // XCHG
+                let temp = self.reg["hl"];
+                self.reg["hl"] = self.reg["de"];
+                self.reg["de"] = temp;
             }
-            0xec => {
+            0xEC => {
                 // CPE
                 self.call_if("parity")?;
             }
-            0xed => {
-                // Unimplemented
-                unimplemented!()
+            0xED => {
+                // CALL addr
+                self.call_imm()?;
             }
-            0xee => {
-                // Unimplemented
-                unimplemented!()
+            0xEE => {
+                // XRI d8
+                let value = self.read_byte()?;
+                self.xor_value(value);
             }
-            0xef => {
+            0xEF => {
                 // RST 5
                 self.call(0x28)?;
             }
-            0xf0 => {
+            0xF0 => {
                 // RP
                 self.ret_not("sign")?;
             }
-            0xf1 => {
-                // Unimplemented
-                unimplemented!()
+            0xF1 => {
+                // POP PSW
+                self.pop_reg("psw")?;
             }
-            0xf2 => {
+            0xF2 => {
                 // JP adr
                 self.jmp_not("sign")?;
             }
-            0xf3 => {
+            0xF3 => {
                 // DI
                 self.interrupts_enabled = false;
             }
-            0xf4 => {
+            0xF4 => {
                 // CP adr
                 self.call_not("sign")?;
             }
-            0xf5 => {
-                // Unimplemented
-                unimplemented!()
+            0xF5 => {
+                // PUSH PSW
+                self.push_reg("psw")?;
             }
-            0xf6 => {
-                // Unimplemented
-                unimplemented!()
+            0xF6 => {
+                // ORI d8
+                let value = self.read_byte()?;
+                self.or_value(value);
             }
-            0xf7 => {
+            0xF7 => {
                 // RST 6
                 self.call(0x30)?;
             }
-            0xf8 => {
+            0xF8 => {
                 // RM
                 self.ret_if("sign")?;
             }
-            0xf9 => {
-                // Unimplemented
-                unimplemented!()
+            0xF9 => {
+                // SPHL
+                self.sp = self.reg["hl"];
             }
-            0xfa => {
+            0xFA => {
                 // JM adr
                 self.jmp_if("sign")?;
             }
-            0xfb => {
+            0xFB => {
                 // EI
                 self.interrupts_enabled = true;
             }
-            0xfc => {
+            0xFC => {
                 // CM adr
                 self.call_if("sign")?;
             }
-            0xfd => {
-                // Unimplemented
-                unimplemented!()
+            0xFD => {
+                // CALL addr
+                self.call_imm()?;
             }
-            0xfe => {
-                // Unimplemented
-                unimplemented!()
+            0xFE => {
+                // CPI d8
+                let value = self.read_byte()?;
+                self.cmp_value(value);
             }
-            0xff => {
+            0xFF => {
                 // RST 7
                 self.call(0x38)?;
             }
-            _ => unimplemented!("Opcode not yet implemented"),
         }
         Ok(())
     }
@@ -396,7 +625,7 @@ impl Emulator {
         self.pc += 1;
         Ok((high << 8) | low)
     }
-    
+
     pub fn load_ram(&mut self, data: Vec<u8>, start: u16) {
         self.ram.load_vec(data, start)
     }
@@ -411,12 +640,13 @@ impl Emulator {
 }
 
 mod instructions;
+mod devices;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
     use crate::utils::load_asm_file;
+    use std::io;
 
     #[test]
     fn int() -> io::Result<()> {
@@ -435,7 +665,7 @@ mod tests {
         emu.execute_next().expect("");
         assert_eq!(emu.reg['c'], 69);
 
-        emu.interrupt(0xc7).expect("");
+        emu.interrupt(0xC7).expect("");
         assert_eq!(emu.pc, 0);
         assert!(!emu.interrupts_enabled);
 
@@ -447,7 +677,6 @@ mod tests {
         assert_eq!(emu.reg['b'], 69);
         assert_eq!(emu.pc, 0x07);
 
-
         emu.execute_next().expect("");
 
         assert_eq!(emu.reg['h'], 69);
@@ -456,4 +685,3 @@ mod tests {
         Ok(())
     }
 }
-

@@ -1,4 +1,4 @@
-use super::super::{Emulator, EResult};
+use super::super::{EResult, Emulator};
 
 const REGISTERS: [char; 8] = ['b', 'c', 'd', 'e', 'h', 'l', 'm', 'a'];
 
@@ -16,7 +16,7 @@ impl Emulator {
         Ok(())
     }
 
-    pub fn resolve_mov(&mut self, opcode: u8) -> EResult<()> {
+    pub fn resolve_mov(&mut self, opcode: u8) {
         let opcode_rel = opcode - 0x40;
         let dst_idx = opcode_rel >> 3;
         let src_idx = opcode_rel - (dst_idx << 3);
@@ -26,15 +26,13 @@ impl Emulator {
             if src_idx == 6 {
                 self.reg[REGISTERS[dst_idx as usize]] = self.ram[self.reg["hl"]];
             } else {
-                self.mov(REGISTERS[dst_idx as usize], REGISTERS[src_idx as usize])?;
+                self.mov(REGISTERS[dst_idx as usize], REGISTERS[src_idx as usize]);
             }
         }
-        Ok(())
     }
 
-    pub fn mov(&mut self, dst: char, src: char) -> EResult<()> {
+    pub fn mov(&mut self, dst: char, src: char) {
         self.reg[dst] = self.reg[src];
-        Ok(())
     }
 
     pub fn lxi(&mut self, dst: &str) -> EResult<()> {
@@ -43,13 +41,12 @@ impl Emulator {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::utils::load_asm_file;
     use super::*;
+    use crate::utils::load_asm_file;
     use std::io;
-    
+
     #[test]
     fn mvi() -> io::Result<()> {
         let mut emu = Emulator::new();
@@ -98,11 +95,10 @@ mod tests {
         let regs = ["bc", "de", "hl"];
         for i in 1..4 {
             emu.execute_next().expect("Fuck");
-            assert_eq!(emu.reg[regs[i-1]], (i * 256 + i + 4) as u16);
+            assert_eq!(emu.reg[regs[i - 1]], (i * 256 + i + 4) as u16);
         }
         emu.execute_next().expect("Fuck");
         assert_eq!(emu.sp, 0x0408);
         Ok(())
     }
 }
-

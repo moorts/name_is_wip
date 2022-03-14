@@ -3,6 +3,9 @@ use super::parser::eval;
 use std::collections::HashMap;
 use regex::Regex;
 
+const MACRO_START: &str = "Custom Mac";
+const MACRO_END: &str = "Custom End";
+
 pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let decl_regex = Regex::new(LABEL_DECL).unwrap();
     if !has_correct_end(code) {
@@ -103,6 +106,10 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     Ok(preprocessed_code)
 }
 
+fn eval_str(str: String) -> u16 {
+    eval(&str) as u16
+}
+
 fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let (macro_instructions, macro_params) = get_macros(code)?;
     let mut macroless_code: Vec<String> = Vec::new();
@@ -130,6 +137,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
 
         for (macro_name, instructions) in &macro_instructions {
             if owned_line.contains(macro_name) {
+                macroless_code.push(MACRO_START.to_string());
                 let input_string = owned_line.split_once(macro_name).unwrap().1.trim();
                 let mut inputs: Vec<&str> = Vec::new();
 
@@ -180,17 +188,158 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                     line = line.replace(replacement_protection, "");
                     macroless_code.push(line.trim().to_string());
                 }
+                macroless_code.push(MACRO_END.to_string());
                 continue 'outer;
             }
         }
 
         macroless_code.push(owned_line.trim().to_string());
     }
+    macroless_code = handle_macro_locals(&macroless_code).unwrap();
     Ok(macroless_code)
 }
 
-fn eval_str(str: String) -> u16 {
-    eval(&str) as u16
+fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+    let loc_label_regex = Regex::new(LABEL_DECL).unwrap();
+    let glob_label_regex = Regex::new(&format!("{}:", LABEL_DECL)).unwrap();
+    let var_name_regex = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4} )").unwrap();
+
+    let mut generated_label_count: u32 = 0;
+    let mut handled_code: Vec<String> = Vec::new();
+    let mut label_names: Vec<String> = Vec::new();
+    let mut label_map: HashMap<String, String> = HashMap::new();
+    let mut equ_names: Vec<String> = Vec::new();
+    let mut equ_map: HashMap<String, String> = HashMap::new();
+    let mut found_set_names: Vec<String> = Vec::new();
+    let mut set_map: HashMap<String, String> = HashMap::new();
+    let mut all_existing_names: Vec<String> = Vec::new();
+    let mut in_macro = false;
+
+    // search entire code for labels and equ assignments outside of macros
+    for line in code {
+        if line.eq(MACRO_START) {
+            in_macro = true;
+            continue;
+        }
+        if line.eq(MACRO_END) {
+            in_macro = false;
+            continue;
+        }
+        if !in_macro && loc_label_regex.is_match(line) {
+            let (label, _) = line.split_once(":").unwrap();
+            if !label_names.contains(&label.to_string()) {
+                label_names.push(label.to_string());
+            }
+        }
+        if !in_macro && line.contains(" EQU ") {
+            let (var, _) = line.split_once(" EQU ").unwrap();
+            if !var_name_regex.is_match(line) {
+                return Err("Illegal variable name!");
+            }
+            if !equ_names.contains(&var.to_string()) {
+                equ_names.push(var.to_string());
+            }
+        }
+    }
+
+    all_existing_names.append(&mut equ_names.clone());
+    all_existing_names.append(&mut label_names.clone());
+
+    for line in code {
+        let mut owned_line = line.clone();
+
+        // check if current block of code is (not) a macro
+        if owned_line.eq(MACRO_START) {
+            in_macro = true;
+            continue;
+        } 
+        if owned_line.eq(MACRO_END) {
+            in_macro = false;
+            label_map.clear();
+            equ_map.clear();
+            set_map.clear();
+            continue;
+        }
+
+        // find set assignments outside of macros
+        if owned_line.contains(" SET ") && !in_macro {
+            let (name, _) = owned_line.split_once(" SET ").unwrap();
+            if !var_name_regex.is_match(line) {
+                return Err("Illegal variable name!");
+            }
+            if !found_set_names.contains(&name.to_string()) {
+                found_set_names.push(name.to_string());
+                all_existing_names.push(name.to_string());
+            }
+        }
+
+        // change line of macro according to principles of locality
+        if in_macro {
+            
+            // map local labels in macros
+            if loc_label_regex.is_match(&owned_line) && !glob_label_regex.is_match(&owned_line) {
+                let (label, _) = owned_line.split_once(":").unwrap();
+                let gen_name = generate_label_name(&all_existing_names, &mut generated_label_count).unwrap();
+                generated_label_count += 1;
+                all_existing_names.push(gen_name.clone());
+                label_map.insert(label.to_string(), gen_name);
+            }
+
+            // convert globally declared label to normal label
+            if glob_label_regex.is_match(&owned_line) {
+                owned_line = owned_line.replace("::", ":");
+            }
+
+            // map local equ assignments
+            if line.contains(" EQU ") {
+                let (name, _) = owned_line.split_once(" EQU ").unwrap();
+                let gen_name = generate_label_name(&all_existing_names, &mut generated_label_count).unwrap();
+                generated_label_count += 1;
+                all_existing_names.push(gen_name.clone());
+                equ_map.insert(name.to_string(), gen_name);
+            }
+
+            // replace local label calls and equ assigned variables
+            for (old_label, generated_label) in &label_map {
+                owned_line = owned_line.replace(old_label, generated_label);
+            }
+            for (old_name, new_name) in &equ_map {
+                owned_line = owned_line.replace(old_name, new_name);
+            }
+            
+            // check if set assignment variable existed outside of macro
+            if owned_line.contains(" SET ") {
+                let (name, _) = owned_line.split_once(" SET ").unwrap();
+                if !found_set_names.contains(&name.to_string()) {
+                    let gen_name = generate_label_name(&all_existing_names, &mut generated_label_count).unwrap();
+                    generated_label_count += 1;
+                    all_existing_names.push(gen_name.clone());
+                    set_map.insert(name.to_string(), gen_name);
+                }
+            }
+            for (old_name, new_name) in &set_map {
+                owned_line = owned_line.replace(old_name, new_name);
+            }
+        }
+        handled_code.push(owned_line.to_string());
+    }
+    Ok(handled_code)
+}
+
+fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u32) -> Result<String, &'static str> {
+    loop {
+        let label_char = char::from_u32((*generated_label_count / 10000) as u32 + 'A' as u32).unwrap();
+        let label_num = (*generated_label_count % 10000) as u32;
+
+        if label_char.eq(&'[') {
+            return Err("Exceeded maximum amount of local labels!")
+        }
+        let new_label = format!("{}{}", label_char, label_num);
+        if !taken_names.contains(&new_label) {
+            return Ok(new_label)
+        }
+        *generated_label_count += 1;
+    }
 }
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
@@ -444,6 +593,51 @@ mod tests {
     }
 
     #[test]
+    fn labels_in_macros() {
+        let code = convert_input(vec![MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END, MACRO_START, "LOOP:", "MOV A,B", "JMP LOOP", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[0], "A0:");
+        assert_eq!(ppc[2], "JMP A0");
+        assert_eq!(ppc[3], "A1:");
+
+        let code = convert_input(vec!["@LAB:", "MOV A,B", MACRO_START, "@LAB: JMP @LAB", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[0], "@LAB:");
+        assert_eq!(ppc[2], "A0: JMP A0");
+
+        let code = convert_input(vec!["GLOB: MOV A,B", MACRO_START, "GLOB2::", "NOP", "JMP GLOB2", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "GLOB2:");
+        assert_eq!(ppc[3], "JMP GLOB2");
+
+        let code = convert_input(vec!["A0: MOV A,B", MACRO_START, "LAB:", "MOV A,B", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "A1:");
+
+        let code = convert_input(vec!["A2: JMP A1", MACRO_START, "LAB:", "JMP LAB", MACRO_END, "A0:", "MOV A,B"]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "A1:");
+    }
+
+    #[test]
+    fn variables_in_macros() {
+        let code = convert_input(vec!["VAL EQU 6", MACRO_START, "VAL EQU 8", "DB VAL", MACRO_END, "JMP VAL"]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert!(ppc[0].contains("VAL"));
+        assert_eq!(ppc[1], "A0 EQU 8");
+        assert_eq!(ppc[2], "DB A0");
+        assert!(ppc[3].contains("VAL"));
+
+        let code = convert_input(vec!["VAL SET 5", MACRO_START, "VAL SET 8", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert!(ppc[1].eq("VAL SET 8"));
+
+        let code = convert_input(vec!["TEST SET 5", MACRO_START, "VAL SET 8", MACRO_END]);
+        let ppc = handle_macro_locals(&code).unwrap();
+        assert_eq!(ppc[1], "A0 SET 8");
+    }
+
+    #[test]
     fn valid_labels() {
         let code = convert_input(vec!["label:", "MOV A,B", " @LAB:", "test:", "MOV A,B"]);
         let mut labels = HashMap::new();
@@ -539,7 +733,7 @@ mod tests {
             "ENDM",
             "",
             "macr0 input",
-            "IF NOM",
+            "IF 1",
             "EI",
             "ENDIF",
             "END",
