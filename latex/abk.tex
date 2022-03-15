@@ -1,0 +1,25 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Descr:       Vorlage für Berichte der DHBW-Karlsruhe, Datei mit Abkürzungen
+%% Author:      Prof. Dr. Jürgen Vollmer, vollmer@dhbw-karlsruhe.de
+%% $Id: abk.tex,v 1.4 2017/10/06 14:02:03 vollmer Exp $
+%% -*- coding: utf-8 -*-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter*{Abkürzungsverzeichnis}                   % chapter*{..} -->   keine Nummer, kein "Kapitel"
+						         % Nicht ins Inhaltsverzeichnis
+% \addcontentsline{toc}{chapter}{Akürzungsverzeichnis}   % Damit das doch ins Inhaltsverzeichnis kommt
+
+% Hier werden die Abkürzungen definiert
+\begin{acronym}[DHBW]
+  % \acro{Name}{Darstellung der Abkürzung}{Langform der Abkürzung}
+ \acro{Abk}[Abk.]{Abkürzung}
+
+ % Folgendes benutzen, wenn der Plural einer Abk. benöigt wird
+ % \newacroplural{Name}{Darstellung der Abkürzung}{Langform der Abkürzung}
+ \newacroplural{Abk}[Abk-en]{Abkürzungen}
+
+ \acro{H2O}[\ensuremath{H_2O}]{Di-Hydrogen-Monoxid}
+
+ % Wenn neicht benutzt, erscheint diese Abk. nicht in der Liste
+ \acro{NUA}{Not Used Acronym}
+\end{acronym}
