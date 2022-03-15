@@ -1,0 +1,73 @@
+
+\documentclass[
+    a4paper,
+    11pt
+]{report}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\usepackage{minted}
+\usepackage{xcolor}
+
+\newcommand{\Autor}{Felix Hirschel, Moritz Gutfleisch und Nico Thomas}
+\author{Hirschel, Felix \and Gutfleisch, Moritz \and Thomas, Nico}
+\newcommand{\MatrikelNummer}{4711}
+\newcommand{\Kursbezeichnung}{Tinf19B1, Tinf19B4}
+
+\newcommand{\Titel}{\LaTeX-Vorlage für diverse Ausarbeitungen\\--\\oder so ähnlich}
+\newcommand{\AbgabeDatum}{1. April 2090}
+
+\newcommand{\Dauer}{12 Wochen}
+
+\newcommand{\Abschluss}{Bachelor of Science}
+
+\newcommand{\Studiengang}{Informatik}
+
+\newcommand{\Was}{Studienarbeit}
+
+\hypersetup{%%
+  pdfauthor={\Autor},
+  pdftitle={\Titel},
+  pdfsubject={\Was}
+}
+
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+\vspace*{-2cm}
+\FirmenLogoDeckblatt\hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
+{\Huge \Titel}\\[1cm]
+{\Huge\scshape \Was}\\[1cm]
+{\large für die Prüfung zum}\\[0.5cm]
+{\Large \Abschluss}\\[0.5cm]
+{\large des Studienganges \Studiengang}\\[0.5cm]
+{\large an der}\\[0.5cm]
+{\large Dualen Hochschule Baden-Württemberg Karlsruhe}\\[0.5cm]
+{\large von}\\[0.5cm]
+{\large\bfseries \Autor}\\[1cm]
+{\large Abgabedatum \AbgabeDatum}
+\vfill
+\end{center}
+\begin{tabular}{l@{\hspace{2cm}}l}
+Bearbeitungszeitraum	         & \Dauer 			\\
+Matrikelnummer	                 & \MatrikelNummer		\\
+Kurs			         & \Kursbezeichnung		\\
+Ausbildungsfirma	         & \FirmenName			\\
+			         & \FirmenStadt			\\
+Betreuer der Ausbildungsfirma	 & \BetreuerFirma		\\
+Gutachter der Studienakademie	 & \BetreuerDHBW		\\
+\end{tabular}
+\end{titlepage}
+
+\include{Inhalt/einleitung}
+\include{Inhalt/analyse}
+\include{Inhalt/design}
+\include{Inhalt/implementierung}
+\include{Inhalt/auswertung}
+
+\end{document}
