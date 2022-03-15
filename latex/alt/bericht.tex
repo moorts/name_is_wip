@@ -6,18 +6,31 @@
 
 \usepackage[utf8]{inputenc}
 
+\usepackage[
+	hyperref=true,
+    bibencoding=inputenc,
+    backend=bibtex,
+    style=numeric,
+	sorting=nty]{biblatex}
+
 \usepackage{hyperref}
 \usepackage{graphicx}
 
 \usepackage{minted}
 \usepackage{xcolor}
 
+\bibliography{bericht}
+
+\newcommand{\rust}[1]{\mintinline{rust}{#1}}
+
+\newcommand{\Emu}{WIP} % Name des Emulators
+
 \newcommand{\Autor}{Felix Hirschel, Moritz Gutfleisch und Nico Thomas}
 \author{Hirschel, Felix \and Gutfleisch, Moritz \and Thomas, Nico}
 \newcommand{\MatrikelNummer}{4711}
 \newcommand{\Kursbezeichnung}{Tinf19B1, Tinf19B4}
 
-\newcommand{\Titel}{\LaTeX-Vorlage für diverse Ausarbeitungen\\--\\oder so ähnlich}
+\newcommand{\Titel}{WebAssembly-basierter Intel 8080 Emulator}
 \newcommand{\AbgabeDatum}{1. April 2090}
 
 \newcommand{\Dauer}{12 Wochen}
@@ -28,6 +41,11 @@
 
 \newcommand{\Was}{Studienarbeit}
 
+\newcommand{\FirmenName}{SAP SE, Siemens AG}
+\newcommand{\FirmenStadt}{Walldorf, Karlsruhe}
+
+\newcommand{\BetreuerDHBW}{Prof. Dr. Kai Becher}
+
 \hypersetup{%%
   pdfauthor={\Autor},
   pdftitle={\Titel},
@@ -37,10 +55,11 @@
 
 \begin{document}
 
+
 \begin{titlepage}
 \begin{center}
 \vspace*{-2cm}
-\FirmenLogoDeckblatt\hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
+\hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
 {\Huge \Titel}\\[1cm]
 {\Huge\scshape \Was}\\[1cm]
 {\large für die Prüfung zum}\\[0.5cm]
@@ -58,16 +77,19 @@ Bearbeitungszeitraum	         & \Dauer 			\\
 Matrikelnummer	                 & \MatrikelNummer		\\
 Kurs			         & \Kursbezeichnung		\\
 Ausbildungsfirma	         & \FirmenName			\\
-			         & \FirmenStadt			\\
-Betreuer der Ausbildungsfirma	 & \BetreuerFirma		\\
 Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \end{tabular}
 \end{titlepage}
 
+\tableofcontents
+
 \include{Inhalt/einleitung}
+\include{Inhalt/grundlagen}
 \include{Inhalt/analyse}
 \include{Inhalt/design}
 \include{Inhalt/implementierung}
 \include{Inhalt/auswertung}
+
+\printbibliography
 
 \end{document}
