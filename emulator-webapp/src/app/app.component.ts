@@ -25,10 +25,8 @@ export class AppComponent implements AfterViewInit {
 
   ngAfterViewInit(): void {
     if (this.fileDialog != null) {
-      //this.fileDialog.nativeElement.onchange = this.handleFileSelect;
       this.renderer.listen(this.fileDialog.nativeElement, "change", e => this.handleFileSelect(this, e));
     }
-    console.log(this.fileDialog);
   }
 
   public onAssembleButtonPressed() {
