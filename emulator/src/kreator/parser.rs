@@ -48,7 +48,7 @@ impl Op {
 }
 
 pub fn eval(expression: &str) -> i32 {
-    to_expression_tree(tokenize(expression.to_string())).evaluate()
+    to_expression_tree(Tokenizer::new(&expression.to_string()).collect()).evaluate()
 }
 
 #[derive(Debug)]
