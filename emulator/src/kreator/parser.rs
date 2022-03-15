@@ -226,21 +226,21 @@ impl<'a> Iterator for Tokenizer<'a> {
                     }
                     if let Some(post) = self.chars.peek() {
                         return match post {
-                            'H' => Some(Token::Number(i32::from_str_radix(&num_str, 16).unwrap())),
-                            'O' | 'Q' => Some(Token::Number(i32::from_str_radix(&num_str, 8).unwrap())),
+                            'H' => {
+                                self.chars.next();
+                                Some(Token::Number(i32::from_str_radix(&num_str, 16).unwrap()))
+                            },
+                            'O' | 'Q' => {
+                                self.chars.next();
+                                Some(Token::Number(i32::from_str_radix(&num_str, 8).unwrap()))
+                            },
                             _ => Some(Token::Number(i32::from_str_radix(&num_str, 10).unwrap())),
                         }
                     }
-                    if let Some(post) = self.chars.next_if(|&x| x == 'H') {
-                        Some(Token::Number(i32::from_str_radix(&num_str, 16).unwrap()))
-                    } else if let Some(post) = self.chars.next_if(|&x| x == 'O' || x == 'Q') {
-                        Some(Token::Number(i32::from_str_radix(&num_str, 8).unwrap()))
-                    } else {
-                        match num_str.chars().last().unwrap() {
-                            'B' => Some(Token::Number(i32::from_str_radix(&num_str[..num_str.len()-1], 2).unwrap())),
-                            'D' => Some(Token::Number(i32::from_str_radix(&num_str[..num_str.len()-1], 10).unwrap())),
-                            _ => Some(Token::Number(i32::from_str_radix(&num_str, 10).unwrap())),
-                        }
+                    match num_str.chars().last().unwrap() {
+                        'B' => Some(Token::Number(i32::from_str_radix(&num_str[..num_str.len()-1], 2).unwrap())),
+                        'D' => Some(Token::Number(i32::from_str_radix(&num_str[..num_str.len()-1], 10).unwrap())),
+                        _ => Some(Token::Number(i32::from_str_radix(&num_str, 10).unwrap())),
                     }
                 }
                 _ => panic!(),
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn tokenizer() {
-        for x in 0..1000 {
+        for x in 0..0x1235 {
             let hex: &str = &format!("{:x}H", x);
             let oct: &str = &format!("{:o}O", x);
             let bin: &str = &format!("{:b}B", x);
