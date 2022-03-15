@@ -242,7 +242,8 @@ impl<'a> Iterator for Tokenizer<'a> {
                         'D' => Some(Token::Number(i32::from_str_radix(&num_str[..num_str.len()-1], 10).unwrap())),
                         _ => Some(Token::Number(i32::from_str_radix(&num_str, 10).unwrap())),
                     }
-                }
+                },
+                c if c.is_whitespace() => self.next(),
                 _ => panic!(),
             }
         } else {
