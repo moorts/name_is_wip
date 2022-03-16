@@ -1,0 +1,121 @@
+\chapter{Grundlagen}
+
+\section{Entwicklungsumgebung}
+
+\section{Rust}
+
+\section{WebAssembly}
+
+"WebAssembly is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei WebAssembly also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem WebAssembly eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen WASM und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach WebAssembly ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
+Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach WebAssembly zu übersetzen (bspw. C/C++, Rust, u.s.w).
+
+\section{Intel 8080}
+
+Das Folgende ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} gewonnen.
+
+\subsubsection{RAM und Stack}
+
+Im RAM (Arbeitsspeicher) liegt sowohl der Programmcode, als auch der Stack.
+Der Arbeitsspeicher des 8080 wird über 16-Bit Addressen angesprochen, hat also maximal 65536 (0x10000) verfügbare Addressen.
+
+Während der Ausführung eines Programmes zeigt der Program Counter (PC) auf die zunächst auszuführende Instruktion im Arbeitsspeicher und der Stack Pointer (SP) auf die Spitze des Stacks. Der Stack des 8080 wächst allerdings nach unten (Addressen sinken bei größerem Stack).
+Es ist nicht festgelegt, wo der Stack anfängt, der Programmierer muss den SP per Programm setzen. Der PC ist initial 0, außer der Entwickler setzt den Startpunkt manuell.
+
+\subsection{Register}
+
+Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf diese kann aufgrund der Nähe zum Prozessor schnell zugegriffen werden. Der 8080 hat 8 solcher Register.
+6 dieser Register können über Assembly angesteuert werden. Jedes Register speichert einen 8-Bit Wert, zudem können die Register paarweise angesprochen werden (als ein 16-Bit Wert).
+
+\begin{table}[h]
+    \centering
+    \caption{Intel 8080 Register, benachbarte Register können paarweise angesprochen werden}
+    \label{tab:regs}
+    \begin{tabular}{|c|c|}
+        \hline
+        W & Z \\\hline
+        B & C \\\hline
+        D & E \\\hline
+        H & L \\\hline
+    \end{tabular}
+\end{table}
+
+Außerdem gibt es ein weiteres Register, den Akkumulator, welches für arithmetische Operationen verwendet wird.
+
+
+\subsection{Flags}
+
+Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), dafür gibt sogenannte Flags. Diese werden in Hardware als 5 Flip-Flops realisiert, im Endeffekt sind es aber einfach Booleans. Es gibt die folgenden Flags:
+
+\begin{description}
+    \item[Zero] Letzte Operation hat 0 ergeben
+    \item[Carry] Bei der letzten Operation gab es Übertrag
+    \item[Sign] Das Ergebnis der letzten Operation war negativ
+    \item[Parity] Die Anzahl der Einsen im Ergebnis (Basis 2) war gerade
+    \item[Auxiliary Carry] Übertrag im vierten Bit % TODO: Formulate better
+\end{description}
+
+\subsection{Interrupts}
+
+\subsection{Assembly}
+
+Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Programme in Maschinensprache sind für Menschen jedoch schlecht lesbar, daher ist die typische Abstraktion über der Maschinensprache eines Prozessors die entsprechende Assembly-Syntax.
+Es folgt eine kurze Einführung in Intel 8080 Assembly.
+
+\subsubsection{Notation}
+
+\begin{table}[h]
+    \centering
+    \caption{Notation zur Beschreibung der Assembly-Instruktionen}
+    \label{tab:notation}
+    \begin{tabular}{l | l}
+        A & Wert im Akkumulator\\
+        B & Wert in Register A\\
+        BC & Wert in Registerpaar BC\\
+        $[HL]$ & Wert an Addresse HL
+    \end{tabular}
+\end{table}
+
+
+\subsubsection{Registerzugriff}
+
+\begin{table}[h]
+    \centering
+    \caption{Beispielhafte Befehle zum Registerzugriff}
+    \label{tab:mov}
+    \begin{tabular}{l | l}
+        \asm{MOV B, A} & Setze B auf Wert in A\\
+        \asm{MOV M, A} & Setze $[HL]$ auf A\\
+        \asm{MOV A, M} & Setze A auf $[HL]$\\
+        \asm{MVI B, 0FFH} & Setze B auf 0xFF\\
+        \asm{LXI B, 1234H} & Setze BC auf 0x1234\\
+    \end{tabular}
+\end{table}
+
+\subsubsection{Verzweigungen}
+
+\begin{table}[h]
+    \centering
+    \caption{Beispielhafte Befehle für Verzweigungen}
+    \label{tab:jmp}
+    \begin{tabular}{l | l}
+        \asm{JMP 0FFH} & Setze PC auf 0xFF\\
+        \asm{JZ  0FFH} & Setze PC auf 0xFF falls Zero-Flag gesetzt ist \\
+        \asm{CALL 0FFH} & Speichere PC auf dem Stack und setze ihn auf 0xFF \\
+        \asm{RET} & Setze PC auf oberstes Stack Element (und entferne es) \\
+    \end{tabular}
+\end{table}
+
+\subsubsection{Arithmetik}
+
+Für arithmetische Operationen werden die Bytes als Zahlen als Zweierkomplementszahlen interpretiert
+
+\begin{table}[h]
+    \centering
+    \caption{Beispielhafte Befehle für arithmetische Operationen}
+    \label{tab:arith}
+    \begin{tabular}{l | l}
+        \asm{ADD B} & Addiere B auf Akkumulator\\
+        \asm{CMP B} & Setze Zero-Flag falls $A = B$, sonst setze Zero-Flag zurück\\
+        \asm{INR B} & Inkrementiere B um 1 \\
+    \end{tabular}
+\end{table}
