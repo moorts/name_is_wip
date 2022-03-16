@@ -1,79 +1,64 @@
-%&bericht
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Descr:       Vorlage für Berichte der DHBW-Karlsruhe
-%% Author:      Prof. Dr. Jürgen Vollmer, juergen.vollmer@dhbw-karlsruhe.de
-%% $Id: bericht.tex,v 1.25 2020/03/13 15:07:45 vollmer Exp $
-%%  -*- coding: utf-8 -*-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[
-   ngerman          % neue deutsche Rechtschreibung
-  ,a4paper          % Papiergrösse
-% ,twoside          % Zweiseitiger Druck (rechts/links)
-% ,10pt             % Schriftgrösse
-  ,11pt
-% ,12pt
-  ,pdftex
-%  ,disable         % Todo-Markierungen auschalten
+    ngerman,
+    a4paper,
+    11pt
 ]{report}
 
-% Bitte die Codierung Ihrer Dateien auswählen:
-% \usepackage[latin1]{inputenc}    % Für UNIX mit ISO-LATIN-codierten Dateien
-% \usepackage[applemac]{inputenc}  % Für Apple Mac
-% \usepackage[ansinew]{inputenc}   % Für Microsoft Windows
-\usepackage[utf8]{inputenc}        % UTF-8 codierte Dateien
-                                   % Dieses Dokument ist unter Unix erstellt, daher
-                                   % wird diese Input-Codierung benutzt.
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
 
-\usepackage{bericht}
+\usepackage{fancyhdr}
 
-%% ACHTUNG, wenn man eine eigene Formatdatei (bericht.fmt) benutzt, werden Änderungen an bericht.sty
-%% erst wirksam, wenn die Format-Datei neu erzeugt wurde!!!
-%% Genauer alle Änderungen, die textuell vor der nächsten Zeile ".... endofdump...." stehen
-%% werden erst wirksam, wenn die Formatdatei neu erzeugt wurde
-\csname endofdump\endcsname
+\usepackage{csquotes}
+\usepackage{mdframed}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Angaben zur Arbeit
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{titlesec}
+\titleformat{\chapter}[hang]
+  {\normalfont\huge\bfseries}{\thechapter}{10pt}{}
+
+\usepackage[
+	hyperref=true,
+    bibencoding=inputenc,
+    backend=bibtex,
+    style=numeric,
+	sorting=nty]{biblatex}
+
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage[german]{cleveref}
+\usepackage{graphicx}
+
+\usepackage{minted}
+\usepackage{xcolor}
+
+\bibliography{bericht}
+
+\newcommand{\rust}[1]{\mintinline{rust}{#1}}
+\newcommand{\asm}[1]{\mintinline{gas}{#1}}
+
+\newcommand{\Emu}{WIP} % Name des Emulators
 
 \newcommand{\Autor}{Felix Hirschel, Moritz Gutfleisch und Nico Thomas}
 \author{Hirschel, Felix \and Gutfleisch, Moritz \and Thomas, Nico}
 \newcommand{\MatrikelNummer}{4711}
 \newcommand{\Kursbezeichnung}{Tinf19B1, Tinf19B4}
 
-
-\newcommand{\FirmenName}{Firmenname}
-\newcommand{\FirmenStadt}{Stadt}
-%\newcommand{\FirmenLogoDeckblatt}{\fbox{\includegraphics[width=3cm]{lion}}}
-
-% Falls es kein Firmenlogo gibt:
-%  \newcommand{\FirmenLogoDeckblatt}{}
-
-\newcommand{\BetreuerFirma}{Titel Vorname Nachname}
-\newcommand{\BetreuerDHBW}{Titel Vorname Nachname}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Wird auf dem Deckblatt und in der Erklärung benutzt:
-\newcommand{\Was}{Studienarbeit}
-%\newcommand{\Was}{Projektrarbeit}
-%\newcommand{\Was}{Studienarbeit}
-%\newcommand{\Was}{Bachleorarbeit}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\newcommand{\Titel}{\LaTeX-Vorlage für diverse Ausarbeitungen\\--\\oder so ähnlich}
+\newcommand{\Titel}{\Emu: WebAssembly-basierter Intel 8080 Emulator}
 \newcommand{\AbgabeDatum}{1. April 2090}
 
 \newcommand{\Dauer}{12 Wochen}
 
-% \newcommand{\Abschluss}{Bachelor of Engineering}
 \newcommand{\Abschluss}{Bachelor of Science}
 
 \newcommand{\Studiengang}{Informatik}
-% \newcommand{\Studiengang}{Informatik / Angewandte Informatik}
+
+\newcommand{\Was}{Studienarbeit }
+
+\newcommand{\FirmenName}{SAP SE, Siemens AG}
+\newcommand{\FirmenStadt}{Walldorf, Karlsruhe}
+
+\newcommand{\BetreuerDHBW}{Prof. Dr. Kai Becher}
 
 \hypersetup{%%
   pdfauthor={\Autor},
@@ -81,30 +66,19 @@
   pdfsubject={\Was}
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagestyle{fancy}
+\fancyhf{}
 
-% Wenn \includeonly{..} benutzt wird, werden nur diese Kaptitel ausgegeben.
-%\includeonly{
-%  abk
-% ,kapitel1
-% ,kapitel2
-% ,changelog
-%}
+\rhead{\leftmark}
+\lhead{\Emu}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Benutzt man das "biblatex"-Paket, dann muß das hier stehen:
-% siehe auch die mit BIBLATEX markierten Zeilen in bericht.sty
-\bibliography{bericht}
 
 \begin{document}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{titlepage}
 \begin{center}
 \vspace*{-2cm}
-\FirmenLogoDeckblatt\hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
+\hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
 {\Huge \Titel}\\[1cm]
 {\Huge\scshape \Was}\\[1cm]
 {\large für die Prüfung zum}\\[0.5cm]
@@ -122,71 +96,21 @@ Bearbeitungszeitraum	         & \Dauer 			\\
 Matrikelnummer	                 & \MatrikelNummer		\\
 Kurs			         & \Kursbezeichnung		\\
 Ausbildungsfirma	         & \FirmenName			\\
-			         & \FirmenStadt			\\
-Betreuer der Ausbildungsfirma	 & \BetreuerFirma		\\
 Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \end{tabular}
 \end{titlepage}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\include{erklaerung}
 
-\input{erklaerung.tex}
+\tableofcontents
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{abstract}
-Dieses \LaTeX-Dokument kann als Vorlage für einen Praxis- oder Projektbericht, eine Studien- oder
-Bachelorarbeit dienen.
-
-Zusammengestellt von Prof.\,Dr.\,Jürgen Vollmer \email{juergen.vollmer@dhbw-karlsruhe.de}\\
-\url{https://www.karlsruhe.dhbw.de}. Die jeweils aktuellste Version dieses \LaTeX-Paketes ist immer
-auf der \emph{FAQ-Seite} des Studiengangs Informatik zu finden:
-\url{https://www.karlsruhe.dhbw.de/inf/studienverlauf-organisatorisches.html} $\to$ \emph{Formulare und Vorlagen}.
-
-\centering Stand \verb+$Date: 2020/03/13 15:07:45 $+
-\end{abstract}
-
-\newpage
-\tableofcontents           % Inhaltsverzeichnis hier ausgeben
-\listoffigures             % Liste der Abbildungen
-\listoftables              % Liste der Tabellen
-\lstlistoflistings         % Liste der Listings
-\listofequations           % Liste der Formeln
-
-% Jetzt kommt der "eigentliche" Text
-\include{abk}              % Abkürzungsverzeichnis
 \include{Inhalt/einleitung}
+\include{Inhalt/grundlagen}
 \include{Inhalt/analyse}
 \include{Inhalt/design}
 \include{Inhalt/implementierung}
 \include{Inhalt/auswertung}
 
-% Ab hier beginnt der Anhang
-\appendix
-\addcontentsline{toc}{chapter}{Anhang}
-
-\addcontentsline{toc}{chapter}{Index}
-\printindex
-
-\addcontentsline{toc}{chapter}{Literaturverzeichnis}
-
-% Haben Sie das "biblatex"-Paket nicht installiert, benutzen Sie folgendes:
-% Ohne das "biblatex"-Paket (s. bericht.sty) produziert folgendes
-% "deutsche" Zitate in Literaturverzeichnissen gemaß der Norm DIN 1505,
-% Teil 2 vom Jan. 1984.
-% Die Zitatmarken werden alphabetisch nach Verfassern
-% sortiert und sind durch abgekürzte Verfasserbuchstaben plus
-% Erscheinungsjahr in eckigen Klammern gekennzeichnet.
-
-% \bibliographystyle{alphadin}
-% \bibliography{bericht}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
-% BIBLATEX
-% Benutzt man das "biblatex"-Paket, muß man folgendes schreiben:
-\def\refname{Literaturverzeichnis}
 \printbibliography
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
-
 
 \end{document}
