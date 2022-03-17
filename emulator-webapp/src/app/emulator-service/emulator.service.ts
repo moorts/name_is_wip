@@ -16,7 +16,11 @@ export class EmulatorService {
   private _emulatorMemory: Uint8Array = new Uint8Array();
   private _step: number = 0;
   private _loop: number = 0;
-  private _interval: number = 10;
+
+  // Total speed: _stepsPerInterval * (1000 / _interval) instructions per second
+  private _interval: number = 10; // Interval in milliseconds
+  private _stepsPerInterval: number = 1; // How many CPU steps to perform per interval (-> allows emulator to perform faster than 1000 i/s)
+  private _skipOnStepInterval: number = 1; // OnStep (updates UI for RAM etc.) will only be executed every _skipOnStepInterval steps to improve performance
 
   public get memory(): Uint8Array {
     if (this._running && this._wasmContext) {
@@ -36,6 +40,10 @@ export class EmulatorService {
 
   public get halted() {
     return !this._emulator?.running;
+  }
+
+  public get step() {
+    return this._step;
   }
 
   constructor() {
@@ -81,26 +89,30 @@ export class EmulatorService {
     }
   }
 
-  public step() {
+  public doStep() {
     if (!this.running || !this.paused || this.halted) return;
     this.cpuStep();
   }
 
   private startLoop() {
-    this._loop = window.setInterval(() => this.cpuStep(), this._interval);
+    this._loop = window.setInterval(() => {
+      for (let i = 0; i < this._stepsPerInterval; i++) {
+        this.cpuStep();
+      }
+    }, this._interval);
   }
 
   private cpuStep() {
     if (!this._emulator) return;
 
     this._emulator.execute_next();
-    this.logEmulatorStatus();
     this._step += 1;
-    this.onStep.emit();
+
+    if (this._step % this._skipOnStepInterval == 0)
+      this.onStep.emit();
 
     if (!this._emulator.running) {
       console.log("CPU halted");
-      //this.logEmulatorStatus();
       window.clearInterval(this._loop);
     }
   }

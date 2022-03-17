@@ -56,7 +56,7 @@ export class AppComponent implements AfterViewInit {
   }
 
   public onStepButtonPressed() {
-    this.emulatorService.step();
+    this.emulatorService.doStep();
   }
 
   private handleFileSelect (app: AppComponent, e: any) {
