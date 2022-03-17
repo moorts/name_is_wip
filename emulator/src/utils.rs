@@ -25,3 +25,25 @@ pub fn load_asm_file(emulator: &mut Emulator, path: &str) -> io::Result<()> {
     emulator.load_ram(mc, 0);
     Ok(())
 }
+
+pub fn load_asm_file_with_origins(emulator: &mut Emulator, path: &str) -> io::Result<()> {
+    let mut file = File::open(path)?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf)?;
+    let asmblr = Assembler::new(&buf);
+    let origins = asmblr.get_origins();
+    let mc = asmblr.assemble().expect("Fuck");
+    if origins.is_empty() {
+        emulator.load_ram(mc, 0);
+    } else {
+        let mut last_idx = 0;
+        let mut curr_addr = 0;
+        for (idx, addr) in origins {
+            emulator.load_ram(mc[last_idx..idx as usize].to_vec(), curr_addr);
+            last_idx = idx as usize;
+            curr_addr = addr;
+        }
+        emulator.load_ram(mc[last_idx..].to_vec(), curr_addr);
+    }
+    Ok(())
+}

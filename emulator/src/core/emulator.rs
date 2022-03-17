@@ -645,7 +645,7 @@ mod devices;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::load_asm_file;
+    use crate::utils::*;
     use std::io;
 
     #[test]
@@ -682,6 +682,19 @@ mod tests {
         assert_eq!(emu.reg['h'], 69);
 
         // TODO: Add another test for non RST instruction interrupts
+        Ok(())
+    }
+
+    #[test]
+    fn origins() -> io::Result<()> {
+        let mut emu = Emulator::new();
+        load_asm_file_with_origins(&mut emu, "./src/core/asm/origins.s")?;
+        assert_eq!(emu.ram[0], 0x06);
+        assert_eq!(emu.ram[1], 0x01);
+        assert_eq!(emu.ram[0x20], 0x06);
+        assert_eq!(emu.ram[0x21], 0x02);
+        assert_eq!(emu.ram[0x40], 0x06);
+        assert_eq!(emu.ram[0x41], 0x03);
         Ok(())
     }
 }
