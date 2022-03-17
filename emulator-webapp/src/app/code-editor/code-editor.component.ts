@@ -15,7 +15,12 @@ export class CodeEditorComponent implements OnInit {
   @Output() pauseAction: EventEmitter<void> = new EventEmitter<void>();
   @Output() stopAction: EventEmitter<void> = new EventEmitter<void>();
 
-  public code: string = 'MOV A, B';
+  public code: string = `MVI B, 10
+ADD B
+DCR B
+JNZ 2
+HLT
+END`;
 
   editorOptions = {theme: 'vs-dark', language: ''};
 

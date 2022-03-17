@@ -18,7 +18,7 @@ export class AppComponent implements AfterViewInit {
 
   constructor(private readonly matIconRegistry: MatIconRegistry,
               private readonly domSanitizer: DomSanitizer,
-              private readonly emulatorService: EmulatorService,
+              public readonly emulatorService: EmulatorService,
               private readonly renderer: Renderer2) {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
   }
@@ -35,6 +35,22 @@ export class AppComponent implements AfterViewInit {
 
   public onFileOpenButtonPressed() {
     this.fileDialog?.nativeElement.click();
+  }
+
+  public onPlayButtonPressed() {
+    this.emulatorService.start();
+  }
+
+  public onStopButtonPressed() {
+    this.emulatorService.stop();
+  }
+
+  public onPauseButtonPressed() {
+    this.emulatorService.togglePause();
+  }
+
+  public onStepButtonPressed() {
+    this.emulatorService.step();
   }
 
   private handleFileSelect (app: AppComponent, e: any) {
