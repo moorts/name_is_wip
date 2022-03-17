@@ -4,6 +4,8 @@ mod kreator;
 mod utils;
 
 use wasm_bindgen::prelude::*;
+
+use crate::core::emulator::Emulator;
 use crate::kreator::assembler::Assembler;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -38,4 +40,11 @@ pub fn assemble(code: &str) -> Vec<u8> {
     }
     
     return vec![];
+}
+
+#[wasm_bindgen]
+pub fn createEmulator(memory: Vec<u8>) -> Emulator {
+    let mut emu = Emulator::new();
+    emu.load_ram(memory, 0);
+    return emu;
 }
