@@ -14,6 +14,8 @@ pub trait RAM: Index<u16, Output=u8> + IndexMut<u16, Output=u8> {
     fn size(&self) -> usize;
 
     fn load_vec(&mut self, vec: Vec<u8>, start: u16);
+    
+    fn get_ptr(&self) -> *const u8;
 }
 
 impl RAM for DefaultRam {
@@ -27,6 +29,10 @@ impl RAM for DefaultRam {
             self[idx] = byte;
             idx += 1;
         }
+    }
+    
+    fn get_ptr(&self) -> *const u8 {
+        return &self.mem as *const u8;
     }
 }
 

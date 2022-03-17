@@ -34,6 +34,10 @@ impl Emulator {
             interrupts_enabled: true, // INTE
         }
     }
+    
+    pub fn get_ram_ptr(&self) -> *const u8 {
+        self.ram.get_ptr()
+    }
 
     fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
         match opcode {

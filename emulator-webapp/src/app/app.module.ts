@@ -15,11 +15,13 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from "@angular/common/http";
 
 import { CodeEditorComponent } from './code-editor/code-editor.component';
+import { RamDisplayComponent } from './ram-display/ram-display.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    CodeEditorComponent
+    CodeEditorComponent,
+    RamDisplayComponent
   ],
   imports: [
     BrowserModule,

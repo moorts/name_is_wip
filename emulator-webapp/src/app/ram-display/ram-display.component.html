@@ -1,0 +1,16 @@
+<table>
+  <thead class="outer">
+    <th></th>
+    <td *ngFor="let in of range(width); let x = index">
+      {{"x"+x.toString(16).toUpperCase()}}
+    </td>
+  </thead>
+  <tbody>
+    <tr *ngFor="let in of range(height); let y = index">
+      <td class="outer" [id]="'row_' + y">000x</td>
+      <td *ngFor="let in of range(width); let x = index" [id]="'cell_' + x + '_' + y">
+        00
+      </td>
+    </tr>
+  </tbody>
+</table>

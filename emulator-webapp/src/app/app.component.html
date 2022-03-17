@@ -18,7 +18,9 @@
   </as-split-area>
   <as-split-area [minSize]="20">
     <mat-tab-group>
-      <mat-tab label="RAM"> Content 1 </mat-tab>
+      <mat-tab label="RAM">
+        <ram-display #ramDisplay></ram-display>
+      </mat-tab>
       <mat-tab label="CPU"> Content 2 </mat-tab>
       <mat-tab label="Peripherals"> Content 3 </mat-tab>
     </mat-tab-group>

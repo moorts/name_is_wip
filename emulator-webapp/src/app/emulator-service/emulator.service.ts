@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, EventEmitter } from '@angular/core';
 import init, { assemble, createEmulator, Emulator, InitOutput } from "emulator";
 
 @Injectable({
@@ -6,19 +6,21 @@ import init, { assemble, createEmulator, Emulator, InitOutput } from "emulator";
 })
 export class EmulatorService {
 
+  public onStep: EventEmitter<any> = new EventEmitter();
+
   private _wasmContext: InitOutput | undefined;
   private _initialMemory: Uint8Array = new Uint8Array();
   private _running: boolean = false;
   private _paused: boolean = false;
   private _emulator: Emulator | undefined;
+  private _emulatorMemory: Uint8Array = new Uint8Array();
   private _step: number = 0;
   private _loop: number = 0;
-  private _interval: number = 100;
+  private _interval: number = 10;
 
   public get memory(): Uint8Array {
-    if (this._running) {
-      // TODO: return emulator memory
-      return this._initialMemory;
+    if (this._running && this._wasmContext) {
+      return this._emulatorMemory;
     } else {
       return this._initialMemory;
     }
@@ -52,6 +54,8 @@ export class EmulatorService {
 
   public start() {
     this._emulator = createEmulator(this._initialMemory);
+    if (this._wasmContext)
+      this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr());
     this._step = 0;
     this._running = true;
     if (!this._paused) {
@@ -92,6 +96,7 @@ export class EmulatorService {
     this._emulator.execute_next();
     this.logEmulatorStatus();
     this._step += 1;
+    this.onStep.emit();
 
     if (!this._emulator.running) {
       console.log("CPU halted");

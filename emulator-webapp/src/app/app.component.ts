@@ -3,6 +3,7 @@ import { MatIconRegistry } from '@angular/material/icon';
 import { DomSanitizer } from '@angular/platform-browser';
 import { EmulatorService } from './emulator-service/emulator.service';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
+import { RamDisplayComponent } from './ram-display/ram-display.component';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +15,7 @@ export class AppComponent implements AfterViewInit {
   title = 'emulator-webapp';
 
   @ViewChild('codeEditor') codeEditor: CodeEditorComponent | undefined;
+  @ViewChild('ramDisplay') ramDisplay: RamDisplayComponent | undefined;
   @ViewChild('fileDialog') fileDialog: ElementRef | undefined;
 
   constructor(private readonly matIconRegistry: MatIconRegistry,
@@ -21,6 +23,9 @@ export class AppComponent implements AfterViewInit {
               public readonly emulatorService: EmulatorService,
               private readonly renderer: Renderer2) {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
+    emulatorService.onStep.subscribe(() => {
+      this.ramDisplay?.update();
+    });
   }
 
   ngAfterViewInit(): void {
@@ -31,6 +36,7 @@ export class AppComponent implements AfterViewInit {
 
   public onAssembleButtonPressed() {
     this.emulatorService.assemble(this.codeEditor?.code ?? "");
+    this.ramDisplay?.update();
   }
 
   public onFileOpenButtonPressed() {

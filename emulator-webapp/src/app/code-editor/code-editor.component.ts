@@ -15,11 +15,10 @@ export class CodeEditorComponent implements OnInit {
   @Output() pauseAction: EventEmitter<void> = new EventEmitter<void>();
   @Output() stopAction: EventEmitter<void> = new EventEmitter<void>();
 
-  public code: string = `MVI B, 10
-ADD B
-DCR B
-JNZ 2
-HLT
+  public code: string = `LXI H, 0010H
+MOV M, L
+INX H
+JMP 2
 END`;
 
   editorOptions = {theme: 'vs-dark', language: ''};
