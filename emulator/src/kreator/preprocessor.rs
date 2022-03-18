@@ -694,9 +694,10 @@ mod tests {
 
         assert_eq!(Ok(labels), get_labels(&code));
 
-        let code = convert_input(vec!["ORG 5+5", "MVI B,10", "start: ADD B", "DCR B", "JNZ start", "MOV B,A", "HLT", "END"]);
+        let code = convert_input(vec!["ORG 5+5", "MVI B,10", "start: ADD B", "DCR B", "JNZ start", "MOV B,A", "ORG 0A1H", "test: HLT", "END"]);
         let mut labels = HashMap::new();
         labels.insert("start".to_string(), 12);
+        labels.insert("test".to_string(), 161);
 
         assert_eq!(Ok(labels), get_labels(&code));
     }
