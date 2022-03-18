@@ -8,6 +8,7 @@ const RAM_SIZE: usize = 0x4000;
 
 pub struct DefaultRam {
     mem: [u8; RAM_SIZE],
+    lastChange: u16
 }
 
 pub trait RAM: Index<u16, Output=u8> + IndexMut<u16, Output=u8> {
@@ -16,6 +17,8 @@ pub trait RAM: Index<u16, Output=u8> + IndexMut<u16, Output=u8> {
     fn load_vec(&mut self, vec: Vec<u8>, start: u16);
     
     fn get_ptr(&self) -> *const u8;
+    
+    fn get_last_changed_address(&self) -> u16;
 }
 
 impl RAM for DefaultRam {
@@ -34,6 +37,10 @@ impl RAM for DefaultRam {
     fn get_ptr(&self) -> *const u8 {
         return &self.mem as *const u8;
     }
+
+    fn get_last_changed_address(&self) -> u16 {
+        self.lastChange
+    }
 }
 
 impl DefaultRam {
@@ -47,7 +54,7 @@ impl DefaultRam {
      * RAM-Mirror: 4000-
      */
     pub fn new() -> Self {
-        Self { mem: [0; RAM_SIZE] }
+        Self { mem: [0; RAM_SIZE], lastChange: 0 }
     }
 
     pub fn load_file(&mut self, path: &str, start: u16) -> io::Result<()> {
@@ -68,6 +75,7 @@ impl Index<u16> for DefaultRam {
 
 impl IndexMut<u16> for DefaultRam {
     fn index_mut(&mut self, index: u16) -> &mut Self::Output {
+        self.lastChange = index;
         &mut self.mem[(index & 0x3fff) as usize]
     }
 }

@@ -46,6 +46,10 @@ export class EmulatorService {
     return this._step;
   }
 
+  public get emulator() {
+    return this._emulator;
+  }
+
   constructor() {
     this.initialize();
   }

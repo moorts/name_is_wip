@@ -24,7 +24,7 @@ export class AppComponent implements AfterViewInit {
               private readonly renderer: Renderer2) {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
     emulatorService.onStep.subscribe(() => {
-      this.ramDisplay?.update();
+      this.ramDisplay?.update(false);
     });
   }
 
@@ -36,7 +36,7 @@ export class AppComponent implements AfterViewInit {
 
   public onAssembleButtonPressed() {
     this.emulatorService.assemble(this.codeEditor?.code ?? "");
-    this.ramDisplay?.update();
+    this.ramDisplay?.update(true);
   }
 
   public onFileOpenButtonPressed() {
@@ -49,7 +49,7 @@ export class AppComponent implements AfterViewInit {
 
   public onStopButtonPressed() {
     this.emulatorService.stop();
-    this.ramDisplay?.update();
+    this.ramDisplay?.update(true);
   }
 
   public onPauseButtonPressed() {

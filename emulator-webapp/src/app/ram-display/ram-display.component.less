@@ -1,3 +1,32 @@
 .outer {
   background-color: #555555;
 }
+
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  overflow: hidden;
+  z-index: 1;
+}
+
+td, th {
+  cursor: pointer;
+  padding: 5px;
+  min-width: 20px;
+  position: relative;
+}
+
+td:hover::after {
+  background-color: #666666;
+  content: '\00a0';
+  height: 10000px;
+  left: 0;
+  position: absolute;
+  top: -5000px;
+  width: 100%;
+  z-index: -1;
+}
+
+tr:hover {
+  background-color: #666666;
+}

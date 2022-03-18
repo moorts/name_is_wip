@@ -35,8 +35,14 @@ impl Emulator {
         }
     }
     
+    // Used for frontend to access RAM directly
     pub fn get_ram_ptr(&self) -> *const u8 {
         self.ram.get_ptr()
+    }
+    
+    // Used for frontend to optimize RAM display
+    pub fn get_last_ram_change(&self) -> u16 {
+        self.ram.get_last_changed_address()
     }
 
     fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
