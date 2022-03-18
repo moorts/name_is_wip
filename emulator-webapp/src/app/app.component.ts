@@ -23,8 +23,10 @@ export class AppComponent implements AfterViewInit {
               public readonly emulatorService: EmulatorService,
               private readonly renderer: Renderer2) {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
-    emulatorService.onStep.subscribe(() => {
-      this.ramDisplay?.update(false);
+    emulatorService.onStep.subscribe((props) => {
+      if (props.ramChanged) {
+        this.ramDisplay?.update(false);
+      }
     });
   }
 

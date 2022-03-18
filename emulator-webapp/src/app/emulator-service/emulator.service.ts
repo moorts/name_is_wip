@@ -50,6 +50,36 @@ export class EmulatorService {
     return this._emulator;
   }
 
+  public get registers() {
+    if (!this._emulator || !this._wasmContext) return null;
+    const ptr = (<any>this._emulator.reg).ptr;
+    const memory = new Uint8Array(this._wasmContext.memory.buffer, ptr);
+
+    return {
+      b: memory[7],
+      c: memory[6],
+      d: memory[9],
+      e: memory[8],
+      h: memory[11],
+      l: memory[10],
+      a: memory[12]
+    };
+  }
+
+  public get largeRegisters() {
+    if (!this._emulator || !this._wasmContext) return null;
+    const ptr = (<any>this._emulator.reg).ptr;
+    const memory = new Uint16Array(this._wasmContext.memory.buffer, ptr);
+
+    return {
+      b: memory[3],
+      d: memory[4],
+      h: memory[5],
+      psw: memory[6],
+      sp: this._emulator.sp
+    };
+  }
+
   constructor() {
     this.initialize();
   }
@@ -109,38 +139,24 @@ export class EmulatorService {
   private cpuStep() {
     if (!this._emulator) return;
 
+    const prevMemAddress = this._emulator.get_last_ram_change();
+    const prevMem = this.memory[prevMemAddress];
+
     this._emulator.execute_next();
     this._step += 1;
 
-    if (this._step % this._skipOnStepInterval == 0)
-      this.onStep.emit();
+    const newMemAddress = this._emulator.get_last_ram_change();
+    const ramChanged = prevMemAddress != newMemAddress || this.memory[prevMemAddress] != prevMem;
+
+    if (this._step % this._skipOnStepInterval == 0) {
+      this.onStep.emit({
+        ramChanged: ramChanged
+      });
+    }
 
     if (!this._emulator.running) {
       console.log("CPU halted");
       window.clearInterval(this._loop);
     }
-  }
-
-  private logEmulatorStatus() {
-    if (!this._emulator || !this._wasmContext) return;
-    console.log("Emulator Step: " + this._step);
-    const ptr = (<any>this._emulator.reg).ptr;
-    const memory = new Uint8Array(this._wasmContext.memory.buffer);
-
-    const reg_b = memory[ptr + 7];
-    const reg_c = memory[ptr + 6];
-    const reg_d = memory[ptr + 9];
-    const reg_e = memory[ptr + 8];
-    const reg_h = memory[ptr + 11];
-    const reg_l = memory[ptr + 10];
-    const reg_a = memory[ptr + 12];
-
-    console.log("B: " + reg_b);
-    console.log("C: " + reg_c);
-    console.log("D: " + reg_d);
-    console.log("E: " + reg_e);
-    console.log("H: " + reg_h);
-    console.log("L: " + reg_l);
-    console.log("A: " + reg_a);
   }
 }
