@@ -354,11 +354,11 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
 
     let mut temp_labels = Vec::new();
     let mut labels = HashMap::new();
-    let mut mem_address: i32 = 0;
+    let mut mem_address: u16 = 0;
 
     for line in code {
         if line.starts_with("ORG ") {
-            mem_address = eval(line.split_once("ORG ").unwrap().1);
+            mem_address = eval(line.split_once("ORG ").unwrap().1) as u16;
         }
         if label_regex.is_match(&line) {
             let split = line.split(":").collect::<Vec<&str>>();
@@ -372,7 +372,7 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
                     if labels.contains_key(&new_label) {
                         return Err("label must not be assigned twice");
                     } else {
-                        labels.insert(String::from(new_label), mem_address as u16);
+                        labels.insert(String::from(new_label), mem_address);
                     }
                 }
                 let line = label_regex.replace(line, "").trim().to_string();
@@ -383,7 +383,7 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
                 if labels.contains_key(&new_label) {
                     return Err("label must not be assigned twice!");
                 } else {
-                    labels.insert(String::from(new_label), mem_address as u16);
+                    labels.insert(String::from(new_label), mem_address);
                 }
             }
             mem_address += get_byte_amount_of_line(&line);
@@ -411,20 +411,15 @@ fn get_opc_by_byte_size() -> (Vec<&'static str>, Vec<&'static str>, Vec<&'static
     ])
 }
 
-fn get_byte_amount_of_line(line: &String) -> i32 {
+fn get_byte_amount_of_line(line: &String) -> u16 {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
-    for opc in &one_byte_labels {
-        if line.starts_with(opc) {
+    if !line.trim().is_empty() {
+        let opc = line.trim().split(" ").next().unwrap();
+        if one_byte_labels.contains(&opc) {
             return 1;
-        }
-    }
-    for opc in &two_byte_labels {
-        if line.starts_with(opc) {
+        } else if two_byte_labels.contains(&opc) {
             return 2;
-        }
-    }
-    for opc in &three_byte_labels {
-        if line.starts_with(opc) {
+        } else if three_byte_labels.contains(&opc) {
             return 3;
         }
     }
