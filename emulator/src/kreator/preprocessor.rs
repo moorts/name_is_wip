@@ -344,7 +344,7 @@ fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u3
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
-    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_amount();
+    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let mut reserved_names = vec![
         "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM", "B", "C", "D", "H", "L", "A", "SP", "PSW"
     ];
@@ -395,7 +395,7 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
     Ok(labels)
 }
 
-fn get_opc_by_byte_amount() -> (Vec<&'static str>, Vec<&'static str>, Vec<&'static str>) {
+fn get_opc_by_byte_size() -> (Vec<&'static str>, Vec<&'static str>, Vec<&'static str>) {
     (vec![
         "NOP", "STAX", "INX", "INR", "DCR", "RLC", "DAD", "LDAX", "DCX", "RRC", "RAL", "RAR",
         "DAA", "STC", "CMC", "HLT", "SBB", "MOV", "ANA", "XRA", "ORA", "CMP", "RNZ", "POP",
@@ -412,7 +412,7 @@ fn get_opc_by_byte_amount() -> (Vec<&'static str>, Vec<&'static str>, Vec<&'stat
 }
 
 fn get_byte_amount_of_line(line: &String) -> i32 {
-    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_amount();
+    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     for opc in &one_byte_labels {
         if line.starts_with(opc) {
             return 1;
