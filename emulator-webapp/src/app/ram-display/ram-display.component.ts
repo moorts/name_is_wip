@@ -60,16 +60,12 @@ export class RamDisplayComponent implements AfterViewInit {
           } else {
             this._cells[index].innerText = "00";
           }
+          this._cells[index].style.backgroundColor = "";
+          this._cells[index].style.transition = "";
         }
       }
     } else {
       // Update only last changed cell
-      const changedIndex = this.emulatorService.emulator?.get_last_ram_change() ?? 0;
-      if (changedIndex < this._offset || changedIndex > this._offset + this.width * this.height) return;
-      const changedCell = this._cells[changedIndex - this._offset];
-
-      changedCell.innerText = data[changedIndex].toString(16).toUpperCase().padStart(2, '0');
-      changedCell.style.backgroundColor = "#FF0000";
 
       if (this._previousHighlightedCell) {
         const prevCell = this._previousHighlightedCell;
@@ -81,6 +77,13 @@ export class RamDisplayComponent implements AfterViewInit {
           }, 200);
         }, 10);
       }
+
+      const changedIndex = this.emulatorService.emulator?.get_last_ram_change() ?? 0;
+      if (changedIndex < this._offset || changedIndex >= this._offset + this.width * this.height) return;
+      const changedCell = this._cells[changedIndex - this._offset];
+
+      changedCell.innerText = data[changedIndex].toString(16).toUpperCase().padStart(2, '0');
+      changedCell.style.backgroundColor = "#FF0000";
 
       this._previousHighlightedCell = changedCell;
     }
