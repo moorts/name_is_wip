@@ -344,21 +344,22 @@ fn generate_label_name(taken_names: &Vec<String>, generated_label_count: &mut u3
 
 fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
     let label_regex = Regex::new(LABEL_DECL).unwrap();
-    let reserved_names = vec![
-        "STC", "CMC", "INR", "DCR", "CMA", "DAA", "NOP", "MOV", "STAX", "LDAX", "ADD", "ADC",
-        "SUB", "SBB", "ANA", "XRA", "ORA", "CMP", "RLC", "RRC", "RAL", "RAR", "PUSH", "POP", "DAD",
-        "INX", "DCX", "XCHG", "XTHL", "SPHL", "LXI", "MVI", "ADI", "ACI", "SUI", "SBI", "ANI",
-        "XRI", "ORI", "CPI", "STA", "LDA", "SHLD", "LHLD", "PCHL", "JMP", "JC", "JNC", "JZ", "JNZ",
-        "JP", "JM", "JPE", "JPO", "CALL", "CC", "CNC", "CZ", "CNZ", "CP", "CM", "CPE", "CPO",
-        "RET", "RC", "RNC", "RZ", "RNZ", "RM", "RP", "RPE", "RPO", "RST", "EI", "DI", "IN", "OUT",
-        "HLT", "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM", "B", "C", "D", "H", "L",
-        "A", "SP", "PSW"
+    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
+    let mut reserved_names = vec![
+        "ORG", "EQU", "SET", "END", "IF", "ENDIF", "MACRO", "ENDM", "B", "C", "D", "H", "L", "A", "SP", "PSW"
     ];
+    reserved_names.extend(&one_byte_labels);
+    reserved_names.extend(&two_byte_labels);
+    reserved_names.extend(&three_byte_labels);
+
     let mut temp_labels = Vec::new();
     let mut labels = HashMap::new();
-    let mut mem_address = 0;
+    let mut mem_address: u16 = 0;
 
     for line in code {
+        if line.starts_with("ORG ") {
+            mem_address = eval(line.split_once("ORG ").unwrap().1) as u16;
+        }
         if label_regex.is_match(&line) {
             let split = line.split(":").collect::<Vec<&str>>();
             let label = split[0].trim_start();
@@ -371,26 +372,58 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
                     if labels.contains_key(&new_label) {
                         return Err("label must not be assigned twice");
                     } else {
-                        labels.insert(String::from(new_label), mem_address as u16);
+                        labels.insert(String::from(new_label), mem_address);
                     }
                 }
-                mem_address += 1;
+                let line = label_regex.replace(line, "").trim().to_string();
+                mem_address += get_byte_amount_of_line(&line);
             }
         } else {
             while let Some(new_label) = temp_labels.pop() {
                 if labels.contains_key(&new_label) {
                     return Err("label must not be assigned twice!");
                 } else {
-                    labels.insert(String::from(new_label), mem_address as u16);
+                    labels.insert(String::from(new_label), mem_address);
                 }
             }
-            mem_address += 1;
+            mem_address += get_byte_amount_of_line(&line);
         }
     }
     if !temp_labels.is_empty() {
         return Err("labels must not point to an empty address!");
     }
     Ok(labels)
+}
+
+fn get_opc_by_byte_size() -> (Vec<&'static str>, Vec<&'static str>, Vec<&'static str>) {
+    (vec![
+        "NOP", "STAX", "INX", "INR", "DCR", "RLC", "DAD", "LDAX", "DCX", "RRC", "RAL", "RAR",
+        "DAA", "STC", "CMC", "HLT", "SBB", "MOV", "ANA", "XRA", "ORA", "CMP", "RNZ", "POP",
+        "PUSH", "RST", "RZ", "RET", "RNC", "RC", "RPO", "XTHL", "RPE", "PCHL", "XCHG", "RP",
+        "DI", "RM", "SPHL", "EI", "CMA", "ADD", "ADC", "SUB"
+    ],
+    vec![
+        "MVI", "ADI", "ACI", "OUT", "SUI", "IN", "SBI", "ANI", "XRI", "ORI", "CPI"
+    ],
+    vec![
+        "LXI", "SHLD", "LHLD", "STA", "LDA", "JNZ", "JMP", "CNZ", "JZ", "CZ", "CALL", "JNC",
+        "CNC", "JC", "CC", "JPO", "CPO", "JPE", "CPE", "JP", "CP", "JM", "CM"
+    ])
+}
+
+fn get_byte_amount_of_line(line: &String) -> u16 {
+    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
+    if !line.trim().is_empty() {
+        let opc = line.trim().split(" ").next().unwrap();
+        if one_byte_labels.contains(&opc) {
+            return 1;
+        } else if two_byte_labels.contains(&opc) {
+            return 2;
+        } else if three_byte_labels.contains(&opc) {
+            return 3;
+        }
+    }
+    0
 }
 
 fn get_macros(code: &Vec<String>) -> Result<(HashMap<String, Vec<String>>, HashMap<String, Vec<String>>), &'static str> {
@@ -644,6 +677,22 @@ mod tests {
         labels.insert(String::from("test"), 1);
         labels.insert(String::from("@LAB"), 1);
         labels.insert(String::from("label"), 0);
+
+        assert_eq!(Ok(labels), get_labels(&code));
+    }
+
+    #[test]
+    fn label_bytes() {
+        let code = convert_input(vec!["MVI B,10", "start: ADD B", "DCR B", "JNZ start", "MOV B,A", "HLT", "END"]);
+        let mut labels = HashMap::new();
+        labels.insert("start".to_string(), 2);
+
+        assert_eq!(Ok(labels), get_labels(&code));
+
+        let code = convert_input(vec!["ORG 5+5", "MVI B,10", "start: ADD B", "DCR B", "JNZ start", "MOV B,A", "ORG 0A1H", "test: HLT", "END"]);
+        let mut labels = HashMap::new();
+        labels.insert("start".to_string(), 12);
+        labels.insert("test".to_string(), 161);
 
         assert_eq!(Ok(labels), get_labels(&code));
     }
