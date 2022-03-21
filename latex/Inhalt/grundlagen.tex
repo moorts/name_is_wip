@@ -128,3 +128,10 @@ Für arithmetische Operationen werden die Bytes als Zahlen als Zweierkomplements
 \subsection{Interrupts}
 
 Durch sogenannte Interrupts kann die normale Ausführung der CPU unterbrochen werden. Interrupts sind externe Signale (bspw. von Peripheriegeräten), bei denen es sich um eine einzelne Instruktion handelt. Diese Instruktion wird ausgeführt, anschließend wird die normale Ausführung fortgesetzt. Meistens handelt es sich bei dieser Instruktion um eine \asm{RST}-Instruktion, eine Gruppe von Instruktionen, die \asm{CALL}s auf fixe Addressen realisieren. Dadurch kann der Entwickler den entsprechenden Code um die Interrupts zu bearbeiten an diesen Addressen ablegen, sodass er somit ausgeführt werden kann.
+
+Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{EI} (Enable Interrupts) bzw. \asm{DI} (Disable Interrupts) Anweisungen. Diese setzen eine interne Flagge, die bestimmt ob Interrupts zugelassen sind. Interrupts während diese Flagge \rust{false} ist werden ignoriert. Bei Programmstart ist dies der Fall.
+
+\subsection{Peripherie}
+
+Über sogenannte Ports regelt der Intel 8080 die Datenübergabe zwischen dem Chip und den angeschlossenen Geräten. 
+Es gibt 256 verfügbare Ports, die über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} schreibt liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
