@@ -21,6 +21,8 @@ Der Arbeitsspeicher des 8080 wird über 16-Bit Addressen angesprochen, hat also 
 Während der Ausführung eines Programmes zeigt der Program Counter (PC) auf die zunächst auszuführende Instruktion im Arbeitsspeicher und der Stack Pointer (SP) auf die Spitze des Stacks. Der Stack des 8080 wächst allerdings nach unten (Addressen sinken bei größerem Stack).
 Es ist nicht festgelegt, wo der Stack anfängt, der Programmierer muss den SP per Programm setzen. Der PC ist initial 0, außer der Entwickler setzt den Startpunkt manuell.
 
+Beim Stack handelt es sich um eine Datenstruktur im Arbeitsspeicher, die 2 zugreifende Operationen unterstützt: Pop und Push. Pop entfernt das oberste Element und lädt es in das angegebene Register, Push legt ein angegebenes Element auf den Stack. Die Operationen in-/dekrementieren automatisch den SP entsprechend.
+
 \subsection{Register}
 
 Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf diese kann aufgrund der Nähe zum Prozessor schnell zugegriffen werden. Der 8080 hat 8 solcher Register.
@@ -54,7 +56,6 @@ Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speic
     \item[Auxiliary Carry] Übertrag im vierten Bit % TODO: Formulate better
 \end{description}
 
-\subsection{Interrupts}
 
 \subsection{Assembly}
 
@@ -93,6 +94,10 @@ Es folgt eine kurze Einführung in Intel 8080 Assembly.
 
 \subsubsection{Verzweigungen}
 
+Bei Assembly gibt es grundlegend 2 Verzweigungstypen: Jumps und Calls. Bei Jumps handelt es sich um direkte Sprünge zu einer Addresse im Arbeitsspeicher. Die äquivalente in Programmiersprachen wie C ist der \rust{goto} Befehl.
+
+Calls hingegen entsprechen grob dem Funktionsaufruf aus higher-level Sprachen. Beim Aufruf einer Call-Instruktion wird die momentane Position im Code (der PC) auf dem Stack abgelegt, dies ist die sogenannte Return-Addresse, und anschließend ein Sprung zur angegebenen Addresse (zum Funktions-Code) ausgeführt. Die Return-Instruktion stellt das Ende einer Funktion dar, sie setzt den PC auf das oberste Element des Stacks, bei korrekter Verwendung ist dies die Return-Addresse.
+
 \begin{table}[h]
     \centering
     \caption{Beispielhafte Befehle für Verzweigungen}
@@ -119,3 +124,7 @@ Für arithmetische Operationen werden die Bytes als Zahlen als Zweierkomplements
         \asm{INR B} & Inkrementiere B um 1 \\
     \end{tabular}
 \end{table}
+
+\subsection{Interrupts}
+
+Durch sogenannte Interrupts kann die normale Ausführung der CPU unterbrochen werden. Interrupts sind externe Signale (bspw. von Peripheriegeräten), bei denen es sich um eine einzelne Instruktion handelt. Diese Instruktion wird ausgeführt, anschließend wird die normale Ausführung fortgesetzt. Meistens handelt es sich bei dieser Instruktion um eine \asm{RST}-Instruktion, eine Gruppe von Instruktionen, die \asm{CALL}s auf fixe Addressen realisieren. Dadurch kann der Entwickler den entsprechenden Code um die Interrupts zu bearbeiten an diesen Addressen ablegen, sodass er somit ausgeführt werden kann.
