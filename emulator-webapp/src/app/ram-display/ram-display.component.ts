@@ -4,7 +4,7 @@ import { EmulatorService } from '../emulator-service/emulator.service';
 @Component({
   selector: 'ram-display',
   templateUrl: './ram-display.component.html',
-  styleUrls: ['./ram-display.component.less']
+  styleUrls: ['./ram-display.component.scss']
 })
 export class RamDisplayComponent implements AfterViewInit {
 
@@ -23,6 +23,12 @@ export class RamDisplayComponent implements AfterViewInit {
   @ViewChild('registerH') registerH: ElementRef<HTMLInputElement> | undefined;
   @ViewChild('registerL') registerL: ElementRef<HTMLInputElement> | undefined;
   @ViewChild('registerA') registerA: ElementRef<HTMLInputElement> | undefined;
+
+  @ViewChild('registerLargeB') registerLargeB: ElementRef<HTMLInputElement> | undefined;
+  @ViewChild('registerLargeD') registerLargeD: ElementRef<HTMLInputElement> | undefined;
+  @ViewChild('registerLargeH') registerLargeH: ElementRef<HTMLInputElement> | undefined;
+  @ViewChild('registerLargePSW') registerLargePSW: ElementRef<HTMLInputElement> | undefined;
+  @ViewChild('registerLargeSP') registerLargeSP: ElementRef<HTMLInputElement> | undefined;
 
   constructor(public readonly emulatorService: EmulatorService) {
 
@@ -70,6 +76,29 @@ export class RamDisplayComponent implements AfterViewInit {
       if (this.registerH) this.registerH.nativeElement.value = registers.h.toString(16).toUpperCase().padStart(2, '0');
       if (this.registerL) this.registerL.nativeElement.value = registers.l.toString(16).toUpperCase().padStart(2, '0');
       if (this.registerA) this.registerA.nativeElement.value = registers.a.toString(16).toUpperCase().padStart(2, '0');
+    } else {
+      if (this.registerB) this.registerB.nativeElement.value = "00";
+      if (this.registerC) this.registerC.nativeElement.value = "00";
+      if (this.registerD) this.registerD.nativeElement.value = "00";
+      if (this.registerE) this.registerE.nativeElement.value = "00";
+      if (this.registerH) this.registerH.nativeElement.value = "00";
+      if (this.registerL) this.registerL.nativeElement.value = "00";
+      if (this.registerA) this.registerA.nativeElement.value = "00";
+    }
+
+    const largeRegisters = this.emulatorService.largeRegisters;
+    if (largeRegisters) {
+      if (this.registerLargeB) this.registerLargeB.nativeElement.value = largeRegisters.b.toString(16).toUpperCase().padStart(4, '0');
+      if (this.registerLargeD) this.registerLargeD.nativeElement.value = largeRegisters.d.toString(16).toUpperCase().padStart(4, '0');
+      if (this.registerLargeH) this.registerLargeH.nativeElement.value = largeRegisters.h.toString(16).toUpperCase().padStart(4, '0');
+      if (this.registerLargePSW) this.registerLargePSW.nativeElement.value = largeRegisters.psw.toString(16).toUpperCase().padStart(4, '0');
+      if (this.registerLargeSP) this.registerLargeSP.nativeElement.value = largeRegisters.sp.toString(16).toUpperCase().padStart(4, '0');
+    } else {
+      if (this.registerLargeB) this.registerLargeB.nativeElement.value = "0000";
+      if (this.registerLargeD) this.registerLargeD.nativeElement.value = "0000";
+      if (this.registerLargeH) this.registerLargeH.nativeElement.value = "0000";
+      if (this.registerLargePSW) this.registerLargePSW.nativeElement.value = "0000";
+      if (this.registerLargeSP) this.registerLargeSP.nativeElement.value = "0000";
     }
 
     const data = this.emulatorService.memory;

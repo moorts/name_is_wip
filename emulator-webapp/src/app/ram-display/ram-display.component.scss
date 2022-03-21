@@ -1,7 +1,3 @@
-.outer {
-  background-color: #555555;
-}
-
 table {
   border-spacing: 0;
   border-collapse: collapse;
@@ -17,7 +13,6 @@ td, th {
 }
 
 td:hover::after {
-  background-color: #666666;
   content: '\00a0';
   height: 10000px;
   left: 0;
@@ -27,12 +22,14 @@ td:hover::after {
   z-index: -1;
 }
 
-tr:hover {
-  background-color: #666666;
-}
-
 td {
   text-align: center;
+}
+
+.rowName {
+  width: 2.5rem;
+  max-width: 2.5rem;
+  overflow: hidden;
 }
 
 #ramPageInput {
@@ -44,7 +41,11 @@ td {
 #offsetControls {
   display: flex;
   justify-content: center;
-  height: 3rem;
+}
+
+.ramOffsetButton {
+  margin-bottom: 2rem;
+  margin-top: 0.5rem;
 }
 
 #mainRam {
@@ -64,12 +65,21 @@ td {
   margin-bottom: 0.25rem;
 }
 
+.registerHeader {
+  margin-left: 1rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
 .registerLabel {
-  width: 1rem;
+  width: 2.5rem;
   display: inline-block;
 }
 
 .registerInput {
-  background-color: #555555;
-  color: white;
+  width: 3rem;
+}
+
+.plsMarginTopThx {
+  margin-top: 1rem;
 }

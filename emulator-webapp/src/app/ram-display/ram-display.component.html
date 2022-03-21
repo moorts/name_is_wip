@@ -9,7 +9,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let in of range(height); let y = index">
-          <td class="outer" [id]="'row_' + y">000x</td>
+          <td class="outer rowName" [id]="'row_' + y">000x</td>
           <td *ngFor="let in of range(width); let x = index" [id]="'cell_' + x + '_' + y">
             00
           </td>
@@ -17,14 +17,15 @@
       </tbody>
     </table>
     <div id="offsetControls">
-      <button mat-raised-button class="icon-button" (click)="offset = offset - 1"><mat-icon>keyboard_arrow_left</mat-icon></button>
+      <button mat-raised-button class="icon-button ramOffsetButton" (click)="offset = offset - 1"><mat-icon>keyboard_arrow_left</mat-icon></button>
       <mat-form-field id="ramPageInput">
         <input type="text" matInput [(ngModel)]="offset"/>
       </mat-form-field>
-      <button mat-raised-button class="icon-button" (click)="offset = offset + 1"><mat-icon>keyboard_arrow_right</mat-icon></button>
+      <button mat-raised-button class="icon-button ramOffsetButton" (click)="offset = offset + 1"><mat-icon>keyboard_arrow_right</mat-icon></button>
     </div>
   </div>
   <div id="registers">
+    <h3 class="registerHeader">8-bit Registers:</h3>
     <div class="registerLine">
       <label class="registerLabel" for="registerB">B:</label>
       <input class="registerInput" #registerB id="registerB" type="text" readonly="true"/>
@@ -52,6 +53,27 @@
     <div class="registerLine">
       <label class="registerLabel" for="registerA">A:</label>
       <input class="registerInput" #registerA id="registerA" type="text" readonly="true"/>
+    </div>
+    <h3 class="registerHeader plsMarginTopThx">16-bit Registers:</h3>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerLargeB">B:</label>
+      <input class="registerInput" #registerLargeB id="registerLargeB" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerLargeD">D:</label>
+      <input class="registerInput" #registerLargeD id="registerLargeD" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerLargeH">H:</label>
+      <input class="registerInput" #registerLargeH id="registerLargeH" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerLargePSW">PSW:</label>
+      <input class="registerInput" #registerLargePSW id="registerLargePSW" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerLargeSP">SP:</label>
+      <input class="registerInput" #registerLargeSP id="registerLargeSP" type="text" readonly="true"/>
     </div>
   </div>
 </div>

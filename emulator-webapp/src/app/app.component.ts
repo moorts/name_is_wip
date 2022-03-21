@@ -4,11 +4,12 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { EmulatorService } from './emulator-service/emulator.service';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
 import { RamDisplayComponent } from './ram-display/ram-display.component';
+import { ThemeService } from './theme-service/theme.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.less']
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements AfterViewInit {
 
@@ -21,7 +22,8 @@ export class AppComponent implements AfterViewInit {
   constructor(private readonly matIconRegistry: MatIconRegistry,
               private readonly domSanitizer: DomSanitizer,
               public readonly emulatorService: EmulatorService,
-              private readonly renderer: Renderer2) {
+              private readonly renderer: Renderer2,
+              private readonly themeService: ThemeService) {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
     emulatorService.onStep.subscribe((props) => {
       if (props.ramChanged) {
@@ -60,6 +62,10 @@ export class AppComponent implements AfterViewInit {
 
   public onStepButtonPressed() {
     this.emulatorService.doStep();
+  }
+
+  public onThemeButtonPressed() {
+    this.themeService.toggleTheme();
   }
 
   private handleFileSelect (app: AppComponent, e: any) {

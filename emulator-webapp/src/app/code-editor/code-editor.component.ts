@@ -1,12 +1,13 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { MonacoEditorLoaderService, MonacoStandaloneCodeEditor } from '@materia-ui/ngx-monaco-editor';
+import { Component, EventEmitter, OnInit, Output, ViewChild } from '@angular/core';
+import { MonacoEditorComponent, MonacoEditorLoaderService, MonacoStandaloneCodeEditor } from '@materia-ui/ngx-monaco-editor';
 import { filter, take } from 'rxjs';
 import { EmulatorService } from '../emulator-service/emulator.service';
+import { ThemeService } from '../theme-service/theme.service';
 
 @Component({
   selector: 'code-editor',
   templateUrl: './code-editor.component.html',
-  styleUrls: ['./code-editor.component.less']
+  styleUrls: ['./code-editor.component.scss']
 })
 export class CodeEditorComponent implements OnInit {
 
@@ -15,21 +16,30 @@ export class CodeEditorComponent implements OnInit {
   @Output() pauseAction: EventEmitter<void> = new EventEmitter<void>();
   @Output() stopAction: EventEmitter<void> = new EventEmitter<void>();
 
+  @ViewChild("editorComponent") editorComponent: MonacoEditorComponent | undefined;
+
   public code: string = `LXI H, 0010H
 MOV M, L
 INX H
 JMP 2
 END`;
 
-  editorOptions = {theme: 'vs-dark', language: ''};
-
   constructor(private readonly monacoLoaderService: MonacoEditorLoaderService,
-              private readonly emulatorService: EmulatorService) {
+              private readonly emulatorService: EmulatorService,
+              private readonly themeService: ThemeService) {
     this.monacoLoaderService.isMonacoLoaded$.pipe(
       filter(isLoaded => isLoaded),
       take(1),
     ).subscribe(() => {
 
+    });
+
+    themeService.onThemeSwitched.subscribe(() => {
+      if (themeService.currentTheme == 'dark') {
+        monaco.editor.setTheme("i8080theme-dark");
+      } else {
+        monaco.editor.setTheme("i8080theme-light");
+      }
     });
    }
 
@@ -112,8 +122,24 @@ END`;
       }
     });
 
-    monaco.editor.defineTheme('i8080theme', {
+    monaco.editor.defineTheme('i8080theme-dark', {
       base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'comment', foreground: '#6A9955' },
+        { token: 'register', foreground: '#CE9178' },
+        { token: 'keyword', foreground: '#569CD6' },
+        { token: 'preprocessor', foreground: '#D16969' },
+        { token: 'label', foreground: '#AAAAAA' },
+        { token: 'number', foreground: '#93CEA8' },
+      ],
+      colors: {
+        'editor.foreground': '#FFFFFF'
+      }
+    });
+
+    monaco.editor.defineTheme('i8080theme-light', {
+      base: 'vs',
       inherit: true,
       rules: [
         { token: 'comment', foreground: '#6A9955' },
@@ -248,7 +274,7 @@ END`;
     let model = editor.getModel()
     if (model != null) {
       monaco.editor.setModelLanguage(model, "i8080");
-      monaco.editor.setTheme("i8080theme");
+      monaco.editor.setTheme("i8080theme-dark");
     }
 
   }

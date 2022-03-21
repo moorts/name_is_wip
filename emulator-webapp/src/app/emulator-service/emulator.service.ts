@@ -109,6 +109,7 @@ export class EmulatorService {
     if (!this._running) return;
 
     this._running = false;
+    this._emulator = undefined;
     window.clearInterval(this._loop);
   }
 
