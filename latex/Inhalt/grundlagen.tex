@@ -67,18 +67,23 @@ Es folgt eine kurze Einführung in Intel 8080 Assembly.
 
 \subsubsection{Notation}
 
+In den folgenden Sektionen werden einige Instruktionen aufgelistet und erklärt. Für diese Erklärungen verwenden wir eine einfache Notation um wichtige Konzepte darzustellen. Buchstaben repräsentieren die entsprechenden Register (Buchstabenpaare analog die Registerpaare), eckige Klammern bedeuten, dass das innere Register(paar) als Addresse interpretiert wird und der dortige Wert gemeint ist.
+Eine kurze Übersicht ist in \cref{tab:notation} auffindbar.
+
 \begin{table}[h]
     \centering
     \caption{Notation zur Beschreibung der Assembly-Instruktionen}
     \label{tab:notation}
     \begin{tabular}{l | l}
         A & Wert im Akkumulator\\
-        B & Wert in Register A\\
+        B & Wert in Register B\\
         BC & Wert in Registerpaar BC\\
         $[HL]$ & Wert an Addresse HL\\
+        10X & 10 in Zahlensystem X (H: Hex, D: Dez, O/Q: Oct, B: Bin)
     \end{tabular}
 \end{table}
 
+Zahlenliterale werden durch Suffixe den entsprechenden Zahlensystemen zugewiesen --- H für Hexadezimal (Basis 16), D für Dezimal (Basis 10), O/Q für Octal (Basis 8) und B für Binär (Basis 2).
 
 \subsubsection{Registerzugriff}
 
@@ -90,8 +95,8 @@ Es folgt eine kurze Einführung in Intel 8080 Assembly.
         \asm{MOV B, A} & Setze B auf Wert in A\\
         \asm{MOV M, A} & Setze $[HL]$ auf A\\
         \asm{MOV A, M} & Setze A auf $[HL]$\\
-        \asm{MVI B, 0FFH} & Setze B auf 0xFF\\
-        \asm{LXI B, 1234H} & Setze BC auf 0x1234\\
+        \asm{MVI B, 0FFH} & Setze B auf 0FFH\\
+        \asm{LXI B, 1234H} & Setze BC auf 1234H\\
     \end{tabular}
 \end{table}
 
@@ -106,16 +111,17 @@ Calls hingegen entsprechen grob dem Funktionsaufruf aus higher-level Sprachen. B
     \caption{Beispielhafte Befehle für Verzweigungen}
     \label{tab:jmp}
     \begin{tabular}{l | l}
-        \asm{JMP 0FFH} & Setze PC auf 0xFF\\
-        \asm{JZ  0FFH} & Setze PC auf 0xFF falls Zero-Flag gesetzt ist \\
-        \asm{CALL 0FFH} & Speichere PC auf dem Stack und setze ihn auf 0xFF \\
+        \asm{JMP 0FFH} & Setze PC auf 0FFH\\
+        \asm{JZ  0FFH} & Setze PC auf 0FFH falls Zero-Flag gesetzt ist \\
+        \asm{CALL 0FFH} & Speichere PC auf dem Stack und setze ihn auf FFH \\
         \asm{RET} & Setze PC auf oberstes Stack Element (und entferne es) \\
     \end{tabular}
 \end{table}
 
 \subsubsection{Arithmetik}
 
-Für arithmetische Operationen werden die Bytes als Zahlen als Zweierkomplementszahlen interpretiert
+Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als Zahlen im Zweierkomplement interpretiert. Die Ergebnisse der Operationen werden hauptsächlich im Akkumulator gespeichert --- Ausnahmen sind \zB Inkrementierungen der Register. Viele der Operationen bearbeiten auch die Flaggen, um Informationen über das Ergebnis zurückzugeben (siehe \cref{sec:flags} für Details).
+\Cref{tab:arith} zeigt einige arithmetische Anweisungen mit einer kurzen Erklärung.
 
 \begin{table}[h]
     \centering
