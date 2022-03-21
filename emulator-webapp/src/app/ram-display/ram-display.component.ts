@@ -66,7 +66,7 @@ export class RamDisplayComponent implements AfterViewInit {
     return this._offset;
   }
 
-  public update(fullUpdate: boolean) {
+  public update(fullUpdate: boolean, ramChanged: boolean = true) {
     const registers = this.emulatorService.registers;
     if (registers) {
       if (this.registerB) this.registerB.nativeElement.value = registers.b.toString(16).toUpperCase().padStart(2, '0');
@@ -101,45 +101,47 @@ export class RamDisplayComponent implements AfterViewInit {
       if (this.registerLargeSP) this.registerLargeSP.nativeElement.value = "0000";
     }
 
-    const data = this.emulatorService.memory;
+    if (ramChanged) {
+      const data = this.emulatorService.memory;
 
-    if (fullUpdate) {
-      // Update all cells
-      for(let y = 0; y < this.height; y++) {
-        for(let x = 0; x < this.width; x++) {
-          const index = y * this.width + x;
-          const dataIndex = this._offset * 16 + index;
-          if (data.length > dataIndex) {
-            this._cells[index].innerText = data[dataIndex].toString(16).toUpperCase().padStart(2, '0');
-          } else {
-            this._cells[index].innerText = "00";
+      if (fullUpdate) {
+        // Update all cells
+        for(let y = 0; y < this.height; y++) {
+          for(let x = 0; x < this.width; x++) {
+            const index = y * this.width + x;
+            const dataIndex = this._offset * 16 + index;
+            if (data.length > dataIndex) {
+              this._cells[index].innerText = data[dataIndex].toString(16).toUpperCase().padStart(2, '0');
+            } else {
+              this._cells[index].innerText = "00";
+            }
+            this._cells[index].style.backgroundColor = "";
+            this._cells[index].style.transition = "";
           }
-          this._cells[index].style.backgroundColor = "";
-          this._cells[index].style.transition = "";
         }
-      }
-    } else {
-      // Update only last changed cell
+      } else {
+        // Update only last changed cell
 
-      if (this._previousHighlightedCell) {
-        const prevCell = this._previousHighlightedCell;
-        window.setTimeout(() => {
-          prevCell.style.backgroundColor = "";
-          prevCell.style.transition = "background-color 0.2s linear";
+        if (this._previousHighlightedCell) {
+          const prevCell = this._previousHighlightedCell;
           window.setTimeout(() => {
-            prevCell.style.transition = "";
-          }, 200);
-        }, 10);
+            prevCell.style.backgroundColor = "";
+            prevCell.style.transition = "background-color 0.2s linear";
+            window.setTimeout(() => {
+              prevCell.style.transition = "";
+            }, 200);
+          }, 10);
+        }
+
+        const changedIndex = this.emulatorService.emulator?.get_last_ram_change() ?? 0;
+        if (changedIndex < this._offset * 16 || changedIndex >= this._offset * 16 + this.width * this.height) return;
+        const changedCell = this._cells[changedIndex - this._offset * 16];
+
+        changedCell.innerText = data[changedIndex].toString(16).toUpperCase().padStart(2, '0');
+        changedCell.style.backgroundColor = "#FF0000";
+
+        this._previousHighlightedCell = changedCell;
       }
-
-      const changedIndex = this.emulatorService.emulator?.get_last_ram_change() ?? 0;
-      if (changedIndex < this._offset * 16 || changedIndex >= this._offset * 16 + this.width * this.height) return;
-      const changedCell = this._cells[changedIndex - this._offset * 16];
-
-      changedCell.innerText = data[changedIndex].toString(16).toUpperCase().padStart(2, '0');
-      changedCell.style.backgroundColor = "#FF0000";
-
-      this._previousHighlightedCell = changedCell;
     }
   }
 
