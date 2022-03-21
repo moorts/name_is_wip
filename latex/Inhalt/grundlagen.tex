@@ -9,9 +9,12 @@
 "WebAssembly is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei WebAssembly also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem WebAssembly eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen WASM und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach WebAssembly ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
 Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach WebAssembly zu übersetzen (bspw. C/C++, Rust, u.s.w).
 
+In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
+
 \section{Intel 8080}
 
 Das Folgende ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} gewonnen.
+Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis unseres Emulators sind.
 
 \subsubsection{RAM und Stack}
 
@@ -42,9 +45,9 @@ Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf diese kann auf
 \end{table}
 
 Außerdem gibt es ein weiteres Register, den Akkumulator, welches für arithmetische Operationen verwendet wird.
+Die Abkürzung PSW (Processor Status Word), die im Bezug auf bestimmte Instruktionen verwendet wird, bezieht sich auf den Akkumulator kombiniert mit den Flags (siehe unten).
 
-
-\subsection{Flags}
+\subsection{Flags}\label{sec:flags}
 
 Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), dafür gibt sogenannte Flags. Diese werden in Hardware als 5 Flip-Flops realisiert, im Endeffekt sind es aber einfach Booleans. Es gibt die folgenden Flags:
 
@@ -72,7 +75,7 @@ Es folgt eine kurze Einführung in Intel 8080 Assembly.
         A & Wert im Akkumulator\\
         B & Wert in Register A\\
         BC & Wert in Registerpaar BC\\
-        $[HL]$ & Wert an Addresse HL
+        $[HL]$ & Wert an Addresse HL\\
     \end{tabular}
 \end{table}
 
@@ -135,3 +138,5 @@ Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{E
 
 Über sogenannte Ports regelt der Intel 8080 die Datenübergabe zwischen dem Chip und den angeschlossenen Geräten. 
 Es gibt 256 verfügbare Ports, die über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} schreibt liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
+
+So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Interrupt-Routine die aktuellen Pixelwerte mitgeteilt werden, wenn das Display ein Interrupt-Signal sendet.
