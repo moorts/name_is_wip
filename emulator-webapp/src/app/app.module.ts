@@ -7,6 +7,7 @@ import {MatGridListModule} from '@angular/material/grid-list';
 import {MatTabsModule} from '@angular/material/tabs';
 import {MatIconModule} from '@angular/material/icon';
 import {MatButtonModule} from '@angular/material/button';
+import {MatInputModule} from '@angular/material/input';
 
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -32,6 +33,7 @@ import { RamDisplayComponent } from './ram-display/ram-display.component';
     MatTabsModule,
     MatIconModule,
     MatButtonModule,
+    MatInputModule,
     AngularSplitModule,
     FormsModule,
     HttpClientModule

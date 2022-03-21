@@ -1,16 +1,57 @@
-<table>
-  <thead class="outer">
-    <th></th>
-    <td *ngFor="let in of range(width); let x = index">
-      {{"x"+x.toString(16).toUpperCase()}}
-    </td>
-  </thead>
-  <tbody>
-    <tr *ngFor="let in of range(height); let y = index">
-      <td class="outer" [id]="'row_' + y">000x</td>
-      <td *ngFor="let in of range(width); let x = index" [id]="'cell_' + x + '_' + y">
-        00
-      </td>
-    </tr>
-  </tbody>
-</table>
+<div id="outer">
+  <div id="mainRam">
+    <table>
+      <thead class="outer">
+        <th></th>
+        <td *ngFor="let in of range(width); let x = index">
+          {{"x"+x.toString(16).toUpperCase()}}
+        </td>
+      </thead>
+      <tbody>
+        <tr *ngFor="let in of range(height); let y = index">
+          <td class="outer" [id]="'row_' + y">000x</td>
+          <td *ngFor="let in of range(width); let x = index" [id]="'cell_' + x + '_' + y">
+            00
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="offsetControls">
+      <button mat-raised-button class="icon-button" (click)="offset = offset - 1"><mat-icon>keyboard_arrow_left</mat-icon></button>
+      <mat-form-field id="ramPageInput">
+        <input type="text" matInput [(ngModel)]="offset"/>
+      </mat-form-field>
+      <button mat-raised-button class="icon-button" (click)="offset = offset + 1"><mat-icon>keyboard_arrow_right</mat-icon></button>
+    </div>
+  </div>
+  <div id="registers">
+    <div class="registerLine">
+      <label class="registerLabel" for="registerB">B:</label>
+      <input class="registerInput" #registerB id="registerB" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerC">C:</label>
+      <input class="registerInput" #registerC id="registerC" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerD">D:</label>
+      <input class="registerInput" #registerD id="registerD" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerE">E:</label>
+      <input class="registerInput" #registerE id="registerE" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerH">H:</label>
+      <input class="registerInput" #registerH id="registerH" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerL">L:</label>
+      <input class="registerInput" #registerL id="registerL" type="text" readonly="true"/>
+    </div>
+    <div class="registerLine">
+      <label class="registerLabel" for="registerA">A:</label>
+      <input class="registerInput" #registerA id="registerA" type="text" readonly="true"/>
+    </div>
+  </div>
+</div>
