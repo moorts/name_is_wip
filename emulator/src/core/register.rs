@@ -1,6 +1,8 @@
-use std::ops::{Index, IndexMut, Range};
+use std::ops::{Index, IndexMut};
+use wasm_bindgen::prelude::wasm_bindgen;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 union Register {
     bytes: (u8, u8),
     value: u16,
@@ -12,6 +14,8 @@ impl Register {
     }
 }
 
+#[wasm_bindgen]
+#[derive(Clone, Copy)]
 pub struct RegisterArray {
     wz: Register,
     bc: Register, // Pair B (B and C)

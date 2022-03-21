@@ -1,0 +1,32 @@
+<mat-toolbar>
+  <span class="toolbar-title">Intel 8080 Emulator</span>
+  <button mat-raised-button color="primary" (click)="onFileOpenButtonPressed()">Load</button>
+  <button mat-raised-button color="primary">Save</button>
+  <button mat-raised-button color="primary" (click)="onAssembleButtonPressed()">Assemble</button>
+  <button mat-raised-button color="play" [disabled]="emulatorService.running" class="icon-button" (click)="onPlayButtonPressed()"><mat-icon>play_arrow</mat-icon></button>
+  <button mat-raised-button [color]="emulatorService.paused ? 'paused' : 'pause'" class="icon-button" (click)="onPauseButtonPressed()"><mat-icon>pause</mat-icon></button>
+  <button mat-raised-button color="step" class="icon-button" (click)="onStepButtonPressed()" [disabled]="!(emulatorService.running && emulatorService.paused && !emulatorService.halted)"><mat-icon>keyboard_arrow_right</mat-icon></button>
+  <button mat-raised-button color="stop" [disabled]="!emulatorService.running" class="icon-button" (click)="onStopButtonPressed()"><mat-icon>stop</mat-icon></button>
+  <span class="toolbar-spacer"></span>
+  <a href="https://github.com/moorts/name_is_wip" target="_blank" mat-icon-button class="example-icon" aria-label="Example icon-button with share icon">
+    <mat-icon>code</mat-icon>
+  </a>
+  <a mat-icon-button class="example-icon" (click)="onThemeButtonPressed()">
+    <mat-icon>lightbulb</mat-icon>
+  </a>
+</mat-toolbar>
+<as-split direction="horizontal" class="mat-typography mat-app-background">
+  <as-split-area [minSize]="20">
+    <code-editor #codeEditor (assembleAction)="onAssembleButtonPressed()"></code-editor>
+  </as-split-area>
+  <as-split-area [minSize]="20">
+    <mat-tab-group>
+      <mat-tab label="Memory">
+        <ram-display #ramDisplay></ram-display>
+      </mat-tab>
+      <mat-tab label="Peripherals"> Content 3 </mat-tab>
+    </mat-tab-group>
+  </as-split-area>
+</as-split>
+
+<input #fileDialog type="file" style="display:none;"/>

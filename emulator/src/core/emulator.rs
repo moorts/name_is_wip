@@ -4,20 +4,23 @@ use std::rc::Rc;
 use crate::core::io::*;
 use crate::core::ram::*;
 use crate::core::register::RegisterArray;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 pub type EResult<T> = Result<T, &'static str>;
 
+#[wasm_bindgen]
 pub struct Emulator {
-    pc: u16,
-    sp: u16,
+    pub pc: u16,
+    pub sp: u16,
     ram: Box<dyn RAM>,
-    reg: RegisterArray,
+    pub reg: RegisterArray,
     input_devices: [Option<Rc<RefCell<dyn InputDevice>>>; 256],
     output_devices: [Option<Rc<RefCell<dyn OutputDevice>>>; 256],
-    running: bool,
-    interrupts_enabled: bool,
+    pub running: bool,
+    pub interrupts_enabled: bool,
 }
 
+#[wasm_bindgen]
 impl Emulator {
     pub fn new() -> Self {
         Emulator {
@@ -30,6 +33,16 @@ impl Emulator {
             running: true,
             interrupts_enabled: true, // INTE
         }
+    }
+    
+    // Used for frontend to access RAM directly
+    pub fn get_ram_ptr(&self) -> *const u8 {
+        self.ram.get_ptr()
+    }
+    
+    // Used for frontend to optimize RAM display
+    pub fn get_last_ram_change(&self) -> u16 {
+        self.ram.get_last_changed_address()
     }
 
     fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
@@ -601,7 +614,8 @@ impl Emulator {
         Ok(())
     }
 
-    fn execute_next(&mut self) -> EResult<()> {
+    #[wasm_bindgen]
+    pub fn execute_next(&mut self) -> EResult<()> {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         self.execute_instruction(opcode)

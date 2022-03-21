@@ -1,0 +1,21 @@
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar-title {
+  margin-right: 2rem;
+}
+
+.icon-button {
+  min-width: 36px;
+  height: 36px;
+  padding-left: 0;
+  padding-right: 0;
+  line-height: unset;
+}
+
+mat-toolbar {
+  button {
+    margin-right: 0.5rem;
+  }
+}

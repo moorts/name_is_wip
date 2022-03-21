@@ -1,0 +1,34 @@
+html, body {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden; /* make browser scrollbar disappear */
+}
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+.mat-play {
+  background-color: #42e36f;
+  color: #fff;
+}
+
+.mat-step {
+  background-color: #42e36f;
+  color: #fff;
+}
+
+.mat-stop {
+  background-color: #f44336;
+  color: #fff;
+}
+
+.mat-pause {
+  background-color: #c7ba00;
+  color: #fff;
+}
+
+.mat-paused {
+  background-color: #9c9100;
+  color: #fff;
+}

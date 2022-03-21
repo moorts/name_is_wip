@@ -1,0 +1,85 @@
+table {
+  border-spacing: 0;
+  border-collapse: collapse;
+  overflow: hidden;
+  z-index: 1;
+}
+
+td, th {
+  cursor: pointer;
+  padding: 5px;
+  min-width: 20px;
+  position: relative;
+}
+
+td:hover::after {
+  content: '\00a0';
+  height: 10000px;
+  left: 0;
+  position: absolute;
+  top: -5000px;
+  width: 100%;
+  z-index: -1;
+}
+
+td {
+  text-align: center;
+}
+
+.rowName {
+  width: 2.5rem;
+  max-width: 2.5rem;
+  overflow: hidden;
+}
+
+#ramPageInput {
+  max-width: 100px;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+#offsetControls {
+  display: flex;
+  justify-content: center;
+}
+
+.ramOffsetButton {
+  margin-bottom: 2rem;
+  margin-top: 0.5rem;
+}
+
+#mainRam {
+  width: fit-content;
+}
+
+#outer {
+  display: flex;
+}
+
+#registers {
+  margin-top: 1rem;
+}
+
+.registerLine {
+  margin-left: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.registerHeader {
+  margin-left: 1rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.registerLabel {
+  width: 2.5rem;
+  display: inline-block;
+}
+
+.registerInput {
+  width: 3rem;
+}
+
+.plsMarginTopThx {
+  margin-top: 1rem;
+}

@@ -5,18 +5,46 @@ mod utils;
 
 use wasm_bindgen::prelude::*;
 
+use crate::core::emulator::Emulator;
+use crate::kreator::assembler::Assembler;
+
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+// JavaScript functions
 #[wasm_bindgen]
 extern "C" {
-    fn alert(s: &str);
+    // JS: alert(msg)
+    fn alert(msg: &str);
+    
+    // JS: console.log(msg)
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(msg: &str);
 }
 
 #[wasm_bindgen]
-pub fn greet() {
-    alert("Hello, emulator!");
+pub fn assemble(code: &str) -> Vec<u8> {
+    let asm = Assembler::new(code);
+    let result = asm.assemble();
+    
+    match result {
+        Ok(bytes) => {
+            return bytes;
+        }
+        Err(msg) => {
+            log(msg);
+        }
+    }
+    
+    return vec![];
+}
+
+#[wasm_bindgen]
+pub fn createEmulator(memory: Vec<u8>) -> Emulator {
+    let mut emu = Emulator::new();
+    emu.load_ram(memory, 0);
+    return emu;
 }
