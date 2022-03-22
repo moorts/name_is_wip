@@ -15,6 +15,7 @@ jobs:
         git config --local user.name "github-actions[bot]"
         git fetch origin
         git checkout origin/gh-pages
+        git fetch origin
         git pull origin/actions/pages
         cd ./emulator
         curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
