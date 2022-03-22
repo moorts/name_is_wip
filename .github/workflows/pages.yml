@@ -20,7 +20,7 @@ jobs:
         cd ../emulator-webapp
         yarn install
         npm run build-docs
-        git add *
+        git add ../docs/*
         git commit -m "Create new Docs" -a
     - name: Push changes
       uses: ad-m/github-push-action@master
