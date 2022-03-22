@@ -21,7 +21,7 @@ jobs:
         yarn install
         npm run build-docs
         git add ../docs/*
-        git commit -m "Create new Docs" -a
+        git commit -m "Create new Docs"
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
