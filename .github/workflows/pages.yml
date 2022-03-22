@@ -9,13 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Get dependencies
-      run: |
-        cd ./emulator
-        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-        wasm-pack build -t web
-        cd ../emulator-webapp
-        yarn install
     - name: Build docs on seperate branch
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -23,7 +16,11 @@ jobs:
         git fetch origin
         git checkout origin/gh-pages
         git merge origin/main
-        cd ./emulator-webapp
+        cd ./emulator
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        wasm-pack build -t web
+        cd ../emulator-webapp
+        yarn install
         npm run build-docs
         git add *
         git commit -m "Create new Docs" -a
