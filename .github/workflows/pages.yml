@@ -2,7 +2,7 @@ name: Push to gh-pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, actions/pages ]
   pull_request:
     branches: [ main ]
 
@@ -18,18 +18,19 @@ jobs:
         wasm-pack build -t web
         cd ../emulator-webapp
         yarn install
-    - name: Build docs
-      run: |
-        cd ./emulator-webapp
-        npm run build-docs
-    - name: Commit files
+    - name: Build docs on seperate branch
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
+        git checkout gh-pages
+        git fetch origin
+        git merge origin/main
+        cd ./emulator-webapp
+        npm run build-docs
         git add *
         git commit -m "Create new Docs" -a
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+        branch: ${{ origin/gh-pages }}
