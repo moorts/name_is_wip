@@ -23,6 +23,7 @@ jobs:
         yarn install
         npm run build-docs
     - name: Commit changes
+      run: |
         git add ../docs/*
         git commit -m "Create new Docs" -a
     - name: Push changes
