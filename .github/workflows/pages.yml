@@ -9,22 +9,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Build docs on seperate branch
+    - name: Configure git and checkout
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git fetch origin
+    - name: Build docs
+      run: |
         cd ./emulator
         curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
         wasm-pack build -t web
         cd ../emulator-webapp
         yarn install
         npm run build-docs
+    - name: Commit changes
         git add ../docs/*
-        git commit -m "Create new Docs"
+        git commit -m "Create new Docs" -a
     - name: Push changes
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: origin/gh-pages
+        branch: gh-pages
         force: true
