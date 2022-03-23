@@ -2,6 +2,27 @@
 
 \section{Emulator}
 
+\subsection{Zentrale Struktur}
+
+Den Kern des Emulators bildet eine Struktur, welche zuständig für die Ausführung der Maschinencode-Programme ist. Diese Struktur gruppiert alle notwendigen Komponenten eines Intel 8080 Systems. Der Aufbau der Struktur ist in \cref{core} illustriert.
+Diese Komponenten wurden in \cref{chap:prereqs} bereits erklärt: \rust{pc} und \rust{sp} sind 2 16-Bit-Zahlen, die den Program Counter und den Stack Pointer repräsentieren. \rust{ram} ist der Arbeitsspeicher und \rust{reg} simuliert die Register (inklusive Flags und Akkumulator).
+
+\begin{listing}[h]
+\label[code]{core}
+\begin{minted}{rust}
+    struct Emulator {
+        pc: u16,
+        sp: u16,
+        ram: RAM,
+        reg: RegisterArray,
+        input_devices: [InputDevice; 256],
+        output_devices: [OutputDevice; 256],
+        running: bool,
+        interrupts_enabled: bool
+    }
+\end{minted}
+\end{listing}
+
 \section{Assembler}
 
 \section{Disassembler}
