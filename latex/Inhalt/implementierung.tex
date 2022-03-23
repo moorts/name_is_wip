@@ -19,7 +19,7 @@ union Register {
 }
 \end{minted}
 
-Ein Union wird ähnlich wie ein Struct deklariert, jedoch Teilen alle Felder den gleichen Speicherplatz. Das bedeutet man kann den Wert eines solchen \rust{Register} entweder durch \rust{Register::bytes} als Tupel aus 2 Bytes oder durch \rust{Register::value} als 16-Bit-Wert auslesen. Dadurch ist keinerlei Konkatenation der Registerwerte notwendig.
+Ein Union wird ähnlich wie ein Struct deklariert, jedoch Teilen alle Felder den gleichen Speicherplatz\footnote{ausführliche Erklärung: \url{https://doc.rust-lang.org/reference/items/unions.html}}. Das bedeutet man kann den Wert eines solchen \rust{Register} entweder durch \rust{Register::bytes} als Tupel aus 2 Bytes oder durch \rust{Register::value} als 16-Bit-Wert auslesen. Dadurch ist keinerlei Konkatenation der Registerwerte notwendig.
 
 \subsubsection{Registerzugriff}
 
