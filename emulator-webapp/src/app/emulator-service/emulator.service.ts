@@ -88,6 +88,10 @@ export class EmulatorService {
     this._wasmContext = await init("assets/emulator/emulator_bg.wasm");
   }
 
+  public loadBytes(buffer: ArrayBuffer) {
+    this._initialMemory = new Uint8Array(buffer);
+  }
+
   public assemble(assembly: string) {
     console.log("Assembling: " + assembly);
     const result = assemble(assembly);

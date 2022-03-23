@@ -73,18 +73,22 @@ export class AppComponent implements AfterViewInit {
     }
     var file = files[0];
     var reader = new FileReader();
-    reader.onload = e => app.onFileLoaded(app, e);
-    reader.readAsDataURL(file);
+    reader.onload = e => app.onFileLoaded(app, e, file);
+    reader.readAsArrayBuffer(file);
   }
 
-  private onFileLoaded (app: AppComponent, e: ProgressEvent<FileReader>) {
-    var match = /^data:(.*);base64,(.*)$/.exec(e.target?.result?.toString() ?? "");
-    if (match == null) {
-        throw 'Could not parse result'; // should not happen
+  private onFileLoaded (app: AppComponent, e: ProgressEvent<FileReader>, file: any) {
+    const buffer = e.target?.result;
+    if (!(buffer instanceof ArrayBuffer)) return;
+
+    const isROM = (<string>file.name).toLowerCase().endsWith(".com");
+
+    if (!isROM && app.codeEditor != null) {
+      app.codeEditor.code = new TextDecoder().decode(buffer);
     }
-    var content = match[2];
-    if (app.codeEditor != null) {
-      app.codeEditor.code = atob(content);
+    if (isROM) {
+      app.emulatorService.loadBytes(buffer);
+      this.ramDisplay?.update(true);
     }
   }
 }
