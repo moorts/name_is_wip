@@ -32,7 +32,7 @@
               { "glob": "**/*", "input": "node_modules/monaco-editor", "output": "assets/monaco-editor/" },
               { "glob": "**/*", "input": "node_modules/onigasm", "output": "assets/onigasm/" },
               { "glob": "**/*", "input": "node_modules/@angular/material/prebuilt-themes", "output": "assets/angular/themes/" },
-              { "glob": "**/*", "input": "../emulator/pkg", "output": "assets/emulator/" }
+              { "glob": "**/*", "input": "node_modules/emulator", "output": "assets/emulator/" }
             ],
             "styles": [
               "src/styles.scss"
