@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{iter::Peekable, str::Chars, fmt::{Display, Formatter}};
+use std::{iter::Peekable, str::Chars, fmt::{Display, Formatter}, array::IntoIter};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Token {
@@ -99,7 +99,7 @@ pub enum Item {
 }
 
 pub fn eval(expression: &str) -> i32 {
-    eval_tokens(Tokenizer::new(expression).collect()).expect("")
+    eval_tokens(Tokenizer::new(expression)).expect("")
 }
 
 
@@ -197,7 +197,10 @@ impl<'a> Iterator for Tokenizer<'a> {
     }
 }
 
-pub fn eval_tokens(tokens: Vec<Token>) -> Result<i32, String> {
+pub fn eval_tokens<I>(tokens: I) -> Result<i32, String>
+where
+    I: Iterator<Item = Token>
+{
     let mut stack: Vec<Token> = Vec::new();
     let mut args = Vec::new();
     for t in tokens {
@@ -310,7 +313,7 @@ mod tests {
             ("NOT 9", !9)
         ];
         for (expr, res) in expressions {
-            let tokens = Tokenizer::new(expr).collect();
+            let tokens = Tokenizer::new(expr);
             assert_eq!(
                 eval_tokens(tokens).expect(""),
                 res
@@ -326,7 +329,7 @@ mod tests {
             ("NOT", "Not enough arguments for unary operator: NOT")
         ];
         for (expr, err) in expressions {
-            let tokens = Tokenizer::new(expr).collect();
+            let tokens = Tokenizer::new(expr);
             assert_eq!(eval_tokens(tokens), Err(String::from(err)));
         }
     }
