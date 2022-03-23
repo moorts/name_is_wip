@@ -38,6 +38,11 @@ Der Rückgabetyp der Methode ist \rust{Result<(), &str>}, dadurch können entspr
 
 \subsubsection{Instruktionen}
 
+Um zu großen Dateien vorzubeugen, sind die Implementierungen der Instruktionen aufgeteilt in verschiedene Module. Sie sind logisch gruppiert in Arithmetik, Kontrollfluss, Logik, Speicherzugriff, Verschiebung und Speziell.
+Obwohl die Funktionen in unterschiedlichen Dateien/Modulen deklariert sind, sind sie Methoden der \rust{Emulator}-Struktur.
+Die verschiedenen Funktionen werden dann im Code von \rust{Emulator::execute_next()} aufgerufen.
+Auch diese Funktionen geben häufig \rust{Result}s zurück, falls die Ausführung theoretisch in einem Fehler resultieren könnte.
+
 \section{Assembler}
 
 \section{Disassembler}
