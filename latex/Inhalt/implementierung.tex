@@ -1,1 +1,30 @@
 \chapter{Implementierung}\label{chap:impl}
+
+\section{Emulator}
+
+\subsection{Registerarray}
+
+Im folgenden werden drei Aspekte der Implementierungen des Registerarrays gezeigt: Die Representation der Register, der Zugriff auf die Register und der Zugriff auf die Flaggen.
+
+\subsubsection{Datentyp}
+
+Naive Implementierungen eines Registerarrays würden die Register einzeln implementieren und für Registerpaare die entsprechenden Inhalte konkatenieren.
+Dies ist jedoch unnötig umständlich. Der effizientere Ansatz ist die Register in Paaren zu speichern (als 16-Bit Unsigned Integer) und die Möglichkeit beizubehalten, die beiden Bytes individuell anzusprechen. In einer Sprache wie C ist dies mit Pointer-Arithmetik gut lösbar, in Rust ist es sinnvoller ein Union zu verwenden.
+
+\begin{minted}{rust}
+#[repr(C)]
+union Register {
+    bytes: (u8, u8),
+    value: u16,
+}
+\end{minted}
+
+Ein Union wird ähnlich wie ein Struct deklariert, jedoch Teilen alle Felder den gleichen Speicherplatz. Das bedeutet man kann den Wert eines solchen \rust{Register} entweder durch \rust{Register::bytes} als Tupel aus 2 Bytes oder durch \rust{Register::value} als 16-Bit-Wert auslesen. Dadurch ist keinerlei Konkatenation der Registerwerte notwendig.
+
+\subsubsection{Registerzugriff}
+
+Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer Teil der zu implementierenden Instruktionen sie benötigt. Um dies möglichst einfach zu machen, haben wir Indexing für den Registerarray implementiert. Über String-Indexing --- \rust{reg["bc"] // Registerpaar BC} --- ist Zugriff auf Registerpaare geregelt, über Character-Indexing --- \rust{reg['b'] // Register B} --- der normale Zugriff.
+
+\subsubsection{Flaggenzugriff}
+
+Die Flaggen sind bekannterweise Teil des PSW-Registerpaar, sprich sie sind als ein Byte gespeichert. Um die Werte der einzelnen Flaggen zu erhalten, werden Bitmasken verwendet. Bspw. der Ausdruck \rust{byte & 0x80} setzt alle Bits, bis auf das mit dem höchsten Stellenwert, auf 0. Damit ist die Flagge gesetzt, wenn der Ausdruck ungleich 0 ist.
