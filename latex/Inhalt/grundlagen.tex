@@ -4,6 +4,51 @@
 
 \section{Rust}
 
+Rust ist eine moderne, performante, memory-safe Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon bei Compilezeit, wodurch Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (aka C/C++). Außerdem ist Rust gut für WebAssembly-Anwendungen geeignet, da gute Dokumentation existiert\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
+
+In diesem Abschnitt werden einige grundlegende Sprachkonstrukte/-konzepte erläutert, die nützlich zum Verständnis dieser Arbeit sind.
+Diese Informationen stammen direkt aus der offiziellen Dokumentation: Dem Rust Book \cite{rustBook} und der Dokumentation der Standard-Library \cite{rustDoc}.
+
+\subsection{Das \rust{match}-Statement}
+
+Das \rust{match}-Statement ist die Rust Alternative zum klassischen \code{switch-case}-Statement. Bis auf die Syntax funktioniert es sehr ähnlich:
+
+\begin{minted}{rust}
+    match x {
+        1 => /* x == 1... */,
+        2..=5 => /* x in [2,3,4,5] */,
+        ...
+        _ => // default case
+    }
+\end{minted}
+
+Rust garantiert zu Compilezeit, dass die match-Arme alle möglichen Fälle abdecken (nur relevant wenn kein default-Case).
+
+\subsection{Result und Option}
+
+Rust hat kein \code{null}, stattdessen existiert der \rust{Option<T>} Typ. Option ist wie folgt definiert:
+
+\begin{minted}{rust}
+    enum Option<T> {
+        Some(T),
+        None
+    }
+\end{minted}
+
+Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), oder oder eine 32-Bit Integer (Some(i32)). Um an den enthaltenden Wert zu kommen, muss eine Fallunterscheidung durchgeführt werden, bspw. durch ein \rust{match}-Statement. Dies garantiert, dass keine ungewollten null-References möglich sind (wie \zB ein Methodenaufruf auf \code{null}).
+
+\rust{Option<T>} wird verwendet, wenn es akzeptabel ist, dass kein Wert vorhanden ist. Andernfalls sollte \rust{Result<T, E>} verwendet werden.
+
+\begin{minted}{rust}
+    enum Result<T, E> {
+        Ok(T),
+        Err(E)
+    }
+\end{minted}
+
+Ein Result enthält entweder einen Wert des entsprechenden Types, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
+
+
 \section{WebAssembly}
 
 "WebAssembly is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei WebAssembly also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem WebAssembly eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen WASM und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach WebAssembly ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
