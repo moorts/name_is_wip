@@ -1,0 +1,6 @@
+[book]
+authors = ["moorts"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Book"
