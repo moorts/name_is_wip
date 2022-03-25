@@ -5,6 +5,8 @@ import { EmulatorService } from './emulator-service/emulator.service';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
 import { RamDisplayComponent } from './ram-display/ram-display.component';
 import { ThemeService } from './theme-service/theme.service';
+import { MatDialog } from '@angular/material/dialog';
+import { LoadFileDialogComponent } from './load-file-dialog/load-file-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -15,15 +17,15 @@ export class AppComponent implements AfterViewInit {
 
   title = 'emulator-webapp';
 
-  @ViewChild('codeEditor') codeEditor: CodeEditorComponent | undefined;
-  @ViewChild('ramDisplay') ramDisplay: RamDisplayComponent | undefined;
-  @ViewChild('fileDialog') fileDialog: ElementRef | undefined;
+  @ViewChild('codeEditor') public codeEditor: CodeEditorComponent | undefined;
+  @ViewChild('ramDisplay') public ramDisplay: RamDisplayComponent | undefined;
 
   constructor(private readonly matIconRegistry: MatIconRegistry,
               private readonly domSanitizer: DomSanitizer,
               public readonly emulatorService: EmulatorService,
               private readonly renderer: Renderer2,
-              private readonly themeService: ThemeService) {
+              private readonly themeService: ThemeService,
+              private readonly dialog: MatDialog ) {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
     emulatorService.onStep.subscribe((props) => {
       this.ramDisplay?.update(false, props.ramChanged);
@@ -31,9 +33,6 @@ export class AppComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    if (this.fileDialog != null) {
-      this.renderer.listen(this.fileDialog.nativeElement, "change", e => this.handleFileSelect(this, e));
-    }
   }
 
   public onAssembleButtonPressed() {
@@ -42,7 +41,11 @@ export class AppComponent implements AfterViewInit {
   }
 
   public onFileOpenButtonPressed() {
-    this.fileDialog?.nativeElement.click();
+    const fileDialog = this.dialog.open(LoadFileDialogComponent, {
+      height: '250px',
+      width: '500px',
+    });
+    fileDialog.componentInstance.app = this;
   }
 
   public onPlayButtonPressed() {
@@ -64,35 +67,5 @@ export class AppComponent implements AfterViewInit {
 
   public onThemeButtonPressed() {
     this.themeService.toggleTheme();
-  }
-
-  private handleFileSelect (app: AppComponent, e: any) {
-    var files = e.target.files;
-    if (files.length < 1) {
-        return;
-    }
-    var file = files[0];
-    var reader = new FileReader();
-    reader.onload = e => app.onFileLoaded(app, e, file);
-    reader.readAsArrayBuffer(file);
-  }
-
-  private onFileLoaded (app: AppComponent, e: ProgressEvent<FileReader>, file: any) {
-    const buffer = e.target?.result;
-    if (!(buffer instanceof ArrayBuffer)) return;
-
-    const isROM = (<string>file.name).toLowerCase().endsWith(".com");
-
-    if (!isROM && app.codeEditor != null) {
-      app.codeEditor.code = new TextDecoder().decode(buffer);
-    }
-    if (isROM && app.codeEditor != null) {
-      const largerBuffer = new ArrayBuffer(buffer.byteLength + 0x100);
-      new Uint8Array(largerBuffer).set(new Uint8Array(buffer), 0x100);
-      app.emulatorService.loadBytes(largerBuffer);
-      const newCode = app.emulatorService.disassemble(new Uint8Array(largerBuffer));
-      app.codeEditor.code = newCode;
-      app.ramDisplay?.update(true);
-    }
   }
 }

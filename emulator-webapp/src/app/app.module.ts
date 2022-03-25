@@ -8,6 +8,9 @@ import {MatTabsModule} from '@angular/material/tabs';
 import {MatIconModule} from '@angular/material/icon';
 import {MatButtonModule} from '@angular/material/button';
 import {MatInputModule} from '@angular/material/input';
+import {MatDialogModule} from '@angular/material/dialog';
+import {MatSelectModule} from '@angular/material/select';
+import {MatRadioModule} from '@angular/material/radio';
 
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -17,12 +20,14 @@ import { HttpClientModule } from "@angular/common/http";
 
 import { CodeEditorComponent } from './code-editor/code-editor.component';
 import { RamDisplayComponent } from './ram-display/ram-display.component';
+import { LoadFileDialogComponent } from './load-file-dialog/load-file-dialog.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     CodeEditorComponent,
-    RamDisplayComponent
+    RamDisplayComponent,
+    LoadFileDialogComponent
   ],
   imports: [
     BrowserModule,
@@ -34,6 +39,9 @@ import { RamDisplayComponent } from './ram-display/ram-display.component';
     MatIconModule,
     MatButtonModule,
     MatInputModule,
+    MatDialogModule,
+    MatSelectModule,
+    MatRadioModule,
     AngularSplitModule,
     FormsModule,
     HttpClientModule

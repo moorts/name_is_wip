@@ -1,0 +1,20 @@
+<h1>Load a ROM or Assembly file</h1>
+<form>
+  <div class="formFieldMargin">
+    <mat-radio-group name="fileType" [(ngModel)]="fileType" (change)="log()">
+      <mat-radio-button value="asm">Assembly</mat-radio-button>
+      <mat-radio-button value="rom">ROM</mat-radio-button>
+    </mat-radio-group>
+  </div>
+  <div *ngIf="fileType == 'rom'">
+    <mat-form-field class="example-full-width" appearance="standard">
+      <mat-label>Start Position in RAM</mat-label>
+      <input matInput placeholder="0x100" [value]="startPosition">
+    </mat-form-field>
+  </div>
+  <div id="spacer"></div>
+  <div id="fileSelectBtn">
+    <button type="button" mat-raised-button color="primary" (click)="fileInput.click()">Choose File</button>
+    <input hidden (change)="onFileSelected()" #fileInput type="file" id="file">
+  </div>
+</form>
