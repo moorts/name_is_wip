@@ -8,7 +8,7 @@ use std::result::Result;
 use num::NumCast;
 use num_traits::sign::Unsigned;
 
-struct Disassembler {
+pub struct Disassembler {
     bytes: Vec<u8>,
     pc: usize,
 }
@@ -25,11 +25,15 @@ impl Iterator for Disassembler {
 }
 
 impl Disassembler {
-    fn load_file(path: &str) -> io::Result<Self> {
+    pub fn load_file(path: &str) -> io::Result<Self> {
         let mut f = File::open(path)?;
         let mut bytes = Vec::new();
         f.read_to_end(&mut bytes)?;
         Ok(Disassembler { bytes, pc: 0 })
+    }
+    
+    pub fn load_bytes(bytes: Vec<u8>) -> Self {
+        return Self { bytes: bytes, pc: 0 }
     }
 
     /*
@@ -82,10 +86,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x07 => Ok(String::from("RLC")),
-            0x08 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x08 => Ok(String::from("NOP")),
             0x09 => Ok(String::from("DAD B")),
             0x0a => Ok(String::from("LDAX B")),
             0x0b => Ok(String::from("DCX B")),
@@ -96,10 +97,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x0f => Ok(String::from("RRC")),
-            0x10 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x10 => Ok(String::from("NOP")),
             0x11 => Ok(format!(
                 "LXI D,{}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
@@ -113,10 +111,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x17 => Ok(String::from("RAL")),
-            0x18 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x18 => Ok(String::from("NOP")),
             0x19 => Ok(String::from("DAD D")),
             0x1a => Ok(String::from("LDAX D")),
             0x1b => Ok(String::from("DCX D")),
@@ -127,10 +122,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x1f => Ok(String::from("RAR")),
-            0x20 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x20 => Ok(String::from("NOP")),
             0x21 => Ok(format!(
                 "LXI H,{}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
@@ -147,10 +139,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x27 => Ok(String::from("DAA")),
-            0x28 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x28 => Ok(String::from("NOP")),
             0x29 => Ok(String::from("DAD H")),
             0x2a => Ok(format!(
                 "LHLD {}",
@@ -164,10 +153,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x2f => Ok(String::from("CMA")),
-            0x30 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x30 => Ok(String::from("NOP")),
             0x31 => Ok(format!(
                 "LXI SP,{}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
@@ -184,10 +170,7 @@ impl Disassembler {
                 Disassembler::fmt_hex::<u8>(self.read_byte())
             )),
             0x37 => Ok(String::from("STC")),
-            0x38 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0x38 => Ok(String::from("NOP")),
             0x39 => Ok(String::from("DAD SP")),
             0x3a => Ok(format!(
                 "LDA {}",
@@ -355,10 +338,7 @@ impl Disassembler {
                 "JZ {}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
             )),
-            0xcb => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0xcb => Ok(String::from("NOP")),
             0xcc => Ok(format!(
                 "CZ {}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
@@ -393,10 +373,7 @@ impl Disassembler {
             )),
             0xd7 => Ok(String::from("RST 2")),
             0xd8 => Ok(String::from("RC")),
-            0xd9 => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0xd9 => Ok(String::from("NOP")),
             0xda => Ok(format!(
                 "JC {}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
@@ -409,10 +386,7 @@ impl Disassembler {
                 "CC {}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
             )),
-            0xdd => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0xdd => Ok(String::from("NOP")),
             0xde => Ok(format!(
                 "SBI {}",
                 Disassembler::fmt_hex::<u8>(self.read_byte())
@@ -446,10 +420,7 @@ impl Disassembler {
                 "CPE {}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
             )),
-            0xed => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0xed => Ok(String::from("NOP")),
             0xee => Ok(format!(
                 "XRI {}",
                 Disassembler::fmt_hex::<u8>(self.read_byte())
@@ -483,10 +454,7 @@ impl Disassembler {
                 "CM {}",
                 Disassembler::fmt_hex::<u16>(self.read_addr())
             )),
-            0xfd => {
-                // No instruction
-                Err("Invalid opcode")
-            }
+            0xfd => Ok(String::from("NOP")),
             0xfe => Ok(format!(
                 "CPI {}",
                 Disassembler::fmt_hex::<u8>(self.read_byte())
@@ -495,7 +463,7 @@ impl Disassembler {
         }
     }
 
-    fn disassemble(&mut self) -> Result<Vec<String>, &'static str> {
+    pub fn disassemble(&mut self) -> Result<Vec<String>, &'static str> {
         let mut out = Vec::new();
         while self.pc < self.bytes.len() {
             out.push(self.decode_next()?);
