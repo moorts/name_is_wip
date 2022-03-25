@@ -1,5 +1,5 @@
 import { Injectable, EventEmitter } from '@angular/core';
-import init, { assemble, createEmulator, Emulator, InitOutput } from "emulator";
+import init, { assemble, createEmulator, disassemble, Emulator, InitOutput } from "emulator";
 
 @Injectable({
   providedIn: 'root'
@@ -96,6 +96,11 @@ export class EmulatorService {
     console.log("Assembling: " + assembly);
     const result = assemble(assembly);
     this._initialMemory = result;
+  }
+
+  public disassemble(bytes: Uint8Array): string {
+    const result = disassemble(bytes);
+    return result;
   }
 
   public start() {

@@ -57,7 +57,7 @@ export class RamDisplayComponent implements AfterViewInit {
     if (offset < 0) return;
     this._offset = offset;
     this._rows.forEach((row, index) => {
-      row.innerText = (this._offset * 16 + index).toString(16).toUpperCase().padStart(3, '0') + "x";
+      row.innerText = (this._offset + index * 16).toString(16).toUpperCase().padStart(3, '0') + "x";
     });
     this.update(true);
   }

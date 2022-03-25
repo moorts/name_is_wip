@@ -86,9 +86,13 @@ export class AppComponent implements AfterViewInit {
     if (!isROM && app.codeEditor != null) {
       app.codeEditor.code = new TextDecoder().decode(buffer);
     }
-    if (isROM) {
-      app.emulatorService.loadBytes(buffer);
-      this.ramDisplay?.update(true);
+    if (isROM && app.codeEditor != null) {
+      const largerBuffer = new ArrayBuffer(buffer.byteLength + 0x100);
+      new Uint8Array(largerBuffer).set(new Uint8Array(buffer), 0x100);
+      app.emulatorService.loadBytes(largerBuffer);
+      const newCode = app.emulatorService.disassemble(new Uint8Array(largerBuffer));
+      app.codeEditor.code = newCode;
+      app.ramDisplay?.update(true);
     }
   }
 }
