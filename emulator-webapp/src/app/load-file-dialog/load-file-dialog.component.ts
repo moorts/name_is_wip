@@ -38,8 +38,8 @@ export class LoadFileDialogComponent implements OnInit {
           this.app.codeEditor.code = new TextDecoder().decode(buffer);
         }
         if (this.fileType == 'rom' && this.app?.codeEditor) {
-          const largerBuffer = new ArrayBuffer(buffer.byteLength + this.startPosition);
-          new Uint8Array(largerBuffer).set(new Uint8Array(buffer), this.startPosition);
+          const largerBuffer = new ArrayBuffer(buffer.byteLength + this.startPosition*1);
+          new Uint8Array(largerBuffer).set(new Uint8Array(buffer), this.startPosition*1);
           this.app.emulatorService.loadBytes(largerBuffer);
           const newCode = this.app.emulatorService.disassemble(new Uint8Array(largerBuffer));
           this.app.codeEditor.code = newCode;

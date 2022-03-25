@@ -9,7 +9,7 @@
   <div *ngIf="fileType == 'rom'">
     <mat-form-field class="example-full-width" appearance="standard">
       <mat-label>Start Position in RAM</mat-label>
-      <input matInput placeholder="0x100" [value]="startPosition">
+      <input matInput placeholder="0x100" [(ngModel)]="startPosition" name="startPosition">
     </mat-form-field>
   </div>
   <div id="spacer"></div>

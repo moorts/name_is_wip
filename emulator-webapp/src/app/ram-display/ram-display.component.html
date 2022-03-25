@@ -17,11 +17,11 @@
       </tbody>
     </table>
     <div id="offsetControls">
-      <button mat-raised-button class="icon-button ramOffsetButton" (click)="offset = offset - 1"><mat-icon>keyboard_arrow_left</mat-icon></button>
+      <button mat-raised-button class="icon-button ramOffsetButton" (click)="offset = offset*1 - 1"><mat-icon>keyboard_arrow_left</mat-icon></button>
       <mat-form-field id="ramPageInput">
         <input type="text" matInput [(ngModel)]="offset"/>
       </mat-form-field>
-      <button mat-raised-button class="icon-button ramOffsetButton" (click)="offset = offset + 1"><mat-icon>keyboard_arrow_right</mat-icon></button>
+      <button mat-raised-button class="icon-button ramOffsetButton" (click)="offset = offset*1 + 1"><mat-icon>keyboard_arrow_right</mat-icon></button>
     </div>
   </div>
   <div id="registers">
