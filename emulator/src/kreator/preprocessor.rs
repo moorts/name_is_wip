@@ -120,7 +120,9 @@ fn get_equate_assignments(code: &Vec<String>) -> Result<HashMap<String, u16>, &'
 pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
+    let equate_assignments = get_equate_assignments(&code).unwrap();
     
+    let mut set_assignments:HashMap<String, u16> = HashMap::new();
     let mut byte_to_line_map: HashMap<u16, usize> = HashMap::new();
     let mut macro_map = HashMap::new();
     let mut line_index: usize = 0;
@@ -129,7 +131,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let mut in_unmet_conditional = false;
     
     for (index, line) in code.iter().enumerate() {
-        let line = label_decl.replace(line, "").trim().to_string();
+        let mut line = label_decl.replace(line, "").trim().to_string();
 
         if line.contains("ENDM") {
             in_macro = false;
@@ -139,6 +141,24 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
             in_unmet_conditional = false;
             line_index += 1;
             continue;
+        }
+
+        // determine if a variable is being declared by SET
+        if line.contains("SET") {
+            let (name, expression) = line.split_once(" SET ").unwrap();
+            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+            line_index += 1;
+            continue;
+        }
+
+        // replace values of variables declared by EQU
+        for (key, value) in &equate_assignments {
+            line = line.replace(&format!(" {}", key), &format!(" {}", value));
+        }
+
+        // replace values of variables declared by SET
+        for (key, value) in &set_assignments {
+            line = line.replace(&format!(" {}", key), &format!(" {}", value));
         }
 
         if in_macro || in_unmet_conditional {
@@ -941,7 +961,7 @@ mod tests {
         map.insert(5, 11);
         map.insert(6, 16);
 
-        //assert_eq!(map, get_line_map(&code));
+        assert_eq!(map, get_line_map(&code));
     }
 
     fn convert_input(lines: Vec<&str>) -> Vec<String> {
