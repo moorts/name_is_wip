@@ -19,7 +19,7 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let code = get_commentless_code(&code)?;
+    let code = get_commentless_code(&code);
     let labels = get_labels(&code)?;
     let code = replace_macros(&code)?;
 
@@ -111,46 +111,42 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
     
-    let mut line_map: HashMap<u16, usize> = HashMap::new();
-    let mut macro_map = HashMap::new();
-    let mut line_count: usize = 0;
-    let mut byte_count: u16 = 0;
+    let mut byte_to_line: HashMap<u16, usize> = HashMap::new();
+    let mut macro_byte_to_line = HashMap::new();
+    let mut line_index: usize = 0;
+    let mut byte_index: u16 = 0;
     let mut in_macro = false;
     
     for (index, line) in code.iter().enumerate() {
-
-        // remove label declarations
         let line = label_decl.replace(line, "").to_string();
 
         if line.contains("ENDM") {
             in_macro = false;
-            line_count += 1;
+            line_index += 1;
             continue;
         }
 
-        if line.is_empty() || in_macro {
-            line_count += 1;
+        if in_macro {
+            line_index += 1;
             continue;
         }
 
         // check for macros
         if line.contains(" MACRO") {
             in_macro = true;
-
-            let macro_name = line.trim_start().split(" ").collect::<Vec<&str>>().get(0).unwrap().to_string();
-            let mut macro_content: Vec<String> = Vec::new();
+            let macro_name = line.trim_start().split_once(" ").unwrap().0.to_string();
+            let mut macro_lines: Vec<String> = Vec::new();
             let mut counter = 1;
-
-            while !code.get(index + counter).unwrap().eq("ENDM") {
-                macro_content.push(code.get(index + counter).unwrap().to_string());
+            while !get_commentless_code(&vec![code.get(index + counter).unwrap().to_string()]).get(0).unwrap().trim().eq("ENDM") {
+                macro_lines.push(code.get(index + counter).unwrap().to_string());
                 counter += 1;
             }
-            let mut local_map = get_line_map(&macro_content);
+            let mut local_map = get_line_map(&macro_lines);
             for value in local_map.values_mut() {
-                *value += line_count + 1;
+                *value += line_index + 1;
             }
-            macro_map.insert(macro_name, local_map);
-            line_count += 1;
+            macro_byte_to_line.insert(macro_name, local_map);
+            line_index += 1;
             continue;
         }
 
@@ -159,39 +155,38 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
         } else {
             &line
         };
-        if macro_map.contains_key(&operand.to_string()) {
-            let local_map = macro_map.get(&operand.to_string()).unwrap();
+        if macro_byte_to_line.contains_key(&operand.to_string()) {
+            let local_map = macro_byte_to_line.get(&operand.to_string()).unwrap();
             for (local_byte, line) in local_map {
-                line_map.insert(local_byte + byte_count, *line);
+                byte_to_line.insert(local_byte + byte_index, *line);
             }
-            byte_count += local_map.len() as u16;
+            byte_index += local_map.len() as u16;
         } else if one_byte_labels.contains(&operand) {
-            line_map.insert(byte_count, line_count);
-            byte_count += 1;
+            byte_to_line.insert(byte_index, line_index);
+            byte_index += 1;
         } else if two_byte_labels.contains(&operand) {
-            line_map.insert(byte_count, line_count);
-            line_map.insert(byte_count + 1, line_count);
-            byte_count += 2;
+            byte_to_line.insert(byte_index, line_index);
+            byte_to_line.insert(byte_index + 1, line_index);
+            byte_index += 2;
         } else if three_byte_labels.contains(&operand) {
-            line_map.insert(byte_count, line_count);
-            line_map.insert(byte_count + 1, line_count);
-            line_map.insert(byte_count + 2, line_count);
-            byte_count += 3;
+            byte_to_line.insert(byte_index, line_index);
+            byte_to_line.insert(byte_index + 1, line_index);
+            byte_to_line.insert(byte_index + 2, line_index);
+            byte_index += 3;
         }
-        line_count += 1;
+        line_index += 1;
     }
-
-    line_map
+    byte_to_line
 }
 
-fn get_commentless_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+fn get_commentless_code(code: &Vec<String>) -> Vec<String> {
     let comment_regex = Regex::new(r";.*").unwrap();
     let mut new_code = Vec::new();
 
     for line in code {
         new_code.push(comment_regex.replace_all(line, "").to_string());
     }
-    Ok(new_code)
+    new_code
 }
 
 fn eval_str(str: String) -> u16 {
@@ -602,7 +597,7 @@ mod tests {
         let ppc = get_commentless_code(&convert_input(vec![";comment\nMOV A, B;asdf\n;END;\nEND"]));
         let expected = convert_input(vec!["\nMOV A, B\n\nEND"]);
 
-        assert_eq!(ppc, Ok(expected));
+        assert_eq!(ppc, expected);
     }
 
     #[test]
