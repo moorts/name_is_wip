@@ -116,25 +116,37 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let mut line_index: usize = 0;
     let mut byte_index: u16 = 0;
     let mut in_macro = false;
+    let mut in_unmet_conditional = false;
     
     for (index, line) in code.iter().enumerate() {
-        let line = label_decl.replace(line, "").to_string();
+        let line = label_decl.replace(line, "").trim().to_string();
 
         if line.contains("ENDM") {
             in_macro = false;
             line_index += 1;
             continue;
-        }
-
-        if in_macro {
+        } else if line.contains("ENDIF") {
+            in_unmet_conditional = false;
             line_index += 1;
             continue;
+        }
+
+        if in_macro || in_unmet_conditional {
+            line_index += 1;
+            continue;
+        }
+
+        if line.contains("IF ") {
+            let condition = line.split_once(" ").unwrap().1;
+            if eval(condition) == 0 {
+                in_unmet_conditional = true;
+            }
         }
 
         // check for macros
         if line.contains(" MACRO") {
             in_macro = true;
-            let macro_name = line.trim_start().split_once(" ").unwrap().0.to_string();
+            let macro_name = line.split_once(" ").unwrap().0.to_string();
             let mut macro_lines: Vec<String> = Vec::new();
             let mut counter = 1;
             while !get_commentless_code(&vec![code.get(index + counter).unwrap().to_string()]).get(0).unwrap().trim().eq("ENDM") {
@@ -899,7 +911,7 @@ mod tests {
             "ENDM",
             "",
             "macr0 input",
-            "IF 1",
+            "IF VAR1",
             "EI",
             "ENDIF",
             "END",
@@ -909,6 +921,17 @@ mod tests {
         let result = convert_input(vec!["JMP 0 +6", "ADD C", "POP B", "RZ", "EI"]);
 
         assert_eq!(Ok(result), get_preprocessed_code(&code));
+
+        let mut map = HashMap::new();
+        map.insert(0, 1);
+        map.insert(1, 1);
+        map.insert(2, 1);
+        map.insert(3, 2);
+        map.insert(4, 8);
+        map.insert(5, 11);
+        map.insert(6, 16);
+
+        assert_eq!(map, get_line_map(&code));
     }
 
     fn convert_input(lines: Vec<&str>) -> Vec<String> {
