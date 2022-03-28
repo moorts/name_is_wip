@@ -17,6 +17,8 @@ export class EmulatorService {
   private _step: number = 0;
   private _loop: number = 0;
 
+  private _cpmMode: boolean = true;
+
   // Total speed: _stepsPerInterval * (1000 / _interval) instructions per second
   private _interval: number = 10; // Interval in milliseconds
   private _stepsPerInterval: number = 1; // How many CPU steps to perform per interval (-> allows emulator to perform faster than 1000 i/s)
@@ -109,6 +111,13 @@ export class EmulatorService {
       this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr());
     this._step = 0;
     this._running = true;
+
+    if (this._cpmMode) {
+      // Patch memory for BDOS syscalls
+      this._emulatorMemory[5] = 0xC9; // RET
+      this._emulator.pc = 0x100;
+    }
+
     if (!this._paused) {
       this.startLoop();
     }
@@ -157,6 +166,46 @@ export class EmulatorService {
 
     const newMemAddress = this._emulator.get_last_ram_change();
     const ramChanged = prevMemAddress != newMemAddress || this.memory[prevMemAddress] != prevMem;
+
+    if (this._cpmMode && this.emulator?.pc == 0x05) {
+      // Emulate CP/M BDOS syscalls (https://www.seasip.info/Cpm/bdos.html)
+      const registers = this.registers;
+      const largeRegisters = this.largeRegisters;
+
+      if (registers && largeRegisters) {
+        const syscall = registers.c;
+
+        switch(syscall) {
+          case 2: {
+            // BDOS function 2 (C_WRITE) - Console output
+            const char = registers?.e;
+            if (char) {
+              console.log(String.fromCharCode(char));
+            }
+            break;
+          }
+          case 9: {
+            // BDOS function 9 (C_WRITESTR) - Output string
+            let address = largeRegisters.d;
+
+            let currentChar = "";
+            let fullString = "";
+            while (currentChar != "$") {
+              fullString += currentChar;
+              currentChar = String.fromCharCode(this._emulatorMemory[address++]);
+            }
+            console.log(fullString);
+            break;
+          }
+        }
+      }
+    }
+
+    if (this._cpmMode && this.emulator?.pc == 0x00) {
+      console.log("Entered CP/M Warm Boot, Stopping Emulator.");
+      this.stop();
+      return;
+    }
 
     if (this._step % this._skipOnStepInterval == 0) {
       this.onStep.emit({

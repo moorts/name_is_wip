@@ -50,6 +50,7 @@ export class AppComponent implements AfterViewInit {
 
   public onPlayButtonPressed() {
     this.emulatorService.start();
+    this.ramDisplay?.update(true);
   }
 
   public onStopButtonPressed() {
