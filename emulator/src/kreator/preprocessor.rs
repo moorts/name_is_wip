@@ -12,14 +12,12 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
         return Err("A program must only contain one END statement and it has to be the last");
     }
 
-    let mut set_assignments: HashMap<String, u16> = HashMap::new();
     let mut in_conditional = false;
     let mut condition = false;
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let equate_assignments = get_equate_assignments(&code)?;
-    let code = get_commentless_code(&code);
+    let code = replace_variable_usages(&get_commentless_code(&code))?;
     let labels = get_labels(&code)?;
     let code = replace_macros(&code)?;
 
@@ -39,25 +37,8 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             owned_line = owned_line.replace(key, &value.to_string());
         }
 
-        if owned_line.contains("EQU") {
+        if owned_line.contains(" EQU ") || owned_line.contains(" SET ") {
             continue;
-        }
-
-        // determine if a variable is being declared by SET
-        if owned_line.contains("SET") {
-            let (name, expression) = owned_line.split_once(" SET ").unwrap();
-            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
-            continue;
-        }
-
-        // replace values of variables declared by EQU
-        for (key, value) in &equate_assignments {
-            owned_line = owned_line.replace(&format!(" {}", key), &format!(" {}", value));
-        }
-
-        // replace values of variables declared by SET
-        for (key, value) in &set_assignments {
-            owned_line = owned_line.replace(&format!(" {}", key), &format!(" {}", value));
         }
 
         // check if conditional is exited (before check for entering since "IF" is contained in "ENDIF")
@@ -120,9 +101,8 @@ fn get_equate_assignments(code: &Vec<String>) -> Result<HashMap<String, u16>, &'
 pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
-    let equate_assignments = get_equate_assignments(&code).unwrap();
+    let code = replace_variable_usages(code).unwrap();
     
-    let mut set_assignments:HashMap<String, u16> = HashMap::new();
     let mut byte_to_line_map: HashMap<u16, usize> = HashMap::new();
     let mut macro_map = HashMap::new();
     let mut line_index: usize = 0;
@@ -131,17 +111,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let mut in_unmet_conditional = false;
     
     for (index, line) in code.iter().enumerate() {
-        let mut line = label_decl.replace(line, "").trim().to_string();
-
-        // replace values of variables declared by EQU
-        for (key, value) in &equate_assignments {
-            line = line.replace(&format!(" {}", key), &format!(" {}", value));
-        }
-
-        // replace values of variables declared by SET
-        for (key, value) in &set_assignments {
-            line = line.replace(&format!(" {}", key), &format!(" {}", value));
-        }
+        let line = label_decl.replace(line, "").trim().to_string();
 
         // check if macro or conditional ends
         if line.contains("ENDM") {
@@ -151,14 +121,6 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
         }
 
         if in_macro || in_unmet_conditional {
-            line_index += 1;
-            continue;
-        }
-
-        // determine if a variable is being declared by SET
-        if line.contains("SET") {
-            let (name, expression) = line.split_once(" SET ").unwrap();
-            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
             line_index += 1;
             continue;
         }
@@ -218,6 +180,35 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
         line_index += 1;
     }
     byte_to_line_map
+}
+
+fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+    let equate_assignments = get_equate_assignments(&code)?;
+    let mut new_code: Vec<String> = Vec::new();
+    let mut set_assignments: HashMap<String, u16> = HashMap::new();
+
+    for line in code {
+        let mut line = line.trim().to_string();
+
+        // replace values of variables declared by EQU
+        for (key, value) in &equate_assignments {
+            line = line.replace(&format!(" {}", key), &format!(" {}", value));
+            line = line.replace(&format!(",{}", key), &format!(",{}", value));
+        }
+
+        // replace values of variables declared by SET
+        for (key, value) in &set_assignments {
+            line = line.replace(&format!(" {}", key), &format!(" {}", value));
+            line = line.replace(&format!(",{}", key), &format!(",{}", value));
+        }
+
+        if line.contains("SET") {
+            let (name, expression) = line.split_once(" SET ").unwrap();
+            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+        }
+        new_code.push(line);
+    }
+    Ok(new_code)
 }
 
 fn get_commentless_code(code: &Vec<String>) -> Vec<String> {
