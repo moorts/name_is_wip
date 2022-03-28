@@ -31,13 +31,11 @@ impl fmt::Display for Assembler {
 
 impl Assembler {
     pub fn new(input_code: &str) -> Self {
-        let mut lines = Vec::new();
-        let comment_regex = Regex::new(r";.*").unwrap();
+        let mut lines:Vec<String> = Vec::new();
+        //let comment_regex = Regex::new(r";.*").unwrap();
 
         for line in input_code.split("\n") {
-            let line = comment_regex.replace(line, "");
-            let line = line.trim_end();
-            lines.push(String::from(line));
+            lines.push(line.trim().to_string());
         }
 
         Self { code: lines }
@@ -458,7 +456,7 @@ mod tests {
         let code_file = "MOV A B \n JMP label \nlabel: INC ACC   ";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B\n JMP label\nlabel: INC ACC";
+        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -467,7 +465,7 @@ mod tests {
         let code_file = "MOV A B \r\n JMP label \r\nlabel: INC ACC  ";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B\n JMP label\nlabel: INC ACC";
+        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -479,11 +477,11 @@ mod tests {
     }
 
     #[test]
-    fn display_remove_comments() {
+    fn display_with_comments() {
         let code_file = " \n;comment\nMOV A B ;comment\n;";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "\n\nMOV A B\n";
+        let expected_text = "\n;comment\nMOV A B ;comment\n;";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
