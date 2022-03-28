@@ -32,7 +32,6 @@ impl fmt::Display for Assembler {
 impl Assembler {
     pub fn new(input_code: &str) -> Self {
         let mut lines:Vec<String> = Vec::new();
-        //let comment_regex = Regex::new(r";.*").unwrap();
 
         for line in input_code.split("\n") {
             lines.push(line.trim().to_string());

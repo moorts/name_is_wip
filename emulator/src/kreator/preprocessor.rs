@@ -19,8 +19,9 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let labels = get_labels(code)?;
-    let code = replace_macros(code)?;
+    let code = get_commentless_code(&code)?;
+    let labels = get_labels(&code)?;
+    let code = replace_macros(&code)?;
 
     for line in code {
         let mut owned_line = line.trim().to_string();
@@ -104,6 +105,16 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     // remove "END" from code
     preprocessed_code.remove(preprocessed_code.len() - 1);
     Ok(preprocessed_code)
+}
+
+fn get_commentless_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+    let comment_regex = Regex::new(r";.*").unwrap();
+    let mut new_code = Vec::new();
+
+    for line in code {
+        new_code.push(comment_regex.replace_all(line, "").to_string());
+    }
+    Ok(new_code)
 }
 
 fn eval_str(str: String) -> u16 {
@@ -508,6 +519,14 @@ fn has_correct_end(code: &Vec<String>) -> bool {
 
 mod tests {
     use super::*;
+
+    #[test]
+    fn remove_comments() {
+        let ppc = get_commentless_code(&convert_input(vec![";comment\nMOV A, B;asdf\n;END;\nEND"]));
+        let expected = convert_input(vec!["\nMOV A, B\n\nEND"]);
+
+        assert_eq!(ppc, Ok(expected));
+    }
 
     #[test]
     fn preprocessing_pc() {
