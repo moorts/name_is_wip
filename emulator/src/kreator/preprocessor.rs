@@ -133,12 +133,24 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     for (index, line) in code.iter().enumerate() {
         let mut line = label_decl.replace(line, "").trim().to_string();
 
+        // replace values of variables declared by EQU
+        for (key, value) in &equate_assignments {
+            line = line.replace(&format!(" {}", key), &format!(" {}", value));
+        }
+
+        // replace values of variables declared by SET
+        for (key, value) in &set_assignments {
+            line = line.replace(&format!(" {}", key), &format!(" {}", value));
+        }
+
+        // check if macro or conditional ends
         if line.contains("ENDM") {
             in_macro = false;
-            line_index += 1;
-            continue;
         } else if line.contains("ENDIF") {
             in_unmet_conditional = false;
+        }
+
+        if in_macro || in_unmet_conditional {
             line_index += 1;
             continue;
         }
@@ -151,21 +163,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
             continue;
         }
 
-        // replace values of variables declared by EQU
-        for (key, value) in &equate_assignments {
-            line = line.replace(&format!(" {}", key), &format!(" {}", value));
-        }
-
-        // replace values of variables declared by SET
-        for (key, value) in &set_assignments {
-            line = line.replace(&format!(" {}", key), &format!(" {}", value));
-        }
-
-        if in_macro || in_unmet_conditional {
-            line_index += 1;
-            continue;
-        }
-
+        // check for (unmet) conditional
         if line.contains("IF ") {
             let condition = line.split_once(" ").unwrap().1;
             if eval(condition) == 0 {
@@ -197,6 +195,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
         } else {
             &line
         };
+        // add a line that would be assembled to the map
         if macro_map.contains_key(&operand.to_string()) {
             let local_map = macro_map.get(&operand.to_string()).unwrap();
             for (local_byte, line) in local_map {
