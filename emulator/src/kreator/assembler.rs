@@ -56,7 +56,7 @@ impl Assembler {
         Ok(machine_code)
     }
 
-    pub fn get_line_map(&self) -> HashMap<u16, usize> {
+    pub fn get_line_map(&self) -> Result<HashMap<u16, usize>, &'static str> {
         get_line_map(&self.code)
     }
 

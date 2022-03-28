@@ -98,10 +98,10 @@ fn get_equate_assignments(code: &Vec<String>) -> Result<HashMap<String, u16>, &'
     Ok(assignments)
 }
 
-pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
+pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static str> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
-    let code = replace_variable_usages(code).unwrap();
+    let code = replace_variable_usages(code)?;
     
     let mut byte_to_line_map: HashMap<u16, usize> = HashMap::new();
     let mut macro_map = HashMap::new();
@@ -143,7 +143,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
                 macro_lines.push(code.get(index + counter).unwrap().to_string());
                 counter += 1;
             }
-            let mut local_map = get_line_map(&macro_lines);
+            let mut local_map = get_line_map(&macro_lines)?;
             for value in local_map.values_mut() {
                 *value += line_index + 1;
             }
@@ -179,7 +179,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
         }
         line_index += 1;
     }
-    byte_to_line_map
+    Ok(byte_to_line_map)
 }
 
 fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
@@ -899,7 +899,7 @@ mod tests {
         map.insert(4, 5);
         map.insert(5, 5);
 
-        assert_eq!(get_line_map(&code), map);
+        assert_eq!(Ok(map.clone()), get_line_map(&code));
 
         let code = convert_input(vec!["mac MACRO", "", "MOV A,B", "ENDM", "label:", "mac", "", "JMP 0", "mac"]);
         map.clear();
@@ -910,7 +910,7 @@ mod tests {
         map.insert(3, 7);
         map.insert(4, 2);
 
-        assert_eq!(get_line_map(&code), map);
+        assert_eq!(Ok(map), get_line_map(&code));
     }
 
     #[test]
@@ -951,7 +951,7 @@ mod tests {
         map.insert(5, 11);
         map.insert(6, 16);
 
-        assert_eq!(map, get_line_map(&code));
+        assert_eq!(Ok(map), get_line_map(&code));
     }
 
     fn convert_input(lines: Vec<&str>) -> Vec<String> {
