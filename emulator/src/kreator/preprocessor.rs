@@ -107,6 +107,40 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     Ok(preprocessed_code)
 }
 
+pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
+    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
+    let label_decl = Regex::new(LABEL_DECL).unwrap();
+    
+    let mut map = HashMap::new();
+    let mut line_count: usize = 0;
+    let mut byte_count: u16 = 0;
+    
+    for line in code {
+        let line = label_decl.replace(line, "");
+        if line.is_empty() {
+            line_count += 1;
+            continue;
+        }
+        let opc = line.split_once(" ").unwrap().0;
+        if one_byte_labels.contains(&opc) {
+            map.insert(byte_count, line_count);
+            byte_count += 1;
+        } else if two_byte_labels.contains(&opc) {
+            map.insert(byte_count, line_count);
+            map.insert(byte_count + 1, line_count);
+            byte_count += 2;
+        } else if three_byte_labels.contains(&opc) {
+            map.insert(byte_count, line_count);
+            map.insert(byte_count + 1, line_count);
+            map.insert(byte_count + 2, line_count);
+            byte_count += 3;
+        }
+        line_count += 1;
+    }
+
+    map
+}
+
 fn get_commentless_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let comment_regex = Regex::new(r";.*").unwrap();
     let mut new_code = Vec::new();
@@ -781,6 +815,21 @@ mod tests {
 
         let code = convert_input(vec!["END", "RRC"]);
         assert_eq!(false, has_correct_end(&code));
+    }
+
+    #[test]
+    fn line_mapping() {
+        let code = convert_input(vec!["MOV A,B", "", "JMP 1", "label:", "lab:", "MVI D, 3H"]);
+        let mut map = HashMap::new();
+
+        map.insert(0, 0);
+        map.insert(1, 2);
+        map.insert(2, 2);
+        map.insert(3, 2);
+        map.insert(4, 5);
+        map.insert(5, 5);
+
+        assert_eq!(get_line_map(&code), map);
     }
 
     #[test]
