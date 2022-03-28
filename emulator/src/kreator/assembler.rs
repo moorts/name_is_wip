@@ -1,5 +1,5 @@
 use super::parser::eval;
-use super::preprocessor::get_preprocessed_code;
+use super::preprocessor::{get_preprocessed_code, get_line_map};
 use core::fmt;
 use regex::Regex;
 use std::{collections::HashMap, hash::Hash};
@@ -54,6 +54,10 @@ impl Assembler {
             }
         }
         Ok(machine_code)
+    }
+
+    pub fn get_line_map(&self) -> HashMap<u16, usize> {
+        get_line_map(&self.code)
     }
 
     pub fn get_origins(&self) -> Vec<(u16, u16)> {

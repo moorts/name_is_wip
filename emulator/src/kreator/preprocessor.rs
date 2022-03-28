@@ -111,34 +111,77 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
     
-    let mut map = HashMap::new();
+    let mut line_map: HashMap<u16, usize> = HashMap::new();
+    let mut macro_map = HashMap::new();
     let mut line_count: usize = 0;
     let mut byte_count: u16 = 0;
+    let mut in_macro = false;
     
-    for line in code {
-        let line = label_decl.replace(line, "");
-        if line.is_empty() {
+    for (index, line) in code.iter().enumerate() {
+
+        // remove label declarations
+        let line = label_decl.replace(line, "").to_string();
+
+        if line.contains("ENDM") {
+            in_macro = false;
             line_count += 1;
             continue;
         }
-        let opc = line.split_once(" ").unwrap().0;
-        if one_byte_labels.contains(&opc) {
-            map.insert(byte_count, line_count);
+
+        if line.is_empty() || in_macro {
+            line_count += 1;
+            continue;
+        }
+
+        // check for macros
+        if line.contains(" MACRO") {
+            in_macro = true;
+
+            let macro_name = line.trim_start().split(" ").collect::<Vec<&str>>().get(0).unwrap().to_string();
+            let mut macro_content: Vec<String> = Vec::new();
+            let mut counter = 1;
+
+            while !code.get(index + counter).unwrap().eq("ENDM") {
+                macro_content.push(code.get(index + counter).unwrap().to_string());
+                counter += 1;
+            }
+            let mut local_map = get_line_map(&macro_content);
+            for value in local_map.values_mut() {
+                *value += line_count + 1;
+            }
+            macro_map.insert(macro_name, local_map);
+            line_count += 1;
+            continue;
+        }
+
+        let operand: &str = if line.contains(" ") {
+            line.split_once(" ").unwrap().0
+        } else {
+            &line
+        };
+        if macro_map.contains_key(&operand.to_string()) {
+            let local_map = macro_map.get(&operand.to_string()).unwrap();
+            for (local_byte, line) in local_map {
+                line_map.insert(local_byte + byte_count, *line);
+            }
+            byte_count += local_map.len() as u16;
+        } else if one_byte_labels.contains(&operand) {
+            line_map.insert(byte_count, line_count);
             byte_count += 1;
-        } else if two_byte_labels.contains(&opc) {
-            map.insert(byte_count, line_count);
-            map.insert(byte_count + 1, line_count);
+        } else if two_byte_labels.contains(&operand) {
+            line_map.insert(byte_count, line_count);
+            line_map.insert(byte_count + 1, line_count);
             byte_count += 2;
-        } else if three_byte_labels.contains(&opc) {
-            map.insert(byte_count, line_count);
-            map.insert(byte_count + 1, line_count);
-            map.insert(byte_count + 2, line_count);
+        } else if three_byte_labels.contains(&operand) {
+            line_map.insert(byte_count, line_count);
+            line_map.insert(byte_count + 1, line_count);
+            line_map.insert(byte_count + 2, line_count);
             byte_count += 3;
         }
         line_count += 1;
     }
 
-    map
+    line_map
 }
 
 fn get_commentless_code(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
@@ -828,6 +871,17 @@ mod tests {
         map.insert(3, 2);
         map.insert(4, 5);
         map.insert(5, 5);
+
+        assert_eq!(get_line_map(&code), map);
+
+        let code = convert_input(vec!["mac MACRO", "", "MOV A,B", "ENDM", "label:", "mac", "", "JMP 0", "mac"]);
+        map.clear();
+
+        map.insert(0, 2);
+        map.insert(1, 7);
+        map.insert(2, 7);
+        map.insert(3, 7);
+        map.insert(4, 2);
 
         assert_eq!(get_line_map(&code), map);
     }
