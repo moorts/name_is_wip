@@ -111,8 +111,8 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
     
-    let mut byte_to_line: HashMap<u16, usize> = HashMap::new();
-    let mut macro_byte_to_line = HashMap::new();
+    let mut byte_to_line_map: HashMap<u16, usize> = HashMap::new();
+    let mut macro_map = HashMap::new();
     let mut line_index: usize = 0;
     let mut byte_index: u16 = 0;
     let mut in_macro = false;
@@ -145,7 +145,7 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
             for value in local_map.values_mut() {
                 *value += line_index + 1;
             }
-            macro_byte_to_line.insert(macro_name, local_map);
+            macro_map.insert(macro_name, local_map);
             line_index += 1;
             continue;
         }
@@ -155,28 +155,28 @@ pub fn get_line_map(code: &Vec<String>) -> HashMap<u16, usize> {
         } else {
             &line
         };
-        if macro_byte_to_line.contains_key(&operand.to_string()) {
-            let local_map = macro_byte_to_line.get(&operand.to_string()).unwrap();
+        if macro_map.contains_key(&operand.to_string()) {
+            let local_map = macro_map.get(&operand.to_string()).unwrap();
             for (local_byte, line) in local_map {
-                byte_to_line.insert(local_byte + byte_index, *line);
+                byte_to_line_map.insert(local_byte + byte_index, *line);
             }
             byte_index += local_map.len() as u16;
         } else if one_byte_labels.contains(&operand) {
-            byte_to_line.insert(byte_index, line_index);
+            byte_to_line_map.insert(byte_index, line_index);
             byte_index += 1;
         } else if two_byte_labels.contains(&operand) {
-            byte_to_line.insert(byte_index, line_index);
-            byte_to_line.insert(byte_index + 1, line_index);
+            byte_to_line_map.insert(byte_index, line_index);
+            byte_to_line_map.insert(byte_index + 1, line_index);
             byte_index += 2;
         } else if three_byte_labels.contains(&operand) {
-            byte_to_line.insert(byte_index, line_index);
-            byte_to_line.insert(byte_index + 1, line_index);
-            byte_to_line.insert(byte_index + 2, line_index);
+            byte_to_line_map.insert(byte_index, line_index);
+            byte_to_line_map.insert(byte_index + 1, line_index);
+            byte_to_line_map.insert(byte_index + 2, line_index);
             byte_index += 3;
         }
         line_index += 1;
     }
-    byte_to_line
+    byte_to_line_map
 }
 
 fn get_commentless_code(code: &Vec<String>) -> Vec<String> {
