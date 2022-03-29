@@ -4,7 +4,7 @@
 
 \subsection{Registerarray}
 
-Im folgenden werden drei Aspekte der Implementierungen des Registerarrays gezeigt: Die Representation der Register, der Zugriff auf die Register und der Zugriff auf die Flaggen.
+Im folgenden werden drei Aspekte der Implementierungen des Registerarrays gezeigt: Die Repräsentation der Register, der Zugriff auf die Register und der Zugriff auf die Flaggen.
 
 \subsubsection{Datentyp}
 
@@ -19,12 +19,12 @@ union Register {
 }
 \end{minted}
 
-Ein Union wird ähnlich wie ein Struct deklariert, jedoch Teilen alle Felder den gleichen Speicherplatz\footnote{ausführliche Erklärung: \url{https://doc.rust-lang.org/reference/items/unions.html}}. Das bedeutet man kann den Wert eines solchen \rust{Register} entweder durch \rust{Register::bytes} als Tupel aus 2 Bytes oder durch \rust{Register::value} als 16-Bit-Wert auslesen. Dadurch ist keinerlei Konkatenation der Registerwerte notwendig.
+Ein Union wird ähnlich wie ein Struct deklariert, jedoch teilen alle Felder den gleichen Speicherplatz\footnote{ausführliche Erklärung: \url{https://doc.rust-lang.org/reference/items/unions.html}}. Das bedeutet man kann den Wert eines solchen \rust{Register} entweder durch \rust{Register::bytes} als Tupel aus 2 Bytes oder durch \rust{Register::value} als 16-Bit-Wert auslesen. Dadurch ist keinerlei Konkatenation der Registerwerte notwendig.
 
 \subsubsection{Registerzugriff}
 
-Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer Teil der zu implementierenden Instruktionen sie benötigt. Um dies möglichst einfach zu machen, haben wir Indexing für den Registerarray implementiert. Über String-Indexing --- \rust{reg["bc"] // Registerpaar BC} --- ist Zugriff auf Registerpaare geregelt, über Character-Indexing --- \rust{reg['b'] // Register B} --- der normale Zugriff.
+Der Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer Teil der zu implementierenden Instruktionen sie benötigt. Um dies möglichst einfach zu machen, wurde Indizierung für den Registerarray implementiert. Über String-Indizierung --- \rust{reg["bc"] // Registerpaar BC} --- ist Zugriff auf Registerpaare geregelt, über Character-Indizierung --- \rust{reg['b'] // Register B} --- der normale Zugriff.
 
 \subsubsection{Flaggenzugriff}
 
-Die Flaggen sind bekannterweise Teil des PSW-Registerpaar, sprich sie sind als ein Byte gespeichert. Um die Werte der einzelnen Flaggen zu erhalten, werden Bitmasken verwendet. Bspw. der Ausdruck \rust{byte & 0x80} setzt alle Bits, bis auf das mit dem höchsten Stellenwert, auf 0. Damit ist die Flagge gesetzt, wenn der Ausdruck ungleich 0 ist.
+Die Flags sind bekannterweise Teil des PSW-Registerpaars, sprich sie sind als einzelnes Byte gespeichert. Um die Werte der einzelnen Flaggen zu erhalten, werden Bitmasken verwendet. Um bspw. herauszufinden, ob das Bit mit dem höchsten Stellenwert gesetzt ist, muss der Ausdruck \rust{byte & 0x80 != 0} berechnet werden. Wenn dieser \rust{true} ist, ist das Bit gesetzt\footnote{\rust{0x80 == 0b10000000}}.

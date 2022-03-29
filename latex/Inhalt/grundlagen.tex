@@ -2,9 +2,16 @@
 
 \section{Entwicklungsumgebung}
 
+\section{WebAssembly}
+
+"\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
+Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach \ac{WASM} zu übersetzen (bspw. C/C++, Rust, usw.).
+
+In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
+
 \section{Rust}
 
-Rust ist eine moderne, performante, memory-safe Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon bei Compilezeit, wodurch Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (aka C/C++). Außerdem ist Rust gut für WebAssembly-Anwendungen geeignet, da gute Dokumentation existiert\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
+Rust ist eine moderne, performante, speichersichere Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon zur Compilezeit, wodurch die Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (bspw. C/C++). Außerdem ist Rust gut für \ac{WASM}-Anwendungen geeignet, da gute Dokumentation existiert\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
 
 In diesem Abschnitt werden einige grundlegende Sprachkonstrukte/-konzepte erläutert, die nützlich zum Verständnis dieser Arbeit sind.
 Diese Informationen stammen direkt aus der offiziellen Dokumentation: Dem Rust Book \cite{rustBook} und der Dokumentation der Standard-Library \cite{rustDoc}.
@@ -22,11 +29,11 @@ Das \rust{match}-Statement ist die Rust Alternative zum klassischen \code{switch
     }
 \end{minted}
 
-Rust garantiert zu Compilezeit, dass die match-Arme alle möglichen Fälle abdecken (nur relevant wenn kein default-Case).
+Rust garantiert zu Compilezeit, dass die match-Arme alle möglichen Fälle abdecken (nur relevant wenn kein default-Case vorhanden ist).
 
 \subsection{Result und Option}
 
-Rust hat kein \code{null}, stattdessen existiert der \rust{Option<T>} Typ. Option ist wie folgt definiert:
+In Rust gibt es keinen \code{null}, stattdessen existiert der \rust{Option<T>} Typ. Option ist wie folgt definiert:
 
 \begin{minted}{rust}
     enum Option<T> {
@@ -35,6 +42,7 @@ Rust hat kein \code{null}, stattdessen existiert der \rust{Option<T>} Typ. Optio
     }
 \end{minted}
 
+\code{T} ist ein generischer Typ Parameter, durch Angabe eines Typen in den Spitzen Klammern, wird der im Option enthaltende Typ festgelegt:
 Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), oder oder eine 32-Bit Integer (Some(i32)). Um an den enthaltenden Wert zu kommen, muss eine Fallunterscheidung durchgeführt werden, bspw. durch ein \rust{match}-Statement. Dies garantiert, dass keine ungewollten null-References möglich sind (wie \zB ein Methodenaufruf auf \code{null}).
 
 \rust{Option<T>} wird verwendet, wenn es akzeptabel ist, dass kein Wert vorhanden ist. Andernfalls sollte \rust{Result<T, E>} verwendet werden.
@@ -46,20 +54,13 @@ Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), ode
     }
 \end{minted}
 
-Ein Result enthält entweder einen Wert des entsprechenden Types, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
+Ein Result enthält entweder einen Wert des entsprechenden Typs, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
 
-
-\section{WebAssembly}
-
-"WebAssembly is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei WebAssembly also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem WebAssembly eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen WASM und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach WebAssembly ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
-Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach WebAssembly zu übersetzen (bspw. C/C++, Rust, u.s.w).
-
-In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
 
 \section{Intel 8080}
 
-Das Folgende ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} gewonnen.
-Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis unseres Emulators sind.
+Das Folgende Kapitel ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen sind dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} entnommen.
+Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis des Emulators sind.
 
 \subsubsection{RAM und Stack}
 
@@ -94,11 +95,11 @@ Die Abkürzung PSW (Processor Status Word), die im Bezug auf bestimmte Instrukti
 
 \subsection{Flags}\label{sec:flags}
 
-Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), dafür gibt sogenannte Flags. Diese werden in Hardware als 5 Flip-Flops realisiert, im Endeffekt sind es aber einfach Booleans. Es gibt die folgenden Flags:
+Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), dafür gibt sogenannte Flags. Diese werden in Hardware als 5 Flip-Flops\footnote{flüchtiger 1-Bit Datenspeicher} realisiert, im Endeffekt handelt es sich einfach um Booleans. Es gibt die folgenden Flags:
 
 \begin{description}
     \item[Zero] Letzte Operation hat 0 ergeben
-    \item[Carry] Bei der letzten Operation gab es Übertrag
+    \item[Carry] Bei der letzten Operation gab es einen Übertrag
     \item[Sign] Das Ergebnis der letzten Operation war negativ
     \item[Parity] Die Anzahl der Einsen im Ergebnis (Basis 2) war gerade
     \item[Auxiliary Carry] Übertrag im vierten Bit % TODO: Formulate better
@@ -112,7 +113,7 @@ Es folgt eine kurze Einführung in Intel 8080 Assembly.
 
 \subsubsection{Notation}
 
-In den folgenden Sektionen werden einige Instruktionen aufgelistet und erklärt. Für diese Erklärungen verwenden wir eine einfache Notation um wichtige Konzepte darzustellen. Buchstaben repräsentieren die entsprechenden Register (Buchstabenpaare analog die Registerpaare), eckige Klammern bedeuten, dass das innere Register(paar) als Addresse interpretiert wird und der dortige Wert gemeint ist.
+In den folgenden Sektionen werden einige Instruktionen aufgelistet und erklärt. Für diese Erklärungen wird eine einfache Notation verwendet, um wichtige Konzepte darzustellen. Buchstaben repräsentieren die entsprechenden Register (Buchstabenpaare analog die Registerpaare), eckige Klammern bedeuten, dass das innere Register(paar) als Addresse interpretiert wird und der dortige Wert gemeint ist.
 Eine kurze Übersicht ist in \cref{tab:notation} auffindbar.
 
 \begin{table}[h]
@@ -165,7 +166,7 @@ Calls hingegen entsprechen grob dem Funktionsaufruf aus higher-level Sprachen. B
 
 \subsubsection{Arithmetik}
 
-Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als Zahlen im Zweierkomplement interpretiert. Die Ergebnisse der Operationen werden hauptsächlich im Akkumulator gespeichert --- Ausnahmen sind \zB Inkrementierungen der Register. Viele der Operationen bearbeiten auch die Flaggen, um Informationen über das Ergebnis zurückzugeben (siehe \cref{sec:flags} für Details).
+Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als Zahlen im Zweierkomplement interpretiert. Die Ergebnisse der Operationen werden hauptsächlich im Akkumulator gespeichert --- Ausnahmen sind \zB Inkrementierungen der Register. Viele der Operationen bearbeiten auch die Flags, um Informationen über das Ergebnis zurückzugeben (siehe \cref{sec:flags} für Details).
 \Cref{tab:arith} zeigt einige arithmetische Anweisungen mit einer kurzen Erklärung.
 
 \begin{table}[h]
@@ -183,11 +184,11 @@ Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als 
 
 Durch sogenannte Interrupts kann die normale Ausführung der CPU unterbrochen werden. Interrupts sind externe Signale (bspw. von Peripheriegeräten), bei denen es sich um eine einzelne Instruktion handelt. Diese Instruktion wird ausgeführt, anschließend wird die normale Ausführung fortgesetzt. Meistens handelt es sich bei dieser Instruktion um eine \asm{RST}-Instruktion, eine Gruppe von Instruktionen, die \asm{CALL}s auf fixe Addressen realisieren. Dadurch kann der Entwickler den entsprechenden Code um die Interrupts zu bearbeiten an diesen Addressen ablegen, sodass er somit ausgeführt werden kann.
 
-Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{EI} (Enable Interrupts) bzw. \asm{DI} (Disable Interrupts) Anweisungen. Diese setzen eine interne Flagge, die bestimmt ob Interrupts zugelassen sind. Interrupts während diese Flagge \rust{false} ist werden ignoriert. Bei Programmstart ist dies der Fall.
+Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{EI}-Anweisung (Enable Interrupts) bzw. \asm{DI}-Anweisung (Disable Interrupts). Diese setzen eine interne Flag, die bestimmt ob Interrupts zugelassen sind. Interrupts während der Wert des Flags \rust{false} ist werden ignoriert. Bei Programmstart ist dies der Fall.
 
 \subsection{Peripherie}
 
 Über sogenannte Ports regelt der Intel 8080 die Datenübergabe zwischen dem Chip und den angeschlossenen Geräten. 
-Es gibt 256 verfügbare Ports, die über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} schreibt liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
+Es gibt 256 verfügbare Ports, über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
 
 So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Interrupt-Routine die aktuellen Pixelwerte mitgeteilt werden, wenn das Display ein Interrupt-Signal sendet.
