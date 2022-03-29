@@ -11,6 +11,7 @@ export class VideoOutputComponent implements AfterViewInit {
 
   @Input() public width: number = 256;
   @Input() public height: number = 224;
+  @Input() public scale: number = 1.0;
 
   @ViewChild("canvas") private canvas!: ElementRef<HTMLCanvasElement>;
 
@@ -21,6 +22,7 @@ export class VideoOutputComponent implements AfterViewInit {
   private fragSource: string | undefined;
   private vao: WebGLVertexArrayObject | null = null;
   private textureLocation: WebGLUniformLocation | null = null;
+  private scaleLocation: WebGLUniformLocation | null = null;
 
   constructor(private readonly emulatorService: EmulatorService, private readonly httpClient: HttpClient) {
     httpClient.get("assets/shaders/simple.frag", {responseType: 'text'}).subscribe(result => {
@@ -51,7 +53,7 @@ export class VideoOutputComponent implements AfterViewInit {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
       new Uint8Array([20, 255, 20, 255]));
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
@@ -67,10 +69,10 @@ export class VideoOutputComponent implements AfterViewInit {
 
       // look up where the vertex data needs to go.
     var positionAttributeLocation = gl.getAttribLocation(this.shaderProgram, "a_position");
-    var texcoordAttributeLocation = gl.getAttribLocation(this.shaderProgram, "a_texcoord");
 
     // lookup uniforms
     this.textureLocation = gl.getUniformLocation(this.shaderProgram, "u_texture");
+    this.scaleLocation = gl.getUniformLocation(this.shaderProgram, "u_scale");
 
     // Create a vertex array object (attribute state)
     this.vao = gl.createVertexArray();
@@ -104,33 +106,6 @@ export class VideoOutputComponent implements AfterViewInit {
     var offset = 0;        // start at the beginning of the buffer
     gl.vertexAttribPointer(
         positionAttributeLocation, size, type, normalize, stride, offset);
-
-    // create the texcoord buffer, make it the current ARRAY_BUFFER
-    // and copy in the texcoord values
-    var texcoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texcoordBuffer);
-    // Put texcoords in the buffer
-    var texcoords = [
-      0, 0,
-      0, 1,
-      1, 0,
-      1, 0,
-      0, 1,
-      1, 1,
-    ];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texcoords), gl.STATIC_DRAW);
-
-    // Turn on the attribute
-    gl.enableVertexAttribArray(texcoordAttributeLocation);
-
-    // Tell the attribute how to get data out of texcoordBuffer (ARRAY_BUFFER)
-    var size = 2;          // 3 components per iteration
-    var type = gl.FLOAT;   // the data is 32bit floats
-    var normalize = true;  // convert from 0-255 to 0.0-1.0
-    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next color
-    var offset = 0;        // start at the beginning of the buffer
-    gl.vertexAttribPointer(
-        texcoordAttributeLocation, size, type, normalize, stride, offset);
   }
 
   public update() {
@@ -143,14 +118,10 @@ export class VideoOutputComponent implements AfterViewInit {
 
     // Update texture
     const data = this.emulatorService.memory;
-    //gl.bindTexture(gl.TEXTURE_2D, this.frameTexture);
-    //gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, this.width, this.height, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+
+    // Upload data to a WebGL texture that only has a red channel
     gl.bindTexture(gl.TEXTURE_2D, this.frameTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.width / 2, this.height / 2, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-      data);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, this.width / 8, this.height, 0, gl.RED, gl.UNSIGNED_BYTE, data);
 
     if (!this.shaderProgram) return;
 
@@ -162,6 +133,7 @@ export class VideoOutputComponent implements AfterViewInit {
     const textureUnit = 0;
     // the shader we're putting the texture on texture unit 0
     gl.uniform1i(this.textureLocation, textureUnit);
+    gl.uniform1f(this.scaleLocation, this.scale);
 
     // Bind the texture to texture unit 0
     gl.activeTexture(gl.TEXTURE0 + textureUnit);

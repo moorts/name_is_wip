@@ -108,7 +108,7 @@ export class EmulatorService {
   public start() {
     this._emulator = createEmulator(this._initialMemory);
     if (this._wasmContext)
-      this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr());
+      this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr(), 0x4000);
     this._step = 0;
     this._running = true;
 
