@@ -21,13 +21,15 @@ import { HttpClientModule } from "@angular/common/http";
 import { CodeEditorComponent } from './code-editor/code-editor.component';
 import { RamDisplayComponent } from './ram-display/ram-display.component';
 import { LoadFileDialogComponent } from './load-file-dialog/load-file-dialog.component';
+import { VideoOutputComponent } from './video-output/video-output.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     CodeEditorComponent,
     RamDisplayComponent,
-    LoadFileDialogComponent
+    LoadFileDialogComponent,
+    VideoOutputComponent
   ],
   imports: [
     BrowserModule,

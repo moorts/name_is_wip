@@ -17,7 +17,7 @@ export class EmulatorService {
   private _step: number = 0;
   private _loop: number = 0;
 
-  private _cpmMode: boolean = true;
+  private _cpmMode: boolean = false;
 
   // Total speed: _stepsPerInterval * (1000 / _interval) instructions per second
   private _interval: number = 10; // Interval in milliseconds

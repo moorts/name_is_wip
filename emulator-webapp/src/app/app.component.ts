@@ -7,6 +7,7 @@ import { RamDisplayComponent } from './ram-display/ram-display.component';
 import { ThemeService } from './theme-service/theme.service';
 import { MatDialog } from '@angular/material/dialog';
 import { LoadFileDialogComponent } from './load-file-dialog/load-file-dialog.component';
+import { VideoOutputComponent } from './video-output/video-output.component';
 
 @Component({
   selector: 'app-root',
@@ -19,6 +20,7 @@ export class AppComponent implements AfterViewInit {
 
   @ViewChild('codeEditor') public codeEditor: CodeEditorComponent | undefined;
   @ViewChild('ramDisplay') public ramDisplay: RamDisplayComponent | undefined;
+  @ViewChild('videoOutput') public videoOutput: VideoOutputComponent | undefined;
 
   constructor(private readonly matIconRegistry: MatIconRegistry,
               private readonly domSanitizer: DomSanitizer,
@@ -29,10 +31,12 @@ export class AppComponent implements AfterViewInit {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
     emulatorService.onStep.subscribe((props) => {
       this.ramDisplay?.update(false, props.ramChanged);
+      this.videoOutput?.update();
     });
   }
 
   ngAfterViewInit(): void {
+    this.videoOutput?.update();
   }
 
   public onAssembleButtonPressed() {
