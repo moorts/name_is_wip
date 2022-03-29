@@ -7,6 +7,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
 
+
 \usepackage{fancyhdr}
 
 \usepackage{csquotes}
@@ -25,11 +26,18 @@
 
 \usepackage{hyperref}
 \usepackage{amsmath}
-\usepackage[german]{cleveref}
+\usepackage{cleveref}
+
+\crefname{listing}{Quellcode}{Quellcode}
 \usepackage{graphicx}
 
-\usepackage{minted}
+\usepackage[chapter]{minted}
 \usepackage{xcolor}
+
+\usepackage{acronym}
+
+\renewcommand\listingscaption{Quellcode}
+\renewcommand\listoflistingscaption{Quellcode Verzeichnis}
 
 \bibliography{bericht}
 
@@ -66,7 +74,6 @@
 }
 
 \pagestyle{fancy}
-\fancyhf{}
 
 \rhead{\leftmark}
 \lhead{\Emu}
@@ -76,7 +83,7 @@
 
 \newcommand{\code}[1]{\texttt{#1}} % Ist einfacher zu schreiben als ständig \texttt und erlaubt
 
-\crefname{code}{Auflistung}{Auflistungen}
+%\crefname{code}{Auflistung}{Auflistungen}
 
 \begin{document}
 
@@ -109,12 +116,18 @@ Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 
 \tableofcontents
 
+\listoftables
+\listoflistings
+
+
 \include{Inhalt/einleitung}
 \include{Inhalt/grundlagen}
 \include{Inhalt/analyse}
 \include{Inhalt/design}
 \include{Inhalt/implementierung}
 \include{Inhalt/auswertung}
+
+\include{acro.tex}
 
 \printbibliography
 
