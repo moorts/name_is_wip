@@ -274,7 +274,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             "XTHL" => return Ok(vec![0xe3]),
             _ => return Err("Could not match instruction"),
         },
-    };
+    }
 }
 
 fn evaluate_str(str: &str) -> u16 {
