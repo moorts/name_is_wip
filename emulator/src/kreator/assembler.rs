@@ -43,32 +43,30 @@ impl Assembler {
     pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let preprocessed_code = get_preprocessed_code(&self.code)?;
+        let origins = self.get_origins();
 
         let mut byte_code: Vec<u8> = Vec::new();
+        let mut current_address: u16 = 0;
+        let mut current_byte_index: usize = 0;
 
         for line in preprocessed_code {
             let line = label_regex.replace(&line, "").trim().to_string();
 
             if !line.is_empty() && !line.contains("ORG ") {
-                byte_code.extend(to_machine_code(line)?);
-            }
-        }
-
-        let origins = self.get_origins();
-        let mut current_address: u16 = 0;
-        let mut code_with_origins: Vec<u8> = Vec::new();
-        for (index, byte) in byte_code.iter().enumerate() {
-            for (origin_index, next_address) in &origins {
-                if index == usize::from(*origin_index) {
-                    current_address = *next_address;
+                for (origin_index, next_address) in &origins {
+                    if current_byte_index == (*origin_index).into() {
+                        current_address = *next_address;
+                    }
                 }
+                while byte_code.len() < current_address.into() {
+                    byte_code.push(0);
+                }
+                let bytes = to_machine_code(line)?;
+                current_byte_index += bytes.len();
+                byte_code.extend(bytes);
             }
-            while code_with_origins.len() < current_address.into() {
-                code_with_origins.push(0);
-            }
-            code_with_origins.push(*byte);
         }
-        Ok(code_with_origins)
+        Ok(byte_code)
     }
 
     pub fn get_line_map(&self) -> Result<HashMap<u16, usize>, &'static str> {
