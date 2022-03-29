@@ -44,16 +44,31 @@ impl Assembler {
         let label_regex = Regex::new(LABEL_DECL).unwrap();
         let preprocessed_code = get_preprocessed_code(&self.code)?;
 
-        let mut machine_code = Vec::new();
+        let mut byte_code: Vec<u8> = Vec::new();
 
         for line in preprocessed_code {
             let line = label_regex.replace(&line, "").trim().to_string();
 
             if !line.is_empty() && !line.contains("ORG ") {
-                machine_code.extend(to_machine_code(line)?);
+                byte_code.extend(to_machine_code(line)?);
             }
         }
-        Ok(machine_code)
+
+        let origins = self.get_origins();
+        let mut current_address: u16 = 0;
+        let mut code_with_origins: Vec<u8> = Vec::new();
+        for (index, byte) in byte_code.iter().enumerate() {
+            for (origin_index, next_address) in &origins {
+                if index == usize::from(*origin_index) {
+                    current_address = *next_address;
+                }
+            }
+            while code_with_origins.len() < current_address.into() {
+                code_with_origins.push(0);
+            }
+            code_with_origins.push(*byte);
+        }
+        Ok(code_with_origins)
     }
 
     pub fn get_line_map(&self) -> Result<HashMap<u16, usize>, &'static str> {
@@ -449,7 +464,7 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use std::fs::File;
+    use std::fs::{File, self};
     use std::io::{self, BufRead};
 
     const OPCODE_TEST_DATA: &str = "./test_data/test_input";
@@ -768,6 +783,21 @@ mod tests {
         let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
 
         assert_eq!(jumps, assembler.get_origins());
+    }
+
+    #[test]
+    fn origins() -> io::Result<()> {
+        let code = fs::read_to_string("./src/core/asm/origins.s")?;
+        let assembler = Assembler::new(&code);
+
+        let result = assembler.assemble().unwrap();
+        assert_eq!(result[0], 0x06);
+        assert_eq!(result[1], 0x01);
+        assert_eq!(result[0x20], 0x06);
+        assert_eq!(result[0x21], 0x02);
+        assert_eq!(result[0x40], 0x06);
+        assert_eq!(result[0x41], 0x03);
+        Ok(())
     }
 
     #[test]
