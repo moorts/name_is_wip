@@ -1,5 +1,5 @@
 import { Injectable, EventEmitter } from '@angular/core';
-import init, { assemble, createEmulator, disassemble, Emulator, InitOutput } from "emulator";
+import init, { assemble, createEmulator, disassemble, Emulator, get_linemap, InitOutput } from "emulator";
 
 @Injectable({
   providedIn: 'root'
@@ -16,8 +16,9 @@ export class EmulatorService {
   private _emulatorMemory: Uint8Array = new Uint8Array();
   private _step: number = 0;
   private _loop: number = 0;
+  private _linemap: any;
 
-  private _cpmMode: boolean = true;
+  private _cpmMode: boolean = false;
 
   // Total speed: _stepsPerInterval * (1000 / _interval) instructions per second
   private _interval: number = 10; // Interval in milliseconds
@@ -50,6 +51,10 @@ export class EmulatorService {
 
   public get emulator() {
     return this._emulator;
+  }
+
+  public get linemap() {
+    return this._linemap;
   }
 
   public get registers() {
@@ -97,7 +102,9 @@ export class EmulatorService {
   public assemble(assembly: string) {
     console.log("Assembling: " + assembly);
     const result = assemble(assembly);
+    const linemap = get_linemap(assembly);
     this._initialMemory = result;
+    this._linemap = linemap;
   }
 
   public disassemble(bytes: Uint8Array): string {
