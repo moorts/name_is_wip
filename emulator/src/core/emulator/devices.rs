@@ -6,16 +6,16 @@ impl Emulator {
 
     pub fn input(&mut self, port: u8) -> EResult<()> {
         match &self.input_devices[port as usize] {
-            Some(device) => self.reg['a'] = device.borrow().read(),
-            None => return Err("No device registered at this port")
+            Some(device) => self.reg['a'] = device.borrow().read(port),
+            None => return Err(format!("No input device at port {}", port))
         }
         Ok(())
     }
 
     pub fn output(&mut self, port: u8) -> EResult<()> {
         match &self.output_devices[port as usize] {
-            Some(device) => device.borrow_mut().write(self.reg['a']),
-            None => return Err("No device registered at this port")
+            Some(device) => device.borrow_mut().write(port, self.reg['a']),
+            None => return Err(format!("No output device at port {}", port))
         }
         Ok(())
     }
@@ -52,13 +52,13 @@ mod tests {
     }
 
     impl InputDevice for Logger {
-        fn read(&self) -> u8 {
+        fn read(&self, port: u8) -> u8 {
             42
         }
     }
 
     impl OutputDevice for Logger {
-        fn write(&mut self, byte: u8) {
+        fn write(&mut self, port: u8, byte: u8) {
             self.last = byte;
         }
     }
@@ -74,7 +74,7 @@ mod tests {
 
         assert_eq!(emu.reg['a'], 42);
 
-        assert_eq!(emu.input(1), Err("No device registered at this port"));
+        assert_eq!(emu.input(1), Err(String::from("No input device at port 1")));
     }
 
     #[test]
@@ -88,6 +88,6 @@ mod tests {
         emu.output(0).expect("");
 
         assert_eq!(logger.borrow().last(), 42);
-        assert_eq!(emu.output(1), Err("No device registered at this port"));
+        assert_eq!(emu.output(1), Err(String::from("No output device at port 1")));
     }
 }

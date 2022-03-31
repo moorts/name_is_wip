@@ -1,5 +1,5 @@
 import { Injectable, EventEmitter } from '@angular/core';
-import init, { assemble, createEmulator, disassemble, Emulator, InitOutput } from "emulator";
+import init, { assemble, createEmulator, disassemble, Emulator, InitOutput, registerSpaceInvadersDevices } from "emulator";
 
 @Injectable({
   providedIn: 'root'
@@ -7,8 +7,9 @@ import init, { assemble, createEmulator, disassemble, Emulator, InitOutput } fro
 export class EmulatorService {
 
   public onStep: EventEmitter<any> = new EventEmitter();
+  public onVideoStep: EventEmitter<any> = new EventEmitter();
 
-  private _wasmContext: InitOutput | undefined;
+  public _wasmContext: InitOutput | undefined;
   private _initialMemory: Uint8Array = new Uint8Array();
   private _running: boolean = false;
   private _paused: boolean = false;
@@ -16,13 +17,14 @@ export class EmulatorService {
   private _emulatorMemory: Uint8Array = new Uint8Array();
   private _step: number = 0;
   private _loop: number = 0;
+  private _videoloop: number = 0;
 
   private _cpmMode: boolean = false;
 
   // Total speed: _stepsPerInterval * (1000 / _interval) instructions per second
-  private _interval: number = 10; // Interval in milliseconds
-  private _stepsPerInterval: number = 1; // How many CPU steps to perform per interval (-> allows emulator to perform faster than 1000 i/s)
-  private _skipOnStepInterval: number = 1; // OnStep (updates UI for RAM etc.) will only be executed every _skipOnStepInterval steps to improve performance
+  private _interval: number = 1; // Interval in milliseconds
+  private _stepsPerInterval: number = 1000; // How many CPU steps to perform per interval (-> allows emulator to perform faster than 1000 i/s)
+  private _skipOnStepInterval: number = 1000000; // OnStep (updates UI for RAM etc.) will only be executed every _skipOnStepInterval steps to improve performance
 
   public get memory(): Uint8Array {
     if (this._running && this._wasmContext) {
@@ -107,6 +109,7 @@ export class EmulatorService {
 
   public start() {
     this._emulator = createEmulator(this._initialMemory);
+    registerSpaceInvadersDevices(this._emulator);
     if (this._wasmContext)
       this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr(), 0x4000);
     this._step = 0;
@@ -128,14 +131,14 @@ export class EmulatorService {
 
     this._running = false;
     this._emulator = undefined;
-    window.clearInterval(this._loop);
+    this.stopLoop();
   }
 
   public togglePause() {
     this._paused = !this._paused;
     if (this._running) {
       if (this.paused) {
-        window.clearInterval(this._loop);
+        this.stopLoop();
       } else {
         this.startLoop();
       }
@@ -153,10 +156,21 @@ export class EmulatorService {
         this.cpuStep();
       }
     }, this._interval);
+    this._videoloop = window.setInterval(() => {
+      this.videoStep();
+    }, 1000/60);
+  }
+
+  private stopLoop() {
+    window.clearInterval(this._loop);
+    window.clearInterval(this._videoloop);
   }
 
   private cpuStep() {
     if (!this._emulator) return;
+
+    if (this._wasmContext)
+      this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr(), 0x4000);
 
     const prevMemAddress = this._emulator.get_last_ram_change();
     const prevMem = this.memory[prevMemAddress];
@@ -217,5 +231,20 @@ export class EmulatorService {
       console.log("CPU halted");
       window.clearInterval(this._loop);
     }
+  }
+
+  private isHalfVblank: boolean = false;
+
+  private videoStep() {
+    if (!this._emulator?.interrupts_enabled) return;
+    if (this.isHalfVblank) {
+      this._emulator?.interrupt(0xCF);
+    } else {
+      this._emulator?.interrupt(0xD7);
+    }
+
+    this.onVideoStep.emit();
+
+    this.isHalfVblank = !this.isHalfVblank;
   }
 }

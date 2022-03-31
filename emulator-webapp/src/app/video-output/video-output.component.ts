@@ -118,10 +118,11 @@ export class VideoOutputComponent implements AfterViewInit {
 
     // Update texture
     const data = this.emulatorService.memory;
+    const vram = new Uint8Array(this.emulatorService._wasmContext!.memory.buffer, this.emulatorService.emulator!.get_ram_ptr() + 0x2400, 0x3FFF - 0x2400 + 1)
 
     // Upload data to a WebGL texture that only has a red channel
     gl.bindTexture(gl.TEXTURE_2D, this.frameTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, this.width / 8, this.height, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, this.width / 8, this.height, 0, gl.RED, gl.UNSIGNED_BYTE, vram);
 
     if (!this.shaderProgram) return;
 

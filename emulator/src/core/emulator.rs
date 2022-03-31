@@ -6,7 +6,7 @@ use crate::core::ram::*;
 use crate::core::register::RegisterArray;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-pub type EResult<T> = Result<T, &'static str>;
+pub type EResult<T> = Result<T, String>;
 
 #[wasm_bindgen]
 pub struct Emulator {
@@ -623,7 +623,7 @@ impl Emulator {
 
     fn read_byte(&mut self) -> EResult<u8> {
         if self.pc + 1 > self.ram.size() as u16 {
-            return Err("READ_BYTE: Not enough bytes available");
+            return Err(format!("READ_BYTE: Not enough bytes available"));
         }
         self.pc += 1;
         Ok(self.ram[self.pc - 1])
@@ -631,7 +631,7 @@ impl Emulator {
 
     fn read_addr(&mut self) -> EResult<u16> {
         if self.pc + 2 > self.ram.size() as u16 {
-            return Err("READ_ADDR: Not enough bytes available");
+            return Err(format!("READ_ADDR: Not enough bytes available"));
         }
         let low = self.ram[self.pc] as u16;
         self.pc += 1;
@@ -649,7 +649,7 @@ impl Emulator {
             self.interrupts_enabled = false;
             return self.execute_instruction(opcode);
         }
-        Err("Interrupts disabled")
+        Err(format!("Interrupts disabled"))
     }
 }
 
@@ -683,7 +683,7 @@ mod tests {
         assert_eq!(emu.pc, 0);
         assert!(!emu.interrupts_enabled);
 
-        assert_eq!(emu.interrupt(0x0), Err("Interrupts disabled"));
+        assert_eq!(emu.interrupt(0x0), Err(String::from("Interrupts disabled")));
 
         emu.execute_next().expect("");
         emu.execute_next().expect("");
