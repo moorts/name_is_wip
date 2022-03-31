@@ -54,7 +54,7 @@ impl Assembler {
 
             if !line.is_empty() && !line.contains("ORG ") {
                 for (origin_index, next_address) in &origins {
-                    if current_byte_index == (*origin_index).into() {
+                    if current_byte_index == usize::from(*origin_index) {
                         current_address = *next_address;
                     }
                 }
