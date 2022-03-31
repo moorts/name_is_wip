@@ -69,8 +69,11 @@ impl Assembler {
         Ok(byte_code)
     }
 
-    pub fn get_line_map(&self) -> Result<HashMap<u16, usize>, &'static str> {
-        get_line_map(&self.code)
+    pub fn get_line_map(&self) -> Result<Vec<(u16, usize)>, &'static str> {
+        let mapping = get_line_map(&self.code)?;
+        let mut mapped_vec = mapping.into_iter().collect::<Vec<(u16, usize)>>();
+        mapped_vec.sort_by(|(a,_), (b,_)| a.cmp(b));
+        Ok(mapped_vec)
     }
 
     pub fn get_origins(&self) -> Vec<(u16, u16)> {
@@ -796,6 +799,15 @@ mod tests {
         assert_eq!(result[0x40], 0x06);
         assert_eq!(result[0x41], 0x03);
         Ok(())
+    }
+
+    #[test]
+    fn line_mapping() {
+        let code = "MOV A,B\n\nJMP 0\nEND";
+        let assembler = Assembler::new(&code);
+        let result = vec![(0, 0), (1, 2), (2, 2), (3, 2)];
+
+        assert_eq!(Ok(result), assembler.get_line_map());
     }
 
     #[test]
