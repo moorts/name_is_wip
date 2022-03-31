@@ -1,5 +1,5 @@
 import { Injectable, EventEmitter } from '@angular/core';
-import init, { assemble, createEmulator, disassemble, Emulator, InitOutput } from "emulator";
+import init, { assemble, createEmulator, disassemble, Emulator, get_linemap, InitOutput } from "emulator";
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +16,9 @@ export class EmulatorService {
   private _emulatorMemory: Uint8Array = new Uint8Array();
   private _step: number = 0;
   private _loop: number = 0;
+  private _linemap: any;
+
+  private _cpmMode: boolean = false;
 
   // Total speed: _stepsPerInterval * (1000 / _interval) instructions per second
   private _interval: number = 10; // Interval in milliseconds
@@ -48,6 +51,10 @@ export class EmulatorService {
 
   public get emulator() {
     return this._emulator;
+  }
+
+  public get linemap() {
+    return this._linemap;
   }
 
   public get registers() {
@@ -95,7 +102,9 @@ export class EmulatorService {
   public assemble(assembly: string) {
     console.log("Assembling: " + assembly);
     const result = assemble(assembly);
+    const linemap = get_linemap(assembly);
     this._initialMemory = result;
+    this._linemap = linemap;
   }
 
   public disassemble(bytes: Uint8Array): string {
@@ -109,6 +118,13 @@ export class EmulatorService {
       this._emulatorMemory = new Uint8Array(this._wasmContext.memory.buffer, this._emulator?.get_ram_ptr());
     this._step = 0;
     this._running = true;
+
+    if (this._cpmMode) {
+      // Patch memory for BDOS syscalls
+      this._emulatorMemory[5] = 0xC9; // RET
+      this._emulator.pc = 0x100;
+    }
+
     if (!this._paused) {
       this.startLoop();
     }
@@ -157,6 +173,46 @@ export class EmulatorService {
 
     const newMemAddress = this._emulator.get_last_ram_change();
     const ramChanged = prevMemAddress != newMemAddress || this.memory[prevMemAddress] != prevMem;
+
+    if (this._cpmMode && this.emulator?.pc == 0x05) {
+      // Emulate CP/M BDOS syscalls (https://www.seasip.info/Cpm/bdos.html)
+      const registers = this.registers;
+      const largeRegisters = this.largeRegisters;
+
+      if (registers && largeRegisters) {
+        const syscall = registers.c;
+
+        switch(syscall) {
+          case 2: {
+            // BDOS function 2 (C_WRITE) - Console output
+            const char = registers?.e;
+            if (char) {
+              console.log(String.fromCharCode(char));
+            }
+            break;
+          }
+          case 9: {
+            // BDOS function 9 (C_WRITESTR) - Output string
+            let address = largeRegisters.d;
+
+            let currentChar = "";
+            let fullString = "";
+            while (currentChar != "$") {
+              fullString += currentChar;
+              currentChar = String.fromCharCode(this._emulatorMemory[address++]);
+            }
+            console.log(fullString);
+            break;
+          }
+        }
+      }
+    }
+
+    if (this._cpmMode && this.emulator?.pc == 0x00) {
+      console.log("Entered CP/M Warm Boot, Stopping Emulator.");
+      this.stop();
+      return;
+    }
 
     if (this._step % this._skipOnStepInterval == 0) {
       this.onStep.emit({

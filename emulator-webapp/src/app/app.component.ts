@@ -29,6 +29,7 @@ export class AppComponent implements AfterViewInit {
     matIconRegistry.addSvgIcon("GitHub", domSanitizer.bypassSecurityTrustResourceUrl("assets/icons/github.svg"));
     emulatorService.onStep.subscribe((props) => {
       this.ramDisplay?.update(false, props.ramChanged);
+      this.codeEditor?.update();
     });
   }
 
@@ -50,6 +51,7 @@ export class AppComponent implements AfterViewInit {
 
   public onPlayButtonPressed() {
     this.emulatorService.start();
+    this.ramDisplay?.update(true);
   }
 
   public onStopButtonPressed() {

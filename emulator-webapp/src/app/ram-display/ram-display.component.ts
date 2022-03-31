@@ -29,6 +29,7 @@ export class RamDisplayComponent implements AfterViewInit {
   @ViewChild('registerLargeH') registerLargeH: ElementRef<HTMLInputElement> | undefined;
   @ViewChild('registerLargePSW') registerLargePSW: ElementRef<HTMLInputElement> | undefined;
   @ViewChild('registerLargeSP') registerLargeSP: ElementRef<HTMLInputElement> | undefined;
+  @ViewChild('registerLargePC') registerLargePC: ElementRef<HTMLInputElement> | undefined;
 
   constructor(public readonly emulatorService: EmulatorService) {
 
@@ -93,12 +94,14 @@ export class RamDisplayComponent implements AfterViewInit {
       if (this.registerLargeH) this.registerLargeH.nativeElement.value = largeRegisters.h.toString(16).toUpperCase().padStart(4, '0');
       if (this.registerLargePSW) this.registerLargePSW.nativeElement.value = largeRegisters.psw.toString(16).toUpperCase().padStart(4, '0');
       if (this.registerLargeSP) this.registerLargeSP.nativeElement.value = largeRegisters.sp.toString(16).toUpperCase().padStart(4, '0');
+      if (this.registerLargePC) this.registerLargePC.nativeElement.value = this.emulatorService.emulator?.pc.toString(16).toUpperCase().padStart(4, '0') ?? "0000";
     } else {
       if (this.registerLargeB) this.registerLargeB.nativeElement.value = "0000";
       if (this.registerLargeD) this.registerLargeD.nativeElement.value = "0000";
       if (this.registerLargeH) this.registerLargeH.nativeElement.value = "0000";
       if (this.registerLargePSW) this.registerLargePSW.nativeElement.value = "0000";
       if (this.registerLargeSP) this.registerLargeSP.nativeElement.value = "0000";
+      if (this.registerLargePC) this.registerLargePC.nativeElement.value = "0000";
     }
 
     if (ramChanged) {

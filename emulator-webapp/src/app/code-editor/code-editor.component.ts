@@ -21,7 +21,7 @@ export class CodeEditorComponent implements OnInit {
   public code: string = `LXI H, 0010H
 MOV M, L
 INX H
-JMP 2
+JMP 3
 END`;
 
   constructor(private readonly monacoLoaderService: MonacoEditorLoaderService,
@@ -45,6 +45,28 @@ END`;
 
   async ngOnInit(): Promise<void> {
 
+  }
+
+  private prevDecorations: any = [];
+
+  public update() {
+    if (!this.emulatorService.running) return;
+
+    const pc = this.emulatorService.emulator!.pc;
+    const linemap = this.emulatorService.linemap;
+
+    const currentExecutedLine = linemap[pc] + 1;
+
+    if (currentExecutedLine == undefined) return;
+
+    const editor = this.editorComponent?.editor;
+    this.prevDecorations = editor?.deltaDecorations(this.prevDecorations, [{
+      range: new monaco.Range(currentExecutedLine, 0, currentExecutedLine, 10),
+      options: {
+        isWholeLine: true,
+        className: 'current-executed-line'
+      }
+    }]);
   }
 
   async editorInit(editor: MonacoStandaloneCodeEditor) {
