@@ -69,10 +69,12 @@ impl Assembler {
         Ok(byte_code)
     }
 
-    pub fn get_line_map(&self) -> Result<Vec<(u16, usize)>, &'static str> {
+    pub fn get_line_map(&self) -> Result<Vec<usize>, &'static str> {
         let mapping = get_line_map(&self.code)?;
-        let mut mapped_vec = mapping.into_iter().collect::<Vec<(u16, usize)>>();
-        mapped_vec.sort_by(|(a,_), (b,_)| a.cmp(b));
+        let mut mapped_vec: Vec<usize> = vec![0; mapping.len()];
+        for (byte, line) in mapping {
+            *mapped_vec.get_mut(usize::from(byte)).unwrap() = line;
+        }
         Ok(mapped_vec)
     }
 
@@ -805,7 +807,7 @@ mod tests {
     fn line_mapping() {
         let code = "MOV A,B\n\nJMP 0\nEND";
         let assembler = Assembler::new(&code);
-        let result = vec![(0, 0), (1, 2), (2, 2), (3, 2)];
+        let result: Vec<usize> = vec![0, 2, 2, 2];
 
         assert_eq!(Ok(result), assembler.get_line_map());
     }
