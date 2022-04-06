@@ -73,7 +73,7 @@ impl Assembler {
         let mapping = get_line_map(&self.code)?;
         let mut mapped_vec: Vec<usize> = vec![0; mapping.len()];
         for (byte, line) in mapping {
-            *mapped_vec.get_mut(usize::from(byte)).unwrap() = line;
+            mapped_vec[byte as usize] = line;
         }
         Ok(mapped_vec)
     }
