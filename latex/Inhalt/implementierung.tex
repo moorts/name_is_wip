@@ -28,3 +28,15 @@ Der Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer T
 \subsubsection{Flaggenzugriff}
 
 Die Flags sind bekannterweise Teil des PSW-Registerpaars, sprich sie sind als einzelnes Byte gespeichert. Um die Werte der einzelnen Flaggen zu erhalten, werden Bitmasken verwendet. Um bspw. herauszufinden, ob das Bit mit dem höchsten Stellenwert gesetzt ist, muss der Ausdruck \rust{byte & 0x80 != 0} berechnet werden. Wenn dieser \rust{true} ist, ist das Bit gesetzt\footnote{\rust{0x80 == 0b10000000}}.
+
+\subsection{Ein-/Ausgabegeräte}
+
+In \cref{chap:design} ist zu sehen, dass die zentrale Struktur 2 Arrays mit 256 Elementen beinhaltet, um Ein- und Ausgabegeräte zu realisieren. Der Datentyp dieser Arrays wurde jedoch, der Übersichtlichkeit halber, vereinfacht. Das erste Problem eines solchen Arrays ist, dass initial keine Geräte registriert sind. Da es in Rust kein \rust{null} gibt, wäre das schlecht umsetzbar. Daher muss der \rust{Option}-Typ verwendet werden:
+
+\rust{[Option<InputDevice>; 256]}
+
+Hier ist jetzt jedoch problematisch, dass verschiedene Geräte registriert werden können. In klassischen objektorientierten Sprachen, wären Input- bzw OutputDevice hier Interfaces, in Rust arbeiten wir mit Traits (siehe \cref{chap:prereqs}). Da die Größe von Trait-Objekten nicht zur Compilezeit bestimmt werden kann, kann ein solches Objekt nicht auf dem Stack gelagert werden, daher muss ein Pointer verwendet werden. Rust verwendet sogenannte Smartpointer um die klassischen Probleme bei Verwendung von Pointern zu vermeiden. Meistens verwendet man hier \rust{Box}, jedoch erlaubt Box nicht, mehrere Referenzen auf die Daten zu haben. Dies brauchen wir jedoch, da sowohl von außen, als auch von innen mit den Geräten kommuniziert werden muss. Durch Kombination von \rust{Rc}, einem referenzzählendem Pointer, mit \rust{RefCell}, einer schreibbaren Speicherregion, kann das gewollte Verhalten erreicht werden. Die Syntax um einen derartigen Array zu deklarieren ist wie folgt:
+
+\rust{[Option<Rc<RefCell<dyn InputDevice>>>; 256]}
+
+Solange unser Programm single-threaded ist, kann nun jederzeit eine mutable-Referenz auf ein solches InputDevice erhalten werden und solange im aktuellen Scope keine mutable Referenz auf das Gerät existiert, können beliebig viele non-mutable Referenzen verwendet werden.
