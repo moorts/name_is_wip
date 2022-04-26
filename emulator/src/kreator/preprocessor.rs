@@ -170,6 +170,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
     let mut new_code: Vec<String> = Vec::new();
     let mut equ_assignments: HashMap<String, u16> = HashMap::new();
     let mut set_assignments: HashMap<String, u16> = HashMap::new();
+    let name_format = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4})$").unwrap();
 
     for line in code {
         let mut line = line.trim().to_string();
@@ -189,11 +190,17 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
 
         if line.contains(" SET ") {
             let (name, expression) = line.split_once(" SET ").unwrap();
+            if get_reserved_names().iter().any(|&reserved_name| reserved_name == name) || !name_format.is_match(&name) {
+                return Err("Supplied illegal variable name");
+            }
             set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
         }
 
         if line.contains(" EQU ") {
             let (name, expression) = line.split_once(" EQU ").unwrap();
+            if get_reserved_names().iter().any(|&reserved_name| reserved_name == name) || !name_format.is_match(&name) {
+                return Err("Supplied illegal variable name");
+            }
             if equ_assignments.contains_key(name) {
                 return Err("Can't assign a variable more than once using EQU!");
             }
@@ -928,6 +935,16 @@ mod tests {
         let ppc = replace_variable_usages(&code).unwrap();
 
         assert_eq!("OUT 10", ppc[2]);
+    }
+
+    #[test]
+    fn illegal_variable_names() {
+        for input in vec!["EQU", "    AAA:", "longboi"] {
+            let code = format!("{} SET 5", &input);
+            let ppc = replace_variable_usages(&vec![code]);
+
+            assert_eq!(Err("Supplied illegal variable name"), ppc);
+        }
     }
 
     #[test]
