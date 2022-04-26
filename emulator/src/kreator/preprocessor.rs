@@ -17,7 +17,7 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let code = replace_variable_usages(&get_commentless_code(&code))?;
+    let code = replace_variable_usages(&code)?;
     let labels = get_labels(&code)?;
     let code = replace_macros(&code)?;
 
