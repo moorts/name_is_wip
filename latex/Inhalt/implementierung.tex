@@ -43,7 +43,7 @@ Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit m
 
 \section{Assembler}
 
-Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \glqq preprocessor\grqq{} (Deutsch: Präprozessor) und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels beispielhafter Code-Beispiele illustriert wird.
+Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \glqq preprocessor\grqq{} zur Vorverarbeitung und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels beispielhafter Code-Beispiele illustriert wird. Generell gilt, dass alle Zeilen des Programmcodes vor ihrer Behandlung durch eine Methode mittels \rust{.trim()} zugeschnitten und gegebenenfalls übergangen werden, sofern eine Leerzeile entsteht. Der Übersichtlichkeit halber ist dieser Teil des Codes an vielen Stellen ausgelassen.
 
 \subsection{Assembler}
 
@@ -103,9 +103,77 @@ Wegen dieser Erweiterung werden die generierten Bytes im Listing \ref{lst:assemb
 \rust{current_byte_index += bytes.len();}
 aktuell gehalten wird.
 
-\subsection{Präprozessor}\label{chap:preprocessor}
+\subsection{Vorverarbeitung}\label{chap:preprocessor}
 
-Der Präprozessor ist eine reine Konstruktion innerhalb des Assemblers und existiert außerhalb der Dokumentation beziehungsweise dem eigentlichen Aufbau des originalen Intel 8080s. Es handelt sich um eine Behilfsklasse, die der Verarbeitung von Pseudo-Instruktionen dient. Dazu stellt die Klasse einige Methoden bereit, die fast alle auf einem \rust{&Vec<String>} operieren, also einen Verweis auf den ursprünglichen Code, der im Assembler-Struct liegt, benötigen. Im folgenden sollen einige Besonderheiten und Probleme die bei der Behandlung von Pseudo-Instruktionen aufgetreten sind betrachtet werden.
+Unter Vorverarbeitung versteht sich im Bezug auf diese Arbeit und den Assembler alles was bei der Übersetzung in Bytecode zwar vom Assembler übersetzt wird, allerdings keine Verarbeitung eines Opcodes ist. Dabei wird der vom Nutzer eingegebenen Code (ohne Kommentare) auf die Zeilen reduziert, die in den eigentlichen Bytecode übersetzt werden. Dazu zählen unter anderem das Ersetzen von Labels oder auch If-Verzweigungen. Im Quellcode wird diese Aufgabe von der Klasse \rust{preprocessor.rs} übernommen. Dabei handelt es sich um eine reine Konstruktion innerhalb des Assemblers und existiert außerhalb der Dokumentation beziehungsweise dem eigentlichen Aufbau des originalen Intel 8080s.
+
+Neben der Vorverarbeitung bietet die Hilfsklasse eine Methode zum Mappen von Zeilen an, auf die im am Ende dieses Kapitels näher eingegangen wird. Zunächst sind die maßgeblichen Schritte der eigentlichen Vorverarbeitung zu betrachten. Die nachfolgende Sammlung von Vorgängen (als einzelne Methoden realisiert) fasst der Präprozessor in einer einzelnen, öffentlichen Methode \rust{get_preprocessed_code(code: &Vec<String>)} zusammen, die dem Assembler zur Verfügung gestellt wird. Man beachte das der Parametertyp dem des im Assembler-Struct gespeicherten Codes entspricht.
+
+\subsubsection{Bestimmung des Programmendes}
+
+Weil dieser Schritt eindeutig und essentiell bezüglich der Korrektheit eines Assembler-Programms ist, ist es der erste Schritt in der Vorverarbeitung. Sinn dieses Schrittes ist es festzustellen, ob ein Programm ordnungsgemäß mit dem \asm{END}-Befehl abgeschlossen wurde. Sollte dies nicht der Fall sein ist jeder folgende Schritt überflüssig und das Übersetzen kann mit einer Fehlermeldung abgebrochen werden.
+
+Zur Bestimmung genügt es über alle Zeilen des Codes zu iterieren und festzustellen, ob eine einzelne Zeile \asm{END} lautet. Dabei ist wichtig, dass tatsächlich alle Codezeilen untersucht werden und nicht nach dem ersten \asm{END} beendet wird. Deshalb bringt es auch keine nennenswerten Performanceersparnisse, sollte die Iteration am Ende des Codes beginnen. 
+
+\begin{listing}
+\begin{minted}{rust}
+let mut has_end = false;
+for line in code {
+	if line.is_empty() {
+		continue;
+	}
+	if line.trim().eq("END") {
+		if has_end {
+			return false;
+		}
+		has_end = true;
+		continue;
+	}
+	if has_end {
+		return false;
+	}
+}
+has_end
+\end{minted}
+\label{lst:end}
+\end{listing}
+
+Listing \ref{lst:end} zeigt die Implementierung der Überprüfung nach dem \asm{END}. Es sind drei Fälle zu beachten, in denen das Programm inkorrekt ist und der vorliegende Code mit einem \rust{false} antworten muss. Der einfachste Fall ist die Absenz des Befehls, wobei die entsprechende Variable nie \rust{true} wird und als solche zurückgegeben wird. Im zweiten Fall folgt auf das \asm{END} eine nicht-leere Zeile (An dieser Stelle dürfen keine Kommentare im Code vorkommen), was vom letzten If-Statement gedeckt wird, welches mit einem \rust{false} antwortet, sobald ein \asm{END} gefunden wurde, die aktuell betrachtete Zeile allerdings nicht leer ist. Der letzte Fall ist das Vorhandensein mehrerer \asm{END}s, was mit einer verschachtelten If-Klausel in Zeile 6 abgedeckt wird.
+
+\subsubsection{Ersetzen von Variablen}
+
+Damit Instruktionen wie If-Verzweigungen korrekt funktionieren und ausgewertet werden können sind im nächsten Schritt Variablen durch ihre konstanten Werte zu ersetzen. Entsprechend dem besonderen Verhalten von Makros im Bezug auf Variablen (siehe \ref{chap:pseudo-instructions}) sind zum aktuellen Zeitpunkt bereits alle Werte bestimmbar.
+
+Auch für diesen Schritt wird einmal der Code einmal Zeile für Zeile durchlaufen, wobei das Bestimmen gültiger Variablen sowie deren Ersetzung parallel erfolgen. Das schließt von vornherein aus, dass verwendete Variablen, die noch nicht deklariert wurden, fälschlicherweise ersetzt werden. Für Variablen, die mittels \asm{SET} deklariert wurden, sieht das Ganze wie folgt aus:
+
+\begin{minted}{rust}
+for (key, value) in &set_assignments {
+	line = line.replace(&format!(" {} ", key), &format!(" {}", value));
+    line = line.replace(&format!(",{} ", key), &format!(",{}", value));
+    if line.ends_with(&format!(" {}", key)) {
+    	line = line.replace(&format!(" {}", key), &format!(" {}", &value.to_string()));
+    }
+    if line.ends_with(&format!(",{}", key)) {
+        line = line.replace(&format!(" {}", key), &format!(" {}", &value.to_string()));
+    }
+}
+if line.contains(" SET ") {
+	let (name, expression) = line.split_once(" SET ").unwrap();
+    set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+}
+\end{minted}
+
+Auffällig ist, dass es vier unterschiedliche Zeilen für das Ersetzen einer Variable gibt. Grund dafür sind die verschiedenen Orte, an denen Variablen auftreten dürfen. Das vorangestellte und folgende Leerzeichen stellt sicher, dass nur Variablen ersetzt werden, deren Name vollständig entsprechend ist. Sollten diese Leerzeichen (oder das vorangestellte Komma) fehlen würde folgendes Beispiel nicht erwartungsgemäß funktionieren: Der Entwickler deklariert eine Variable namens \glqq Foo\grqq{} und eine zweite Variable namens \glqq FooBa\grqq. In dem Fall, dass Foo als erstes in der Map \rust{set_assignments} auftaucht, wird auch ein Aufkommen von FooBa durch Foo ersetzt, weil nicht überprüft wird, ob sich die beiden Namen vollständig entsprechen.
+
+Für den Fall, dass sich der hintere Teil zweier Namen entspricht wird entsprechend der zwei vorangehenden Zeilen Code das Ende überprüft. Der möglicherweise intuitive Ansatz eines Entwicklers zur schöneren Implementierung mittels Regex ist an dieser Stelle nicht möglich, weil das entsprechende Crate in Rust zum Zeitpunkt der Arbeit nicht den, zur Verbesserung notwendigen, Lookahead anbietet.
+
+Neben dem Ersetzen von Variablen gilt es die entsprechenden Werte auszulesen, was mit einer simplen Überprüfung nach den entsprechenden Pseudo-Befehlen geschieht. Sofern eine solche vorhanden ist, wird die Zeile in aufgeteilt und in eine Map vom Typ \rust{HashMap<(String, u16)>} aufgenommen. Das geschieht unter der Bedingung, dass der Name dem vom Intel 8080 vorgegebenen Format entspricht, wofür getestet wird, dass der Name keinem reservierten Namen (Opcodes, Pseudo-Instruktionen etc.) entspricht und einem vorschriftsgemäßen Aufbau folgt. Diese Überprüfung ist einerseits das Nicht-Vorhandensein in einem Array aus reservierten Namen, andererseits das entsprechen eines Regex 
+
+Aus Gründen der Übersichtlichkeit ist die namentliche Überprüfung, sowie das Verfahren bei \asm{EQU} nicht mitaufgenommen. Letzteres funktioniert beinah analog wobei der einzige Unterschied zu \asm{SET} ist, dass in dem Fall, dass ein Variablenname bereits in der Map liegt der zugehörige Wert nicht überschrieben, sondern eine Fehlermeldung propagiert wird.
+
+\subsubsection{Vorverarbeitung}
+
+Die Vorverarbeitung 
 
 \subsubsection{Makros}
 
