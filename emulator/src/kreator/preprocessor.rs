@@ -82,22 +82,6 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     Ok(preprocessed_code)
 }
 
-fn get_equate_assignments(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> {
-    let mut assignments: HashMap<String, u16> = HashMap::new();
-
-    for line in code {
-        let line = line.trim().to_string();
-        if line.contains(" EQU ") {
-            let (name, expression) = line.split_once(" EQU ").unwrap();
-            if assignments.contains_key(name) {
-                return Err("Can't assign a variable more than once using EQU!");
-            }
-            assignments.insert(name.to_string(), eval_str(expression.to_string()));
-        }
-    }
-    Ok(assignments)
-}
-
 pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static str> {
     let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
     let label_decl = Regex::new(LABEL_DECL).unwrap();
@@ -183,15 +167,15 @@ pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static 
 }
 
 fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
-    let equate_assignments = get_equate_assignments(&code)?;
     let mut new_code: Vec<String> = Vec::new();
+    let mut equ_assignments: HashMap<String, u16> = HashMap::new();
     let mut set_assignments: HashMap<String, u16> = HashMap::new();
 
     for line in code {
         let mut line = line.trim().to_string();
 
         // replace values of variables declared by EQU
-        for (key, value) in &equate_assignments {
+        for (key, value) in &equ_assignments {
             line = line.replace(&format!(" {}", key), &format!(" {}", value));
             line = line.replace(&format!(",{}", key), &format!(",{}", value));
         }
@@ -202,10 +186,19 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
             line = line.replace(&format!(",{}", key), &format!(",{}", value));
         }
 
-        if line.contains("SET") {
+        if line.contains(" SET ") {
             let (name, expression) = line.split_once(" SET ").unwrap();
             set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
         }
+
+        if line.contains(" EQU ") {
+            let (name, expression) = line.split_once(" EQU ").unwrap();
+            if equ_assignments.contains_key(name) {
+                return Err("Can't assign a variable more than once using EQU!");
+            }
+            equ_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+        }
+
         new_code.push(line);
     }
     Ok(new_code)
@@ -911,6 +904,15 @@ mod tests {
         map.insert(4, 2);
 
         assert_eq!(Ok(map), get_line_map(&code));
+    }
+
+    #[test]
+    fn variables_apply_only_after_definition() {
+        let code = convert_input(vec!["OUT test", "test EQU 5", "OUT test"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT test", ppc[0]);
+        assert_eq!("OUT 5", ppc[2]);
     }
 
     #[test]
