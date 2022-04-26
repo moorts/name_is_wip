@@ -607,7 +607,7 @@ fn has_correct_end(code: &Vec<String>) -> bool {
         if line.is_empty() {
             continue;
         }
-        if line.trim().contains("END") && !line.contains("ENDIF") && !line.contains("ENDM") {
+        if line.trim().eq("END") {
             if has_end {
                 return false;
             }
@@ -618,7 +618,7 @@ fn has_correct_end(code: &Vec<String>) -> bool {
             return false;
         }
     }
-    return has_end;
+    has_end
 }
 
 mod tests {
