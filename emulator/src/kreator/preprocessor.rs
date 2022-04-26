@@ -174,21 +174,16 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
     for line in code {
         let mut line = line.trim().to_string();
 
-        // replace values of variables declared by EQU
-        for (key, value) in &equ_assignments {
-            line = line.replace(&format!(" {} ", key), &format!(" {}", value));
-            line = line.replace(&format!(",{} ", key), &format!(",{}", value));
-            if line.ends_with(key) {
-                line = line.replace(key, &value.to_string());
-            }
-        }
-
-        // replace values of variables declared by SET
-        for (key, value) in &set_assignments {
-            line = line.replace(&format!(" {} ", key), &format!(" {}", value));
-            line = line.replace(&format!(",{} ", key), &format!(",{}", value));
-            if line.ends_with(key) {
-                line = line.replace(key, &value.to_string());
+        for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
+            for (key, value) in assignment_map {
+                line = line.replace(&format!(" {} ", key), &format!(" {}", value));
+                line = line.replace(&format!(",{} ", key), &format!(",{}", value));
+                if line.ends_with(&format!(" {}", key)) {
+                    line = line.replace(&format!(" {}", key), &format!(" {}", &value.to_string()));
+                }
+                if line.ends_with(&format!(",{}", key)) {
+                    line = line.replace(&format!(" {}", key), &format!(" {}", &value.to_string()));
+                }
             }
         }
 
@@ -928,6 +923,11 @@ mod tests {
 
         assert_eq!("OUT 4", ppc[2]);
         assert_eq!("OUT 5", ppc[3]);
+
+        let code = convert_input(vec!["Ba SET 5", "FooBa SET 10", "OUT FooBa"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT 10", ppc[2]);
     }
 
     #[test]
