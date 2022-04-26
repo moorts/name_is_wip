@@ -176,14 +176,20 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
 
         // replace values of variables declared by EQU
         for (key, value) in &equ_assignments {
-            line = line.replace(&format!(" {}", key), &format!(" {}", value));
-            line = line.replace(&format!(",{}", key), &format!(",{}", value));
+            line = line.replace(&format!(" {} ", key), &format!(" {}", value));
+            line = line.replace(&format!(",{} ", key), &format!(",{}", value));
+            if line.ends_with(key) {
+                line = line.replace(key, &value.to_string());
+            }
         }
 
         // replace values of variables declared by SET
         for (key, value) in &set_assignments {
-            line = line.replace(&format!(" {}", key), &format!(" {}", value));
-            line = line.replace(&format!(",{}", key), &format!(",{}", value));
+            line = line.replace(&format!(" {} ", key), &format!(" {}", value));
+            line = line.replace(&format!(",{} ", key), &format!(",{}", value));
+            if line.ends_with(key) {
+                line = line.replace(key, &value.to_string());
+            }
         }
 
         if line.contains(" SET ") {
@@ -913,6 +919,15 @@ mod tests {
 
         assert_eq!("OUT test", ppc[0]);
         assert_eq!("OUT 5", ppc[2]);
+    }
+
+    #[test]
+    fn longer_variable_names() {
+        let code = convert_input(vec!["test EQU 5", "te EQU 4", "OUT te", "OUT test"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT 4", ppc[2]);
+        assert_eq!("OUT 5", ppc[3]);
     }
 
     #[test]
