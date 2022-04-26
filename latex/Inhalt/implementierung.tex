@@ -40,3 +40,74 @@ Diese Implementierung ist jedoch noch immer ungenügend, weil verschiedene Gerä
 \rust{[Option<Rc<RefCell<dyn InputDevice>>>; 256]}
 
 Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit mit einer mutable Referenz auf ein solches InputDevice gearbeitet werden. Außerdem dürfen beliebig viele non-mutable Referenzen existieren, sofern im aktuellen Scope keine mutable Referenz auf das Gerät existiert.
+
+\section{Assembler}
+
+Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \glqq preprocessor\grqq{} (Deutsch: Präprozessor) und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels beispielhafter Code-Beispiele illustriert wird.
+
+\subsection{Assembler}
+
+Der in der Klasse \rust{assembler.rs} definierte Struct 
+\begin{minted}{rust}
+    pub struct Assembler {
+        code: Vec<String>,
+    }
+\end{minted}
+bildet eine Schnittstelle für den eigentlichen Emulator und das \ac{wasm}-Interface. Der Emulator benötigt den zu Bytecode übersetzten Input des Nutzers und liefert dem Assembler dafür bei der Initialisierung ein Slice, das den diesen Input repräsentiert. Basierend darauf erzeugt der Assembler den \rust{code}, wobei je Zeile ein neuer String erzeugt wird. Bereits zu diesem Zeitpunkt können Kommentare (mittels Regex) entfernt werden. Dabei ist zu beachten, dass nur der Text der Kommentare entfernt werden darf, die dadurch entstehenden Leerzeilen müssen erhalten bleiben (siehe \ref{chap:preprocessor}) Obiges Struct implementiert neben der Methode \rust{assemble()} zur Generierung des Bytecodes eine Methode, die diese Bytes auf den Index der jeweiligen Zeile mappt. Das nutzt die Web-Schnittstelle um bei schrittweiser Ausführung die aktuelle Zeile ersichtlich zu machen.
+Der Assembler selbst beschränkt sich nach außen hin auf diese beiden Methoden, wobei zunächst \rust{assemble} zu betrachten ist, auf das Mapping wird in \ref{chap:preprocessor} genauer eingegangen.
+
+In seiner einfachsten Form besitzt \rust{assemble()} den Aufbau aus Listing \ref{lst:assemble}.
+
+\begin{listing}[ht]
+\begin{minted}{rust}
+pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
+	let preprocessed_code = get_preprocessed_code(&self.code)?;
+	let mut byte_code: Vec<u8> = Vec::new();
+    for line in preprocessed_code {
+        if !line.contains("ORG ") {
+	        let bytes = to_machine_code(line)?;
+            byte_code.extend(bytes);
+        }
+    }
+    Ok(byte_code)
+}
+\end{minted}
+\label{lst:assemble}
+\end{listing}
+
+Diese Implementierung erzeugt aus dem, dem Assembler bei Initialisierung übergebenen Code, einen Vektor von positiven 8-Bit-Werten. Da es sich beim ursprünglichen Code um Nutzereingaben handelt, besteht die Gefahr, dass Syntaxfehler eine Übersetzung fehlschlagen lassen. Deshalb ist die Rückgabe vom Typ \rust{Result}, womit bei einem Fehlschlag eine entsprechende Fehlermeldung zurückgegeben werden kann, anstatt dass das Programm abstürzt.
+
+Die grundlegende Funktionsweise ist letztlich das Iterieren über alle Zeilen des vom Präprozessor behandelten Codes und ein Übersetzen der jeweiligen Zeile in Bytecode. Zeilen, in denen eine nutzerdefinierte Speicheradresse (vergleiche Origins, \ref{chap:pseudo-instructions}) deklariert ist, werden durch die Vorverarbeitung mittels Präprozessor (Zeile 2) nicht entfernt, weshalb diese Zeilen noch einmal gesondert übergangen werden müssen. Die Zeilen müssen erhalten werden, da der Assembler die vom Nutzer deklarierten Speicheradressen selber ausliest, dafür allerdings den vorverarbeiteten Code nutzt.
+
+Während der Entwicklung ist aufgefallen, dass es inhaltlich sinnvoll wäre, wenn der Assembler, der die Origins ohnehin ausliest, diese auch direkt auswertet. Deshalb wurde das if-Statement im \ref{lst:assemble} um folgende Schleifen erweitert:
+
+\begin{listing}[ht]
+\begin{minted}{rust}
+let origins = self.get_origins();
+for (origin_index, next_address) in &origins {
+	if current_byte_index == usize::from(*origin_index) {
+        current_address = *next_address;
+    }
+}
+while byte_code.len() < current_address.into() {
+    byte_code.push(0);
+}
+\end{minted}
+\end{listing}
+
+Zunächst werden alle Origins bestimmt, welche sich als Kombination aus Byte-Index und Speicheradresse verstehen lassen. Das bedeutet der Assembler erstellt in der ersten Zeile einen \rust{Vec<(u16, u16)>}, bei dem der erste Wert der Index eines Bytes des Bytecodes ist, der zweite Wert ist die vom Nutzer definierte Speicheradresse, in die geschrieben werden soll, sobald das entsprechende Byte vom Emulator erreicht wurde. Um Bezug auf diese Angaben zu nehmen muss je Zeile überprüft werden, ob das aktuelle Byte (\rust{current_byte_index}) ein Byte ist, für das es eine explizite Speicheradresse gibt. Sofern dies der Fall ist wird die aktuelle Adresse auf den Wert der neuen Speicheradresse gesetzt. 
+
+Damit der Vektor nun weiter beschrieben werden kann, werden die Adressen zwischen der zuletzt beschriebenen und der neuen aktuellen Adresse mit dem Wert 0 aufgefüllt. Es sei zu beachten, dass dieser Wert ein Platzhalter ist und nicht als \glqq 0\grqq{} verstanden werden darf. Auch der Emulator muss an dieser Stelle darauf achten, dass er diese Werte nur an den Stellen als solche versteht, an denen ein entsprechender Wert erwartet wird (beispielsweise bei Befehlen wie \asm{LXI}, deren Opcode eine Zahl folgt).
+
+Wegen dieser Erweiterung werden die generierten Bytes im Listing \ref{lst:assemble} in einer separaten Variable gespeichert, da der Index des aktuellen Bytes davon abhängt und entsprechend mittels
+\rust{current_byte_index += bytes.len();}
+aktuell gehalten wird.
+
+\subsection{Präprozessor}\label{chap:preprocessor}
+
+Der Präprozessor ist eine reine Konstruktion innerhalb des Assemblers und existiert außerhalb der Dokumentation beziehungsweise dem eigentlichen Aufbau des originalen Intel 8080s. Es handelt sich um eine Behilfsklasse, die der Verarbeitung von Pseudo-Instruktionen dient. Dazu stellt die Klasse einige Methoden bereit, die fast alle auf einem \rust{&Vec<String>} operieren, also einen Verweis auf den ursprünglichen Code, der im Assembler-Struct liegt, benötigen. Im folgenden sollen einige Besonderheiten und Probleme die bei der Behandlung von Pseudo-Instruktionen aufgetreten sind betrachtet werden.
+
+\subsubsection{Makros}
+
+\subsubsection{Labels}
+

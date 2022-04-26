@@ -4,7 +4,7 @@
 
 \section{WebAssembly}
 
-"\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
+"\ac{ac} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
 Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach \ac{WASM} zu übersetzen (bspw. C/C++, Rust, usw.).
 
 In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
@@ -181,6 +181,25 @@ Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als 
         \asm{INR B} & Inkrementiere B um 1 \\
     \end{tabular}
 \end{table}
+
+\subsubsection{Pseudo-Instruktionen}\label{chap:pseudo-instructions}
+
+Neben den eigentlichen Instruktionen bietet der Intel 8080 dem Entwickler diverse Befehle, die keinen Bytecode erzeugen, weshalb es sich um sogenannte \glqq Pseudo-Instruktionen\grqq{} handelt. Sie spielen bei der Entwicklung auf Assembly-Level eine zentrale Rolle, insofern dass sie es erlauben Konzepte wie If-Verzweigungen oder Variablen umzusetzen.
+
+Eine Pseudo-Instruktion folgt einem ähnlichen Aufbau wie herkömmliche Befehle, manche legen allerdings fest, ob das vorangestellte Namensfeld eines Befehls vorhanden sein muss, beziehungsweise darf. Bis auf einige Ausnahmen können auch hier Labels, Sprungmarken die das nachfolgende Byte referenzieren, definiert werden. Dem Entwickler stehen insgesamt fünf Pseudo-Instruktionen zur Verfügung, deren Aufbau und Funktion nun folgt:
+\linebreak
+
+\textit{Origin} erlaubt es die Adresse, in der das nächste Byte assembled wird, festzulegen. Die Syntax dafür lautet \asm{ORG exp}, wobei es sich beim zweiten Teil um eine 16-Bit-Adresse, beziehungsweise deren Repräsentation als mathematischer Ausdruck handelt. Nur Instruktionen, die auf diesen Befehl folgen, sind von ihm betroffen.
+
+\textit{Equate} erlaubt die Definition einer Konstanten mittels \asm{name EQU exp}. Jedes Vorkommnis von \glqq name\grqq{} nach dessen Definition wird vom Assembler mit dem entsprechenden Ausdruck ersetzt. Eine so definierte Variable darf nicht erneut definiert werden.
+
+\textit{Set} funktioniert identisch zu Equate (\asm{name SET exp}), erlaubt allerdings das wiederholte Definieren von Variablen.
+
+\textit{End Of Assembly} definiert das (physikalische) Ende des Programms mittels \asm{END}. Dieser Befehl muss vorkommen, allerdings nicht mehr als einmal.
+
+\textit{Conditional Assembly} dient der Programmierung mit Bedingungen und funktioniert identisch zu den bekannten If-Statements. Die Definition beginnt mit \asm{IF exp} beginnt und endet mit \asm{ENDIF}. Der Code, der sich zwischen diesen beiden Zeilen befindet, wird aufgerufen sofern der mathematische Ausdruck, der auf das \asm{IF} folgt, als wahr (ungleich 0) interpretiert wird.
+
+\textit{Macro Definition} ist die umfangreichste Pseudo-Instruktion die der Intel 8080 bietet. Mittels \asm{name MACRO list} und \asm{ENDM} lassen sich Methoden ohne Rückgabewert realisieren. Ein Makro besteht aus einem Namen, einer Menge von Befehlen und optional einer Menge von Ausdrücken, die als Parameter dienen (\asm{list}). Sofern im Assembler nun der definierte Name als Instruktion angetroffen wird, wird an dieser Stelle der Inhalt des Makros' (gegebenenfalls unter Beachtung der Parameter), eingesetzt und in Bytecode übersetzt.
 
 \subsection{Interrupts}
 
