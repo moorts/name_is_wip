@@ -473,12 +473,15 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
     let mut mem_address: u16 = 0;
 
     for line in code {
+        if line.trim().is_empty() {
+            continue;
+        }
         if line.starts_with("ORG ") {
             mem_address = eval(line.split_once("ORG ").unwrap().1) as u16;
         }
         if label_regex.is_match(&line) {
-            let split = line.split(":").collect::<Vec<&str>>();
-            let mut label = split[0].trim_start().to_string();
+            let (label_name, operand) = line.split_once(":").unwrap();
+            let mut label = label_name.trim_start().to_string();
             while label.len() > 5 {
                 label.pop();
             }
@@ -486,7 +489,7 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
                 return Err("illegal label name");
             }
             temp_labels.push(label.to_string());
-            if !split[1].trim().is_empty() {
+            if !operand.trim().is_empty() {
                 while let Some(new_label) = temp_labels.pop() {
                     if labels.contains_key(&new_label) {
                         return Err("label must not be assigned twice");
@@ -835,7 +838,7 @@ mod tests {
 
     #[test]
     fn empty_label() {
-        let labels = get_labels(&convert_input(vec!["label:"]));
+        let labels = get_labels(&convert_input(vec!["label:", ""]));
         assert_eq!(Err("labels must not point to an empty address!"), labels);
     }
 
