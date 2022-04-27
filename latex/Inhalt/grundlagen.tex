@@ -182,6 +182,14 @@ Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als 
     \end{tabular}
 \end{table}
 
+\subsubsection{Labels}
+
+Einen integralen Bestandteil der Programmierung mit Assembly machen \glqq Label\grqq{} aus. Es handelt sich um Sprungmarken, mittels welcher die Reihenfolge der Ausführung der Statements beeinflusst werden kann. Außerdem enthalten Labels bestimmte Werte, welche für arithmetische Operationen verwendet werden können.
+
+Die Deklaration eines Labels folgt diesem Aufbau: \asm{label: Opcode}, wobei das Label selbst optional ist. Zusätzlich kann ein Label allein in einer einzelnen Zeile stehen, in diesem Fall bezieht es sich auf die nächste vom Assembler angetroffene Instruktion. Dadurch ergibt sich auch die Möglichkeit mehrere Label auf dasselbe Byte zu beziehen, was legal ist. In all diesen Fällen referenziert ein Label den Index des Bytes im Bytecode, vor welchem es deklariert wurde. Die alleinige Deklaration eines Labels hat noch keinen Einfluss auf das vorliegende Programm.
+
+Der Name eines Labels muss mit einem Buchstaben des Alphabets, einem \glqq @\grqq{} oder \glqq ?\grqq{} beginnen, besteht aus einem bis fünf Zeichen und muss mit einem  \glqq :\grqq{} enden. Nicht erlaubt ist die Verwendung reservierter Namen (beispielsweise Namen der Register) oder mehrfache Verwendung desselben Namens. Sofern der Name eines Labels länger als fünf Zeichen ist, wird er auf die ersten fünf gekürzt.
+
 \subsubsection{Pseudo-Instruktionen}\label{chap:pseudo-instructions}
 
 Neben den eigentlichen Instruktionen bietet der Intel 8080 dem Entwickler diverse Befehle, die keinen Bytecode erzeugen, weshalb es sich um sogenannte \glqq Pseudo-Instruktionen\grqq{} handelt. Sie spielen bei der Entwicklung auf Assembly-Level eine zentrale Rolle, insofern dass sie es erlauben Konzepte wie If-Verzweigungen oder Variablen umzusetzen.
