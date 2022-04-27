@@ -45,7 +45,7 @@ Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit m
 
 Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \glqq preprocessor\grqq{} zur Vorverarbeitung und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels beispielhafter Code-Beispiele illustriert wird. Generell gilt, dass alle Zeilen des Programmcodes vor ihrer Behandlung durch eine Methode mittels \rust{.trim()} zugeschnitten und gegebenenfalls übergangen werden, sofern eine Leerzeile entsteht. Der Übersichtlichkeit halber ist dieser Teil des Codes an vielen Stellen ausgelassen.
 
-\subsection{Assembler}
+\subsection{Assembler.rs}
 
 Der in der Klasse \rust{assembler.rs} definierte Struct 
 \begin{minted}{rust}
@@ -173,9 +173,49 @@ Neben dem Ersetzen von Variablen gilt es die entsprechenden Werte auszulesen, wa
 
 Aus Gründen der Übersichtlichkeit ist die namentliche Überprüfung, sowie das Verfahren bei \asm{EQU} nicht mitaufgenommen. Letzteres funktioniert beinah analog wobei der einzige Unterschied zu \asm{SET} ist, dass in dem Fall, dass ein Variablenname bereits in der Map liegt der zugehörige Wert nicht überschrieben, sondern eine Fehlermeldung propagiert wird.
 
-\subsubsection{Label Bestimmung}
+\subsubsection{Bestimmung von Labels}
 
-\subsubsection{Makros}
+Im nächsten Schritt sollen die im Kapitel \ref{chap:labels} vorgestellten Labels ausgelesen werden. Weil diese sich nicht auf einen Zeilenindex, sondern Byteindizes beziehen, müssen auch an dieser Stelle Origins beachtet werden, genauso wie der Inhalt der eigentlichen Zeile. Allerdings hat die Vorverarbeitung keinen Zugriff auf die Methode \rust{to_machine_code} des Assemblers zur Überführung einer Zeile in ihren Bytecode. Deshalb sind an dieser Stelle einmal alle Opcodes, in Abhängigkeit von ihrer produzierten Anzahl von Bytes (ein bis drei) in Arrays verfügbar gemacht. An dieser Stelle geht es nur um die Bestimmung deklarierter Label, ein Ersetzen der Werte erfolgt an anderer Stelle.
 
-\subsubsection{Labels}
+Ähnlich der vorhergehenden Schritte wird zeilenweise über den Code iteriert. In einer Variable \rust{mem_address} wird der aktuelle Byteindex gespeichert und aktualisiert, sofern eine Zeile ein \asm{ORG}-Statement oder einen Opcdoe beinhaltet. In der resultierenden \rust{HashMap<String, u16>} verweist dann ein gefundenes Label auf den Wert der Variable, zum Zeitpunkt ihres Funds.
 
+Das Identifizieren von Labels erfolgt mittels folgendem Regex:
+
+\rust{"^( *[a-zA-Z@?][a-zA-Z@?0-9]*:)"}, was die in den Grundlagen vorgestellte Spezifikation abbildet. Es sei zu beachten, dass dieser Ausdruck alle Namen matcht, auch die mit einer Länge von mehr als fünf Zeichen. Deshalb muss jeder so gefundene Name, bevor er weiterverarbeitet wird entsprechend gekürzt werden. Sofern die Bezeichnung des Labels valide ist und überschüssige Zeichen gekürzt wurden wird das Label einem Vektor für \glqq temporäre\grqq{} Label hinzugefügt.
+
+Weil eine beliebige Menge Label auf dasselbe Byte verweisen kann wird prinzipiell davon ausgegangen, dass ein Label nicht unmittelbar vor einem Opcode steht. Stattdessen werden sie in einem separaten Vektor gesammelt und in dem Fall, dass die Methode auf einen Opcode trifft, dem eigentlichen Ergebnis beigefügt. Dieser Vektor hat einen weiteren Vorteil: In dem Fall, dass ein Label auf nichts verweist (man stelle sich vor die letzte Zeile eines Programms lautet \asm{instr:}) ist der Vektor zum Schleifenende hin nicht leer. Das kann überprüft werden und gegebenenfalls ein entsprechender Fehler zurückgeliefert werden.
+
+\subsection{Makros}
+
+Im Programmcode gelten Makros zwar als Teil der Vorverarbeitung, ihre Mächtigkeit und damit einhergehende Komplexität setzt aber eine differenziertere Betrachtung voraus. Die Verarbeitung von Makros geschieht in drei unterschiedlichen Schritten, die nachfolgend erläutert werden. Zum Zeitpunkt der Makroverarbeitung wurden im Code bereits alle Variablen durch ihre zugewiesenen Werte ersetzt. Außerdem sind alle Entwicklerkommentare entfernt worden und es wurde festgestellt, dass das Programm ein korrektes Ende besitzt.
+
+\subsubsection{Deklarationen}
+
+Bevor ein Makro aufgerufen werden kann muss es deklariert werden. Die Syntax dafür wurde bereits in Kapitel \ref{chap:pseudo-instructions} vorgestellt. Damit der Assembler eine Makroreferenz ersetzen kann, muss auch er entsprechend davor ermitteln welche Makros überhaupt deklariert wurden, was den ersten Schritt der Verarbeitung von Makros ausmacht. Das Ergebnis ist ein Tupel von zwei \rust{HashMap<String, Vec<String>>}s, wobei einmal der Name des Makros auf die enthaltenen Instruktionen und das andere Mal auf seine Liste von Parametern gemappt wird.
+
+Ähnlich anderer Vorverarbeitungsschritte muss auch an dieser Stelle über den gesamten Code iteriert werden. Besonderer Behandlung bedarf es dabei vor allem der Zeilen in denen der Start eines Makros steht (\asm{name MACRO list}) und denen in welchen ein Makro abgeschlossen wird (\asm{ENDM}). Das gesamte Verhalten während des Schleifenablaufs wird maßgeblich von der Variablen \rust{in_macro: bool} beeinflusst. Sie ist als \rust{false} initialisiert und wird in Abhängigkeit von Makrostart und -ende entsprechend verändert. 
+
+Sollte ein weiterer Makrobeginn festgestellt werden, während die Variable wahr ist, kann bereits an dieser Stelle abgebrochen werden, da der Intel 8080 es nicht erlaubt ein Makro innerhalb eines Makros zu definieren. Auch aufkommende \asm{ENDM}-Befehle, die keinen entsprechenden Anfang besitzen können mittels dieser Variable identifiziert werden. Alle anderen Zeilen werden, sofern \rust{in_macro == true} gilt in einen separaten Vektor aufgenommen, auf den später der Makroname gemappt wird. In jedem anderen Fall handelt es sich um eine Zeile, die außerhalb eines Makros steht und für den weiteren Verlauf nicht mehr relevant ist.
+
+Der restliche Arbeitsaufwand für das Finden von Makrodeklarationen beläuft sich auf das Auftrennen von Strings und eine geeignete Speicherung all dieser Werte. Folgender Code illustriert das Ganze beispielhaft:
+
+\begin{minted}{rust}
+let split: Vec<&str> = line.split("MACRO").collect();
+macro_name = split[0].to_string();
+if macro_name.is_empty() {
+    return Err("Cannot define macro without name");
+}
+for par in split[1].split(",") {
+    if !par.is_empty() {
+        parameters.push(par.trim().to_string());
+    }
+}
+\end{minted}
+
+Dabei wird eine Zeile, sofern sie das Schlüsselwort \glqq MACRO\grqq{} enthält, an eben diesem aufgetrennt. Das Ergebnis ist der Einfachheit halber ein Vektor, dessen erstes Element der Name des Makros ist, das zweite eine mögliche Liste von Parametern als String. Darauf aufbauend kann der Name (an dieser Stelle vereinfacht) validiert werden und der String der Parameter mittels einem wiederholten Auftrennen in einen Vektor aus den einzelnen Parameternamen überführt werden.
+
+Sowohl die Parameter, als auch der Code eines Makros werden, solange kein Ende gefunden wurde, in temporären Variablen gespeichert. Ihre Inhalte werden in das Endergebnis geschrieben und die Variablen geleert, sobald ein \asm{ENDM} aufkommt.
+
+\subsubsection{Referenzierungen}
+
+Sobald der Assembler eine Liste aller existierenden Makros besitzt und die Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. An dieser Stelle kann außerdem der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept entspricht dem der vorhergehenden Implementierung mittels boolscher Variable, weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
