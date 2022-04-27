@@ -478,8 +478,11 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
         }
         if label_regex.is_match(&line) {
             let split = line.split(":").collect::<Vec<&str>>();
-            let label = split[0].trim_start();
-            if reserved_names.contains(&label) {
+            let mut label = split[0].trim_start().to_string();
+            while label.len() > 5 {
+                label.pop();
+            }
+            if reserved_names.contains(&&label[..]) {
                 return Err("illegal label name");
             }
             temp_labels.push(label.to_string());
@@ -825,6 +828,9 @@ mod tests {
     fn duplicate_labels() {
         let labels = get_labels(&convert_input(vec!["label:", "label:", "MOV A,B"]));
         assert_eq!(Err("label must not be assigned twice!"), labels);
+
+        let code = convert_input(vec!["instr:", "instruction:", "MOV A,B"]);
+        assert_eq!(Err("label must not be assigned twice!"), get_labels(&code));
     }
 
     #[test]
@@ -837,6 +843,15 @@ mod tests {
     fn illegal_label() {
         let labels = get_labels(&vec!["IF: RRC".to_string()]);
         assert_eq!(Err("illegal label name"), labels);
+    }
+
+    #[test]
+    fn long_labels() {
+        let code = convert_input(vec!["instruction: MOV A,B"]);
+        let mut labels:HashMap<String, u16> = HashMap::new();
+        labels.insert("instr".to_string(), 0);
+
+        assert_eq!(Ok(labels), get_labels(&code));
     }
 
     #[test]

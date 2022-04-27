@@ -2,9 +2,8 @@ use super::parser::eval;
 use super::preprocessor::{get_preprocessed_code, get_line_map};
 use core::fmt;
 use regex::Regex;
-use std::{collections::HashMap, hash::Hash};
 
-pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
+pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]*:)";
 
 pub fn get_reserved_names() -> Vec<&'static str> {
     vec![
