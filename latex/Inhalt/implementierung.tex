@@ -146,14 +146,10 @@ Damit Instruktionen wie If-Verzweigungen korrekt funktionieren und ausgewertet w
 
 Auch für diesen Schritt wird einmal der Code einmal Zeile für Zeile durchlaufen, wobei das Bestimmen gültiger Variablen sowie deren Ersetzung parallel erfolgen. Das schließt von vornherein aus, dass verwendete Variablen, die noch nicht deklariert wurden, fälschlicherweise ersetzt werden. Für Variablen, die mittels \asm{SET} deklariert wurden, sieht das Ganze, auf seine grundlegende Logik reduziert, wie folgt aus:
 
+\begin{listing}[th]
 \begin{minted}{rust}
 for (key, value) in &set_assignments {
-	let fmt_key = &format!(" {} ", key);
-	line = line.replace(fmt_key, fmt_val);
-	let fmt_key = &format!(" {}", key);
-    if line.ends_with(fmt_key) {
-    	line = line.replace(fmt_key, fmt_val);
-    }
+	line = replace_names(&line, assignment_map);
 }
 if line.contains(" SET ") {
 	let (name, exp) = line.split_once(" SET ").unwrap();
@@ -163,6 +159,8 @@ if line.contains(" SET ") {
     );
 }
 \end{minted}
+\label{lst:var-replacement}
+\end{listing}
 
 Es sei zu beachten, dass eine Variable in vier unterschiedlichen Konstellationen auftreten kann. Im obigen Ausschnitt sind lediglich die Fälle behandelt, dass eine Variable entweder frei im Programm steht oder am Ende einer Zeile. Das vorangestellte und folgende Leerzeichen stellt sicher, dass nur Variablen ersetzt werden, deren Name vollständig entsprechend ist. Sollten diese Leerzeichen fehlen würde folgendes Beispiel nicht erwartungsgemäß funktionieren: Der Entwickler deklariert eine Variable namens \glqq Foo\grqq{} und eine zweite Variable namens \glqq FooBa\grqq. In dem Fall, dass Foo als erstes in der Map \rust{set_assignments} auftaucht, wird auch ein Aufkommen von FooBa durch Foo ersetzt, weil nicht überprüft werden würde, ob sich die beiden Namen vollständig entsprechen.
 Die übrigen Fälle, die hier fehlen, funktionieren analog, allerdings mit dem Unterschied, dass auch unmittelbar vor einer Variablen ein Komma stehen darf, auf das entsprechend geprüft wird.
@@ -197,8 +195,9 @@ Bevor ein Makro aufgerufen werden kann muss es deklariert werden. Die Syntax daf
 
 Sollte ein weiterer Makrobeginn festgestellt werden, während die Variable wahr ist, kann bereits an dieser Stelle abgebrochen werden, da der Intel 8080 es nicht erlaubt ein Makro innerhalb eines Makros zu definieren. Auch aufkommende \asm{ENDM}-Befehle, die keinen entsprechenden Anfang besitzen können mittels dieser Variable identifiziert werden. Alle anderen Zeilen werden, sofern \rust{in_macro == true} gilt in einen separaten Vektor aufgenommen, auf den später der Makroname gemappt wird. In jedem anderen Fall handelt es sich um eine Zeile, die außerhalb eines Makros steht und für den weiteren Verlauf nicht mehr relevant ist.
 
-Der restliche Arbeitsaufwand für das Finden von Makrodeklarationen beläuft sich auf das Auftrennen von Strings und eine geeignete Speicherung all dieser Werte. Folgender Code illustriert das Ganze beispielhaft:
+Der restliche Arbeitsaufwand für das Finden von Makrodeklarationen beläuft sich auf das Auftrennen von Strings und eine geeignete Speicherung all dieser Werte. Listing \ref{lst:split} illustriert das Ganze beispielhaft.
 
+\begin{listing}[th]
 \begin{minted}{rust}
 let split: Vec<&str> = line.split("MACRO").collect();
 macro_name = split[0].to_string();
@@ -211,6 +210,9 @@ for par in split[1].split(",") {
     }
 }
 \end{minted}
+\label{lst:split}
+\caption{Auftrennen einer Definition eines Makros}
+\end{listing}
 
 Dabei wird eine Zeile, sofern sie das Schlüsselwort \glqq MACRO\grqq{} enthält, an eben diesem aufgetrennt. Das Ergebnis ist der Einfachheit halber ein Vektor, dessen erstes Element der Name des Makros ist, das zweite eine mögliche Liste von Parametern als String. Darauf aufbauend kann der Name (an dieser Stelle vereinfacht) validiert werden und der String der Parameter mittels einem wiederholten Auftrennen in einen Vektor aus den einzelnen Parameternamen überführt werden.
 
@@ -218,4 +220,74 @@ Sowohl die Parameter, als auch der Code eines Makros werden, solange kein Ende g
 
 \subsubsection{Referenzierungen}
 
-Sobald der Assembler eine Liste aller existierenden Makros besitzt und die Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. An dieser Stelle kann außerdem der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept entspricht dem der vorhergehenden Implementierung mittels boolscher Variable, weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
+Sobald der Assembler eine Liste aller existierenden Makros besitzt und die Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. Außerdem kann nun der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept entspricht dem der vorhergehenden Implementierung mittels boolscher Variable, weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
+
+Bei der Erkennung von Makros wird je Zeile überprüft, ob ihr Inhalt einem Eintrag in der, im vorherigen Schritt generierten, Map vorhanden ist. In diesem Fall müssen zuerst eventuelle Parameter ermittelt werden. Das ist auf dieselbe Art und Weise implementiert, wie bereits in Listing \ref{lst:split} vorgestellt. Damit die Variablen innerhalb eines Makros durch ihre eigentlichen Werte ersetzbar sind, müssen diese entsprechend gemappt werden, was in Listing \ref{lst:var-map} zu sehen ist.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+let params = macro_params.get(macro_name).unwrap();
+for (index, parameter) in params.iter().enumerate() {
+	let value = if index >= inputs.len() {
+    	String::new()
+    } else {
+    	inputs[index].to_string()
+    };
+    input_map.insert(parameter.to_string(), value);
+}
+\end{minted}
+\label{lst:var-map}
+\caption{Mapping von Nutzereingaben auf Parameter}
+\end{listing}
+
+Dazu wird über die entsprechende Menge von Parametern, die für das Makro definiert wurden, iteriert. An dieser Stelle ist wichtig, dass über eine Aufzählung der eigentlichen Werte iteriert wird, weil der Index der Parameter über die Zuordnung bestimmt. Das ist in Zeile 6 ersichtlich, in der der beim Makroaufruf angegebene Wert ausgelesen wird. Gemäß der Spezifikation des Assemblers ist es zulässig nicht alle definierten Parameter anzugeben. In dem Fall muss der Assembler davon ausgehen, dass nur die ersten (links beginnend) Parameter übergeben wurden und ersetzt die übrigen Werte mit einem leeren String. Im Code wird dies durch einen Vergleich zwischen Index und Anzahl aller beim Aufruf übergebenen Parameter realisiert, wobei eben jene Parameter fehlen, für die es keinen Index gibt.
+
+Anschließend wird jede Instruktion des Makros an den resultierenden Vektor (\rust{Vec<String>}) angehängt. Bei diesem Vorgang werden entsprechende Vorkommnisse von Parametern in den Befehlen ersetzt. Im Gegensatz zum Ersetzen von Variablen ist die hier geforderte Implementierung komplexer, weil der Nutzer wiederum Variablennamen als Parameter angeben kann. Das führt möglicherweise zu unerwarteten Seiteneffekten sobald ein Parameter Substring eines anderen ist, weshalb das genaue Vorgehen an der vereinfachen Fassung in Listing \ref{lst:param-replace} zu sehen ist.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+while let Some(reg_match) = var_regex.find(&line) {
+    let last_match =  line.get(reg_match.end()..);
+    let start = match first_match {
+        " " | "," | "+" | "-" | "*" | "/" => reg_match.start()+1,
+        _ => reg_match.start()
+    };
+    let end = match last_match {
+        " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
+        _ => reg_match.end() -1
+    };
+let value_string = &format!("{}{}", &value, substr_prot);
+line.replace_range(start..end - 1, value_string);
+// identischer Ablauf für letztes Aufkommen eines Namens
+line.replace(replacement_protection, "").trim().to_string()
+\end{minted}
+\label{lst:param-replace}
+\caption{Ersetzung von Variablen in Makros einer einzelnen Instruktion (vereinfacht)}
+\end{listing}
+
+Der Quellcode basiert auf den Regex \rust{var_regex} und \rust{end_regex}, die mit den Strings 
+
+\rust{&format!(r"[ ,]{}[ ,+\-*/,].", variable)}, bzw. 
+
+\rust{&format!(r"[ ,]{} ?\$", variable)} definiert sind. Sie matchen Vorkommnisse von Parameternamen in einer Zeile und Verhindern, dass nur ein Substring des eigentlichen Namens gefunden wird. Mittels dem ersten der beiden Regex werden alle Namen, die nicht am Ende der Zeile stehen gefunden. Im Fall eines Treffers gibt die Methode \rust{find()} ein \rust{Option<Range>}-Objekt zurück dessen Inhalt, sofern vorhanden, in \rust{reg_match} gespeichert wird. Die darin enthaltene Range läuft vom ersten Index des Matches bis zum letzten. Aus dieser Range lassen sich das erste und letzte Zeichen des gematchten Strings bestimmen, welche in den Variablen \rust{first_match} und \rust{last_match} gespeichert sind. Die Bestimmung von letzterem ist als Referenz in Zeile 2 zu sehen.
+
+Abhängig davon, ob sich vor dem ersten (bzw. nach dem letzten) Symbol des verglichenen Namens ein weiteres Symbol befindet, muss der Index angepasst werden. Das geschieht in den Zeilen 3 bis 10. Sie definieren in Abhängigkeit des ersten und letzten Zeichens einen weiteren Index. Die beiden Indizes \rust{start} und \rust{end} verweisen somit auf den ersten und letzten Buchstaben des gefunden Namens im gesamten String \rust{line}.
+
+Nach einer erfolgreichen Bestimmung kann der so ermittelte Bereich durch den eigentlichen Wert ersetzt werden. Die erforderliche Methode stellt Rust dafür standardmäßig bereit. Allerdings wird der Wert mit einem Platzhalter (\rust{substr_prot}) erweitert. Bei ihm handelt es sich um einen String, der keiner legalen Nutzereingabe entspricht. Er dient dazu bereits ersetzte Namen kein weiteres Mal zu ersetzen.
+
+Zur Verdeutlichung ist in Tabelle \ref{tab:replace} ein Beispiel illustriert. Für das Beispiel sei das Makro \asm{mac} angenommen, das die zwei Parameter \asm{FooBar} und \asm{Foo} (in der Reihenfolge) besitzt. Der Inhalt des Makros ist der Befehl \asm{MOV FooBar, Foo}. Außerdem wurde \asm{Foo} vorher im Programm als Variable initialisiert.
+
+\begin{table}[h]
+    \centering
+    \caption{Ersetzung ohne Platzhalter}
+    \label{tab:replace}
+    \begin{tabular}{l | l}
+        \asm{mac Foo, A} & Referenz von \asm{mac} wobei FooBar = Foo, Foo = A\\
+        \asm{MOV FooBar, Foo} & Befehl vor Ersetzung\\
+        \asm{MOV Foo, Foo} & FooBar mit seinem Wert ersetzt\\
+        \asm{MOV A, Foo} & Erster Aufkommen des Parameters Foo ersetzt\\
+        \asm{MOV A, A} & Zweites Aufkommen des Parameters Foo ersetzt\\
+    \end{tabular}
+\end{table}
+
+Es wird schnell ersichtlich, dass dieses Ergebnis nicht das ist, was der Programmierer erwarten würde. Durch das Hinzufügen eines Werts, den der Nutzer nicht benutzen kann, bzw. darf, wird diesem Verhalten vorgebeugt. Denn dann wird in der dritten Zeile aus \asm{FooBar} \glqq Foo@ \%\grqq, wobei hier als Platzhalter der String \glqq @ -\grqq{} gewählt wurde. Nun matcht der Inhalt des zweiten Parameters nur noch seinem eigentlichen Aufkommen am Ende der Zeile. Sobald alle Parameter auf diese Weise ersetzt wurden, können die Platzhalter einfach mit einem leeren String ersetzt werden. Hier ist es wichtig, dass der Platzhalter so gewählt wird, dass er nicht zufällig in seinem letzten Zeichen dem ersten Zeichen eines Namens entspricht, weshalb das \glqq \%\grqq{} gewählt wurde.
