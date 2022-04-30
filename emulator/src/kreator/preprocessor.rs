@@ -168,8 +168,8 @@ pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static 
 
 fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let mut new_code: Vec<String> = Vec::new();
-    let mut equ_assignments: HashMap<String, u16> = HashMap::new();
-    let mut set_assignments: HashMap<String, u16> = HashMap::new();
+    let mut equ_assignments: HashMap<String, String> = HashMap::new();
+    let mut set_assignments: HashMap<String, String> = HashMap::new();
     let mut in_conditional = false;
     let mut condition = false;
     let name_format = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4})$").unwrap();
@@ -198,16 +198,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
         }
 
         for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
-            for (key, value) in assignment_map {
-                line = line.replace(&format!(" {} ", key), &format!(" {}", value));
-                line = line.replace(&format!(",{} ", key), &format!(",{}", value));
-                if line.ends_with(&format!(" {}", key)) {
-                    line = line.replace(&format!(" {}", key), &format!(" {}", &value.to_string()));
-                }
-                if line.ends_with(&format!(",{}", key)) {
-                    line = line.replace(&format!(" {}", key), &format!(" {}", &value.to_string()));
-                }
-            }
+            line = replace_names(&line, assignment_map);
         }
 
         if line.contains(" SET ") {
@@ -215,7 +206,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
             if get_reserved_names().iter().any(|&reserved_name| reserved_name == name) || !name_format.is_match(&name) {
                 return Err("Supplied illegal variable name");
             }
-            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+            set_assignments.insert(name.to_string(), eval_str(expression.to_string()).to_string());
         }
 
         if line.contains(" EQU ") {
@@ -226,7 +217,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
             if equ_assignments.contains_key(name) {
                 return Err("Can't assign a variable more than once using EQU!");
             }
-            equ_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+            equ_assignments.insert(name.to_string(), eval_str(expression.to_string()).to_string());
         }
 
         new_code.push(line);
@@ -294,37 +285,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                 }
 
                 for instruction in instructions {
-                    let replacement_protection = "@";
-                    let mut line = instruction.to_string();
-
-                    for (variable, value) in &input_map {
-                        let var_regex = Regex::new(&format!(r"[ ,]{}[ ,+\-*/,].", variable)).unwrap();
-                        let end_regex = Regex::new(&format!("[ ,]{} ?$", variable)).unwrap();
-
-                        while let Some(reg_match) = var_regex.find(&line.clone()) {
-                            let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
-                            let last_match_symbol =  line.get(reg_match.end()..).unwrap();
-                            let start = match first_match_symbol {
-                                " " | "," => reg_match.start() + 1,
-                                _ => reg_match.start()
-                            };
-                            let end = match last_match_symbol {
-                                " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
-                                _ => reg_match.end() -1
-                            };
-                            line.replace_range(start..end - 1, &format!("{}{}", &value, replacement_protection));
-                        }
-                        if let Some(reg_match) = end_regex.find(&line.clone()) {
-                            let first_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
-                            let start = match first_symbol {
-                                " " | "," => reg_match.start() + 1,
-                                _ => reg_match.start()
-                            };
-                            line.replace_range(start..reg_match.end(), &format!("{}{}", &value, replacement_protection));
-                        }
-                    }
-                    line = line.replace(replacement_protection, "");
-                    macroless_code.push(line.trim().to_string());
+                    macroless_code.push(replace_names(&instruction, &input_map));
                 }
                 macroless_code.push(MACRO_END.to_string());
                 continue 'outer;
@@ -335,6 +296,39 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     }
     macroless_code = handle_macro_locals(&macroless_code).unwrap();
     Ok(macroless_code)
+}
+
+fn replace_names(line: &str, names: &HashMap<String, String>) -> String {
+    let replacement_protection = "@";
+    let mut line = line.trim().to_string();
+    
+    for (variable, value) in names {
+        let var_regex = Regex::new(&format!(r"[ ,+\-*/]{}[ ,+\-*/].", variable)).unwrap();
+        let end_regex = Regex::new(&format!(r"[ ,+\-*/]{}$", variable)).unwrap();
+
+        while let Some(reg_match) = var_regex.find(&line.clone()) {
+            let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
+            let last_match_symbol =  line.get(reg_match.end()..).unwrap();
+            let start = match first_match_symbol {
+                " " | "," | "+" | "-" | "*" | "/" => reg_match.start() + 1,
+                _ => reg_match.start()
+            };
+            let end = match last_match_symbol {
+                " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
+                _ => reg_match.end() -1
+            };
+            line.replace_range(start..end - 1, &format!("{}{}", &value, replacement_protection));
+        }
+        if let Some(reg_match) = end_regex.find(&line.clone()) {
+            let first_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
+            let start = match first_symbol {
+                " " | "," | "+" | "-" | "*" | "/" => reg_match.start() + 1,
+                _ => reg_match.start()
+            };
+            line.replace_range(start..reg_match.end(), &format!("{}{}", &value, replacement_protection));
+        }
+    }
+    line.replace(replacement_protection, "").trim().to_string()
 }
 
 fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
@@ -998,6 +992,23 @@ mod tests {
 
             assert_eq!(Err("Supplied illegal variable name"), ppc);
         }
+    }
+
+    #[test]
+    fn variable_as_variable() {
+        let code = convert_input(vec!["VAL SET 5", "test SET   VAL+ 1", "OUT test"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT 6", ppc[2]);
+    }
+
+    #[test]
+    fn variable_in_expression() {
+        let line = "OUT 5+var".to_string();
+        let mut map = HashMap::new();
+        map.insert("var".to_string(), "5".to_string());
+
+        assert_eq!("OUT 5+5", replace_names(&line, &map));
     }
 
     #[test]
