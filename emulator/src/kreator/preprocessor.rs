@@ -17,9 +17,9 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let code = replace_variable_usages(&code)?;
     let labels = get_labels(&code)?;
     let code = replace_macros(&code)?;
+    let code = replace_variable_usages(&code)?;
 
     for line in code {
         let mut owned_line = line.trim().to_string();
@@ -170,10 +170,32 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
     let mut new_code: Vec<String> = Vec::new();
     let mut equ_assignments: HashMap<String, u16> = HashMap::new();
     let mut set_assignments: HashMap<String, u16> = HashMap::new();
+    let mut in_conditional = false;
+    let mut condition = false;
     let name_format = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4})$").unwrap();
 
     for line in code {
         let mut line = line.trim().to_string();
+
+
+        if line.eq("ENDIF") {
+            in_conditional = false;
+            condition = false;
+        } else if line.contains("IF") {
+            in_conditional = true;
+            let mut condition_str = line.split_once(" ").unwrap().1.to_string();
+            for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
+                for (key, value) in assignment_map {
+                    if condition_str.trim().eq(key) {
+                        condition_str = condition_str.replace(key, &value.to_string());
+                    }
+                }
+            }
+            condition = eval_str(condition_str) != 0;
+        } else if in_conditional && !condition {
+            new_code.push(line);
+            continue;
+        }
 
         for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
             for (key, value) in assignment_map {
@@ -798,6 +820,19 @@ mod tests {
         let code = convert_input(vec!["TEST SET 5", MACRO_START, "VAL SET 8", MACRO_END]);
         let ppc = handle_macro_locals(&code).unwrap();
         assert_eq!(ppc[1], "A0 SET 8");
+    }
+
+    #[test]
+    fn variables_in_macros_with_if() {
+        let code = convert_input(vec!["mac MACRO", "IF var", "var SET 5", "ENDIF", "ENDM", "var SET 0", "mac", "OUT var", "END"]);
+        let ppc = get_preprocessed_code(&code).unwrap();
+
+        assert_eq!(vec!["OUT 0"], ppc);
+
+        let code = convert_input(vec!["mac MACRO", "IF var", "var SET 5", "ENDIF", "ENDM", "var SET 1", "mac", "OUT var", "END"]);
+        let ppc = get_preprocessed_code(&code).unwrap();
+
+        assert_eq!(vec!["OUT 5"], ppc);
     }
 
     #[test]
