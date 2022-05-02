@@ -8,6 +8,26 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 pub type EResult<T> = Result<T, &'static str>;
 
+static CLOCK_CYCLES: [usize; 256] = [
+    4, 10, 7, 5, 5, 5, 7, 4, 4, 10, 7, 5, 5, 5, 7, 4,
+    4, 10, 7, 5, 5, 5, 7, 4, 4, 10, 7, 5, 5, 5, 7, 4,
+    4, 10, 16, 5, 5, 5, 7, 4, 4, 10, 16, 5, 5, 5, 7, 4,
+    4, 10, 13, 5, 10, 10, 10, 4, 4, 10, 13, 5, 5, 5, 7, 4,
+    5, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 7, 5,
+    5, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 7, 5,
+    5, 5, 5, 5, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 7, 5,
+    7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 7, 5,
+    4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+    4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+    4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+    4, 4, 4, 4, 4, 4, 7, 4, 4, 4, 4, 4, 4, 4, 7, 4,
+    0, 10, 10, 10, 0, 11, 7, 11, 0, 10, 10, 10, 0, 17, 7, 11,
+    0, 10, 10, 10, 0, 11, 7, 11, 0, 10, 10, 10, 0, 17, 7, 11,
+    0, 10, 10, 18, 0, 11, 7, 11, 0, 5, 10, 5, 0, 17, 7, 11,
+    0, 10, 10, 4, 0, 11, 7, 11, 0, 5, 10, 4, 0, 17, 7, 11
+];
+
+
 #[wasm_bindgen]
 pub struct Emulator {
     pub pc: u16,
@@ -45,7 +65,7 @@ impl Emulator {
         self.ram.get_last_changed_address()
     }
 
-    fn execute_instruction(&mut self, opcode: u8) -> EResult<()> {
+    fn execute_instruction(&mut self, opcode: u8) -> EResult<usize> {
         match opcode {
             0x00 => {
                 // NOP
@@ -344,7 +364,7 @@ impl Emulator {
             }
             0xC0 => {
                 // RNZ
-                self.ret_not("zero")?;
+                return self.ret_not("zero");
             }
             0xC1 => {
                 // POP B
@@ -360,7 +380,7 @@ impl Emulator {
             }
             0xC4 => {
                 // CNZ adr
-                self.call_not("zero")?;
+                return self.call_not("zero");
             }
             0xC5 => {
                 // PUSH B
@@ -377,7 +397,7 @@ impl Emulator {
             }
             0xC8 => {
                 // RZ
-                self.ret_if("zero")?;
+                return self.ret_if("zero");
             }
             0xC9 => {
                 // RET
@@ -393,7 +413,7 @@ impl Emulator {
             }
             0xCC => {
                 // CZ addr
-                self.call_if("zero")?;
+                return self.call_if("zero");
             }
             0xCD => {
                 // CALL addr
@@ -410,7 +430,7 @@ impl Emulator {
             }
             0xD0 => {
                 // RNC
-                self.ret_not("carry")?;
+                return self.ret_not("carry");
             }
             0xD1 => {
                 // POP D
@@ -427,7 +447,7 @@ impl Emulator {
             }
             0xD4 => {
                 // CNC adr
-                self.call_not("carry")?;
+                return self.call_not("carry");
             }
             0xD5 => {
                 // PUSH D
@@ -444,7 +464,7 @@ impl Emulator {
             }
             0xD8 => {
                 // RC
-                self.ret_if("carry")?;
+                return self.ret_if("carry");
             }
             0xD9 => {
                 // RET
@@ -461,7 +481,7 @@ impl Emulator {
             }
             0xDC => {
                 // CC adr
-                self.call_if("carry")?;
+                return self.call_if("carry");
             }
             0xDD => {
                 // CALL addr
@@ -478,7 +498,7 @@ impl Emulator {
             }
             0xE0 => {
                 // RPO
-                self.ret_not("parity")?;
+                return self.ret_not("parity");
             }
             0xE1 => {
                 // POP H
@@ -494,7 +514,7 @@ impl Emulator {
             }
             0xE4 => {
                 // CPO adr
-                self.call_not("parity")?;
+                return self.call_not("parity");
             }
             0xE5 => {
                 // PUSH H
@@ -511,7 +531,7 @@ impl Emulator {
             }
             0xE8 => {
                 // RPE
-                self.ret_if("parity")?;
+                return self.ret_if("parity");
             }
             0xE9 => {
                 // PCHL
@@ -529,7 +549,7 @@ impl Emulator {
             }
             0xEC => {
                 // CPE
-                self.call_if("parity")?;
+                return self.call_if("parity");
             }
             0xED => {
                 // CALL addr
@@ -546,7 +566,7 @@ impl Emulator {
             }
             0xF0 => {
                 // RP
-                self.ret_not("sign")?;
+                return self.ret_not("sign");
             }
             0xF1 => {
                 // POP PSW
@@ -562,7 +582,7 @@ impl Emulator {
             }
             0xF4 => {
                 // CP adr
-                self.call_not("sign")?;
+                return self.call_not("sign");
             }
             0xF5 => {
                 // PUSH PSW
@@ -579,7 +599,7 @@ impl Emulator {
             }
             0xF8 => {
                 // RM
-                self.ret_if("sign")?;
+                return self.ret_if("sign");
             }
             0xF9 => {
                 // SPHL
@@ -595,7 +615,7 @@ impl Emulator {
             }
             0xFC => {
                 // CM adr
-                self.call_if("sign")?;
+                return self.call_if("sign");
             }
             0xFD => {
                 // CALL addr
@@ -611,11 +631,11 @@ impl Emulator {
                 self.call(0x38)?;
             }
         }
-        Ok(())
+        Ok(CLOCK_CYCLES[opcode as usize] as usize)
     }
 
     #[wasm_bindgen]
-    pub fn execute_next(&mut self) -> EResult<()> {
+    pub fn execute_next(&mut self) -> EResult<usize> {
         let opcode = self.ram[self.pc];
         self.pc += 1;
         self.execute_instruction(opcode)
@@ -644,7 +664,7 @@ impl Emulator {
         self.ram.load_vec(data, start)
     }
 
-    pub fn interrupt(&mut self, opcode: u8) -> EResult<()> {
+    pub fn interrupt(&mut self, opcode: u8) -> EResult<usize> {
         if self.interrupts_enabled {
             self.interrupts_enabled = false;
             return self.execute_instruction(opcode);
