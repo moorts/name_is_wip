@@ -291,3 +291,99 @@ Zur Verdeutlichung ist in Tabelle \ref{tab:replace} ein Beispiel illustriert. F�
 \end{table}
 
 Es wird schnell ersichtlich, dass dieses Ergebnis nicht das ist, was der Programmierer erwarten würde. Durch das Hinzufügen eines Werts, den der Nutzer nicht benutzen kann, bzw. darf, wird diesem Verhalten vorgebeugt. Denn dann wird in der dritten Zeile aus \asm{FooBar} \glqq Foo@ \%\grqq, wobei hier als Platzhalter der String \glqq @ -\grqq{} gewählt wurde. Nun matcht der Inhalt des zweiten Parameters nur noch seinem eigentlichen Aufkommen am Ende der Zeile. Sobald alle Parameter auf diese Weise ersetzt wurden, können die Platzhalter einfach mit einem leeren String ersetzt werden. Hier ist es wichtig, dass der Platzhalter so gewählt wird, dass er nicht zufällig in seinem letzten Zeichen dem ersten Zeichen eines Namens entspricht, weshalb das \glqq \%\grqq{} gewählt wurde.
+
+\subsection{Parser}
+
+Für die Verarbeitung arithmetischer Ausdrücke haben wir einen Präzedenzparser geschrieben, der Edsger Dijkstra's Rangierbahnhof-Algorithmus implementiert. Im folgenden ist eine formale Grammatik in \ac{EBNF} gegeben, welche die Sprache der akzeptierten arithmetischen Ausdrücke darstellt.
+
+In der Grammatik ist Operator-Präzedenz bereits sichtbar --- die Präzedenz steigt von oben nach unten.
+
+\begin{grammar}
+
+<expression> ::= <disjunctive>
+
+<disjunctive> ::= <conjunctive> ( ( `OR' | `XOR' ) <conjunctive> ) *
+
+<conjunctive> ::= <additive> ( `AND' <additive> ) *
+
+<additive> ::= <multiplicative> ( ( `+' | `-' ) <multiplicative> ) *
+
+<multiplicative> ::= <primary> ( ( `*' | `/' | `MOD' | `SHL' ) <primary> ) *
+
+<primary> ::= `(' <expression> `)' | NUMBER | ( `-' | `NOT' ) <primary>
+
+\end{grammar}
+
+\subsubsection{Tokenizer}
+
+Der Tokenizer ist als Iterator über den Eingabestring implementiert. Der Eingabestring wird Buchstabe für Buchstabe konsumiert, und entsprechend in sogenannte Tokens umgewandelt. Dieser Tokenstream dient dann als Eingabe für den Parsing-Algorithmus.
+\cref{lst:token-enum} zeigt das Token-Enum und die dazugehörigen Operator-Enums.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+pub enum Token {
+    Number(i32),
+    Operator(Op),
+    Parenthesis(char),
+    Unary(UnOp)
+}
+
+pub enum Op {
+    Add, Sub, Mul, // ...
+}
+
+pub enum UnOp {
+    Minus, Not
+}
+\end{minted}
+\label{lst:token-enum}
+\caption{Token- und Operator-Enums}
+\end{listing}
+
+Für die Operatoren ist eine Funktion implementiert, die die entsprechende Präzedenz zurückgibt und eine Funktion, die den Operator auf 2 Parameter anwendet.
+
+\subsubsection{Rangierbahnhof-Algorithmus}
+
+\begin{algorithm}
+\caption{Rangierbahnhof-Algorithmus}
+\label{alg:shunt}
+\begin{algorithmic}
+\State Stack und Ablage sind leere Stapel
+
+\ForAll {$t \in tokens$}
+\If {$t$ ist Zahl}
+    \State Lege $t$ in Ablage
+\ElsIf {$t$ ist Operator}
+    \While {$stack$ ist nicht leer}
+        \If {Präzedenz($t$) ist kleiner-gleich Präzedenz(Stackspitze)}
+            \State Wende die Operation an der Stackspitze
+            \State \quad auf die obersten 2 Elemente der Ablage an
+            \State Ersetze oberste 2 Elemente mit Ergebnis
+            \State Entferne Stackspitze von Stack
+        \Else
+            \State Gehe zum Schleifenende
+        \EndIf
+    \EndWhile
+    \State Lege $t$ auf Stack
+\ElsIf {$t$ ist öffnende-Klammer}
+    \State Lege $t$ auf Stack
+\ElsIf {$t$ ist schließende-Klammer}
+    \While {Stackspitze ist nicht öffnende-Klammer}
+        \State Wende die Operation an der Stackspitze
+        \State \quad auf die obersten 2 Elemente der Ablage an
+        \State Ersetze oberste 2 Elemente mit Ergebnis
+        \State Entferne Stackspitze von Stack
+    \EndWhile
+\EndIf
+\EndFor
+\While {Stack ist nicht leer}
+    \State Wende die Operation an der Stackspitze
+    \State \quad auf die obersten 2 Elemente der Ablage an
+    \State Ersetze oberste 2 Elemente mit Ergebnis
+    \State Entferne Stackspitze von Stack
+\EndWhile
+\State \textbf{return} letztes Element in Ablage
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Komplexität}
