@@ -1,41 +1,65 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Descr:       Vorlage für Berichte der DHBW-Karlsruhe, BibTeX
-%% Author:      Prof. Dr. Jürgen Vollmer, vollmer AT dhbw-karlsruhe.de
-%% $Id: bericht.bib,v 1.10 2016/03/16 12:27:42 vollmer draft $
-%% -*- coding: utf-8 -*-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%
-%%  declararion of abbreviations
-%%%%
-@STRING{addison		= "Addison-Wesley"}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-@BOOK{knuth.1984a,
-AUTHOR		= "Knuth, Donald E.",
-TITLE		= "The \TeX{}book",
-PUBLISHER	= addison,
-YEAR		= 1984
+@book{rustBook,
+  author    = "Steve Klabnik and Carol Nichols",
+  title     = "The Rust Programming Language",
+  publisher = "no starch press",
+  address   = "San Francisco, CA",
+  year      = 2018
 }
 
-@BOOK{lamport.1995a,
-AUTHOR		= "Lamport, Leslie",
-TITLE		= "Das \LaTeX\ Handbuch",
-PUBLISHER	= addison,
-YEAR		= 1995
+@misc{rustRef,
+  title        = "The Rust Reference",
+  author       = "",
+  howpublished = "\url{https://doc.rust-lang.org/nightly/reference/}",
+  year         = 2022,
+  note         = "Accessed: 2022-03-15"
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Referenzieren von URL's
-@MISC{dante.2010a,
-  AUTHOR	= "Dante",
-  TITLE		= "Webseite der \emph{Deutschsprachige Anwendervereinigung TeX e.V.}",
-  HOWPUBLISHED 	= "\url{http://www.dante.de}",
-  YEAR		= 2010,
-  MONTH		= jan
+@misc{rustDoc,
+  title        = "Rust std library documentation",
+  author       = "",
+  howpublished = "\url{https://doc.rust-lang.org/std/index.html}",
+  year         = 2022,
+  note         = "Accessed: 2022-03-15"
 }
 
+@manual{datasheet,
+  title        = "intel 8080 Microcomputer Systems User's Manual",
+  author       = "",
+  organization = "INTEL CORPORATION",
+  address      = "Santa Clara, CA",
+  year         = 2000
+}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+@manual{progManual,
+  title        = "intel 8080 Assembly Language Programming Manual",
+  author       = "",
+  organization = "INTEL CORPORATION",
+  address      = "Santa Clara, CA",
+  year         = 2000
+}
+
+@report{WebAssemblyCoreSpecification,
+  title = {{WebAssembly Core Specification}},
+  editor = {Rossberg, Andreas},
+  date = {2019-12-05},
+  institution = {{W3C}},
+  url = {https://www.w3.org/TR/wasm-core-1/},
+  langid = {english},
+  note = {https://webassembly.github.io/spec/core/\_download/WebAssembly.pdf}
+}
+@inproceedings{10.1145/3062341.3062363,
+author = {Haas, Andreas and Rossberg, Andreas and Schuff, Derek L. and Titzer, Ben L. and Holman, Michael and Gohman, Dan and Wagner, Luke and Zakai, Alon and Bastien, JF},
+title = {Bringing the Web up to Speed with WebAssembly},
+year = {2017},
+isbn = {9781450349888},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3062341.3062363},
+doi = {10.1145/3062341.3062363},
+booktitle = {Proceedings of the 38th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+pages = {185–200},
+numpages = {16},
+keywords = {assembly languages, programming languages, type systems, just-in-time compilers, virtual machines},
+location = {Barcelona, Spain},
+series = {PLDI 2017}
+}
