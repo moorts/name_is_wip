@@ -344,8 +344,15 @@ Für die Operatoren ist eine Funktion implementiert, die die entsprechende Präz
 
 \subsubsection{Rangierbahnhof-Algorithmus}
 
+Dijkstra's Rangierbahnhof-Algorithmus ist ein Algorithmus zur Umwandlung eines arithmetischen Ausdrucks in Postfixnotation oder in einen Abstract-Syntax-Tree. Er kann leicht angepasst werden um stattdessen das Ergebnis eines solchen Ausdrucks zu berechnen --- siehe \cref{alg:shunt} für entsprechenden Pseudocode.
+
+Der Algorithmus verwendet 2 Stacks, wobei auf einem (im Pseudocode einfach Stack genannt) Operatoren und Klammern abgelegt werden und auf dem anderen (im Pseudocode Ablage genannt) werden Zwischenergebnisse abgelegt.
+Der Algorithmus geht die Tokens nacheinander durch, wobei 3 Tokentypen unterschieden werden. Bei einer Zahl, wird diese sofort auf die Ablage gelegt. Bei einem Operator werden solange die Operatoren auf dem Stack abgearbeitet, bis der aktuelle Token höhere Präzedenz hat, als die Stackspitze. Anschließend wird der Token auf den Stack gelegt.
+Im klassischen Algorithmus werden Operatoren abgearbeitet, indem sie auf die Ablage verschoben werden. Dadurch entsteht auf dieser der Ausdruck in Postfixnotation. In unserem Fall jedoch, wenden wir die Operatoren sofort an, da wir auf der Ablage das Ergebnis des Ausdrucks erzeugen wollen. Wie in der Postfixnotation, sind die obersten 2 Elemente der Ablage stets die Parameter der als nächstes auszuführenden Operation. Folglich nehmen wir für jeden Operator der vom Stack entfernt wird diese 2 Elemente von der Ablage, wenden den Operator auf sie an (bspw. Berechnung der Summe) und legen das Ergebnis der Rechnung auf die Ablage. Der dritte Tokentyp ist die Klammer. Eine öffnende Klammer wird auf den Stack gelegt, wodurch erkennbar wird, welche Operatoren innerhalb der Klammer sind. Wenn die dazugehörige schließende Klammer vom Tokenstream gelesen wird, werden solange Operatoren vom Stack angewendet, bis die öffnende Klammer die Stackspitze bildet. Diese wird vom Stack entfernt und der nächste Token kann gelesen werden.
+Wenn alle Tokens abgearbeitet sind und der Stack vollständig geleert ist, verbleibt nur eine Zahl auf der Ablage: das Ergebnis des Ausdrucks.
+
 \begin{algorithm}
-\caption{Rangierbahnhof-Algorithmus}
+\caption{Angepasster Rangierbahnhof-Algorithmus}
 \label{alg:shunt}
 \begin{algorithmic}
 \State Stack und Ablage sind leere Stapel
@@ -387,3 +394,6 @@ Für die Operatoren ist eine Funktion implementiert, die die entsprechende Präz
 \end{algorithm}
 
 \subsubsection{Komplexität}
+
+Unser Parser, inklusive Tokenizer, hat lineare Zeitkomplexität ($\mathcal{O}(n)$) und muss die Eingabe nur einmal durchlaufen. Die Reduktion auf einen Durchlauf ist durch Implementierung des Tokenizers als Iterator möglich, sonst müssten die Eingabe einmal von Tokenizer und einmal vom Parser durchlaufen werden.
+
