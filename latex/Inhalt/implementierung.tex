@@ -107,7 +107,11 @@ aktuell gehalten wird.
 
 Unter Vorverarbeitung versteht sich im Bezug auf diese Arbeit und den Assembler alles was zwar vom Assembler übersetzt wird, allerdings keine Verarbeitung eines Opcodes ist. Dabei wird der vom Nutzer eingegebenen Code (ohne Kommentare) auf die Zeilen reduziert, die in den eigentlichen Bytecode übersetzt werden. Dazu zählen unter anderem das Ersetzen von Labels oder auch If-Verzweigungen. Im Quellcode wird diese Aufgabe von der Klasse \rust{preprocessor.rs} übernommen. Dabei handelt es sich um eine reine Konstruktion innerhalb des Assemblers, die außerhalb der Dokumentation beziehungsweise dem eigentlichen Aufbau des originalen Intel 8080s existiert.
 
-Neben der Vorverarbeitung bietet die Hilfsklasse eine Methode zum Mappen von Zeilen an, die der Assembler als eine Art Adapter nach außen hin bietet. Auf sie wird am Ende dieses Kapitels näher eingegangen. Zunächst sind die maßgeblichen Schritte der eigentlichen Vorverarbeitung zu betrachten. Die nachfolgende Sammlung von Vorgängen (als einzelne Methoden realisiert) fasst der Präprozessor in einer einzelnen, öffentlichen Methode \rust{get_preprocessed_code(code: &Vec<String>)} zusammen, die dem Assembler zur Verfügung gestellt wird. Man beachte das der Parametertyp einer Referenz auf den des im Assembler-Struct gespeicherten Codes entspricht.
+Neben der Vorverarbeitung bietet die Hilfsklasse eine Methode zum Mappen von Zeilen an, die der Assembler als eine Art Adapter nach außen hin bietet. Auf sie wird am Ende dieses Kapitels näher eingegangen. Zunächst sind die maßgeblichen Schritte der eigentlichen Vorverarbeitung zu betrachten. Die nachfolgende Sammlung von Vorgängen (als einzelne Methoden realisiert) fasst der Präprozessor in einer einzelnen, öffentlichen Methode \rust{get_preprocessed_code(code: &Vec<String>)} zusammen, die dem Assembler zur Verfügung gestellt wird.
+
+Generell gilt, dass die meisten hier vorgestellten Schritte als einzelne Methoden realisiert sind. Ihre Definition folgt dem Schema
+
+\rust{fn method(code: &Vec<String>) -> Result<Vec<String>, &'static str>}, was bedeutet, dass sie auf der Referenz eines Vektors aus Strings operieren und einen neuen Vektor aus Strings zurückgeben. Diesem Vektor werden, je nach Auswertung, entsprechende Zeilen angehängt. Der Rückgabewert wird im folgenden auch als \glqq Ergebnisvektor\grqq{} einer Methode bezeichnet.
 
 \subsubsection{Bestimmung des Programmendes}
 
@@ -142,9 +146,9 @@ Das Listing in \ref{lst:end} zeigt die Implementierung der Überprüfung nach de
 
 \subsubsection{Ersetzen von Variablen}
 
-Damit Instruktionen wie If-Verzweigungen korrekt funktionieren und ausgewertet werden können sind im nächsten Schritt Variablen durch ihre konstanten Werte zu ersetzen. Entsprechend dem besonderen Verhalten von Makros im Bezug auf Variablen (siehe Kapitel \ref{chap:pseudo-instructions}) sind zum aktuellen Zeitpunkt bereits alle Werte bestimmbar.
+Damit Instruktionen wie If-Verzweigungen korrekt funktionieren und ausgewertet werden können sind im nächsten Schritt Variablen durch ihre konstanten Werte zu ersetzen. Dadurch, dass Referenzen auf Makros bereits ersetzt und deren lokale Variablen gegebenenfalls umbenannt wurden, ist dieser Schritt relativ trivial, weil alle Namen gleich zu behandeln sind.
 
-Auch für diesen Schritt wird einmal der Code einmal Zeile für Zeile durchlaufen, wobei das Bestimmen gültiger Variablen sowie deren Ersetzung parallel erfolgen. Das schließt von vornherein aus, dass verwendete Variablen, die noch nicht deklariert wurden, fälschlicherweise ersetzt werden. Für Variablen, die mittels \asm{SET} deklariert wurden, sieht das Ganze, auf seine grundlegende Logik reduziert, wie folgt aus:
+Somit genügt es den Code Zeile für Zeile zu durchlaufen, wobei das Bestimmen gültiger Variablen sowie deren Ersetzung parallel erfolgen. Das schließt von vornherein aus, dass verwendete Variablen, die noch nicht deklariert wurden, fälschlicherweise ersetzt werden. Für Variablen, die mittels \asm{SET} deklariert wurden, sieht das Ganze, auf seine grundlegende Logik reduziert, wie folgt aus:
 
 \begin{listing}[th]
 \begin{minted}{rust}
@@ -162,14 +166,13 @@ if line.contains(" SET ") {
 \label{lst:var-replacement}
 \end{listing}
 
-Es sei zu beachten, dass eine Variable in vier unterschiedlichen Konstellationen auftreten kann. Im obigen Ausschnitt sind lediglich die Fälle behandelt, dass eine Variable entweder frei im Programm steht oder am Ende einer Zeile. Das vorangestellte und folgende Leerzeichen stellt sicher, dass nur Variablen ersetzt werden, deren Name vollständig entsprechend ist. Sollten diese Leerzeichen fehlen würde folgendes Beispiel nicht erwartungsgemäß funktionieren: Der Entwickler deklariert eine Variable namens \glqq Foo\grqq{} und eine zweite Variable namens \glqq FooBa\grqq. In dem Fall, dass Foo als erstes in der Map \rust{set_assignments} auftaucht, wird auch ein Aufkommen von FooBa durch Foo ersetzt, weil nicht überprüft werden würde, ob sich die beiden Namen vollständig entsprechen.
-Die übrigen Fälle, die hier fehlen, funktionieren analog, allerdings mit dem Unterschied, dass auch unmittelbar vor einer Variablen ein Komma stehen darf, auf das entsprechend geprüft wird.
-
-Für den Fall, dass sich der hintere Teil zweier Namen entspricht wird entsprechend der zwei vorangehenden Zeilen Code das Ende überprüft. Der möglicherweise intuitive Ansatz eines Entwicklers zur schöneren Implementierung mittels Regex ist an dieser Stelle nicht möglich, weil das entsprechende Crate in Rust zum Zeitpunkt der Arbeit nicht den, zur Verbesserung notwendigen, Lookahead und -behind anbietet. Diese sind notwendig da ansonsten möglicherweise wichtige Kommata und Leerzeichen verschwinden könnten.
+Die genaue Funktionsweise der Methode \rust{replace_names} aus Zeile zwei ist im Quellcode \ref{lst:param-replace} näher beschrieben. Letztlich beläuft sie sich darauf, die String-Vorkommen der Schlüssel der angegebenen Map in einem gegebenen String mit den entsprechenden Werten zu ersetzen.
 
 Neben dem Ersetzen von Variablen gilt es die entsprechenden Werte auszulesen, was mit einer simplen Überprüfung nach den entsprechenden Pseudo-Befehlen geschieht. Sofern ein solcher vorhanden ist, wird die Zeile aufgeteilt und in eine Map vom Typ \rust{HashMap<(String, u16)>} aufgenommen. Das geschieht unter der Bedingung, dass der Name dem vom Intel 8080 vorgegebenen Format entspricht, wofür getestet wird, dass der Name keinem reservierten Namen (Opcodes, Pseudo-Instruktionen etc.) entspricht und einem vorschriftsgemäßen Aufbau folgt. Diese Überprüfung ist einerseits das Nicht-Vorhandensein in einem Array aus reservierten Namen, andererseits das entsprechen eines Regex .
 
 Aus Gründen der Übersichtlichkeit ist die namentliche Überprüfung, sowie das Verfahren bei \asm{EQU} nicht mitaufgenommen. Letzteres funktioniert beinah analog wobei der einzige Unterschied zu \asm{SET} ist, dass in dem Fall, dass ein Variablenname bereits in der Map liegt der zugehörige Wert nicht überschrieben, sondern eine Fehlermeldung propagiert wird.
+
+Damit beim Iterieren über den Code Variablenzuweisungen, die innerhalb eines If-Blocks stehen, entsprechend behandelt werden, bedarf es einer weiteren Überprüfung des Zeileninhalts. Dazu werden zwei boolsche Variablen \rust{in_conditional} und \rust{condition} definiert, die den aktuellen Zustand bei der Verarbeitung repräsentieren. Dazu wird, sobald ein \asm{IF}-Statement passiert wird die entsprechende Variable auf \rust{true} gesetzt. Zusätzlich wird mittels Parser der Wert der Bedingung bestimmt und in der zweiten Variable angegeben, ob dieser ungleich \glqq 0\grqq{} ist (sofern das gegeben ist, gilt die Bedingung als wahr). Sollte eine Zeile nun eine Variablenzuweisung beinhalten, sich aber in einem als \rust{false} evaluierten If-Block befinden, wird die Zuweisung einfach übergangen.
 
 \subsubsection{Bestimmung von Labels}
 
@@ -182,6 +185,10 @@ Das Identifizieren von Labels erfolgt mittels folgendem Regex:
 \rust{"^( *[a-zA-Z@?][a-zA-Z@?0-9]*:)"}, was die in den Grundlagen vorgestellte Spezifikation abbildet. Es sei zu beachten, dass dieser Ausdruck alle Namen matcht, auch die mit einer Länge von mehr als fünf Zeichen. Deshalb muss jeder so gefundene Name, bevor er weiterverarbeitet wird entsprechend gekürzt werden. Sofern die Bezeichnung des Labels valide ist und überschüssige Zeichen gekürzt wurden wird das Label einem Vektor für \glqq temporäre\grqq{} Label hinzugefügt.
 
 Weil eine beliebige Menge Label auf dasselbe Byte verweisen kann wird prinzipiell davon ausgegangen, dass ein Label nicht unmittelbar vor einem Opcode steht. Stattdessen werden sie in einem separaten Vektor gesammelt und in dem Fall, dass die Methode auf einen Opcode trifft, dem eigentlichen Ergebnis beigefügt. Dieser Vektor hat einen weiteren Vorteil: In dem Fall, dass ein Label auf nichts verweist (man stelle sich vor die letzte Zeile eines Programms lautet \asm{instr:}) ist der Vektor zum Schleifenende hin nicht leer. Das kann überprüft werden und gegebenenfalls ein entsprechender Fehler zurückgeliefert werden.
+
+\subsubsection{Weitere Behandlung}
+
+
 
 \subsection{Makros}
 
@@ -220,7 +227,9 @@ Sowohl die Parameter, als auch der Code eines Makros werden, solange kein Ende g
 
 \subsubsection{Referenzierungen}
 
-Sobald der Assembler eine Liste aller existierenden Makros besitzt und die Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. Außerdem kann nun der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept entspricht dem der vorhergehenden Implementierung mittels boolscher Variable, weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
+Sobald der Assembler eine Liste aller existierenden Makros besitzt und die Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. Außerdem kann nun der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept des Entfernens entspricht dem der vorhergehenden Implementierung mittels boolscher Variable, weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
+
+Die Stellen, an denen eine Makroreferenz durch seine Instruktionen ersetzt wird, werden in zwei unterschiedliche Strings gekapselt, sodass im Ergebnisvektor vor den Befehlen der String  und nach den Befehlen  steht. Auf den genauen Grund für diese Implementierung wird in \ref{chap:local-refs} eingegangen.
 
 Bei der Erkennung von Makros wird je Zeile überprüft, ob ihr Inhalt einem Eintrag in der, im vorherigen Schritt generierten, Map vorhanden ist. In diesem Fall müssen zuerst eventuelle Parameter ermittelt werden. Das ist auf dieselbe Art und Weise implementiert, wie bereits in Listing \ref{lst:split} vorgestellt. Damit die Variablen innerhalb eines Makros durch ihre eigentlichen Werte ersetzbar sind, müssen diese entsprechend gemappt werden, was in Listing \ref{lst:var-map} zu sehen ist.
 
@@ -291,6 +300,18 @@ Zur Verdeutlichung ist in Tabelle \ref{tab:replace} ein Beispiel illustriert. F�
 \end{table}
 
 Es wird schnell ersichtlich, dass dieses Ergebnis nicht das ist, was der Programmierer erwarten würde. Durch das Hinzufügen eines Werts, den der Nutzer nicht benutzen kann, bzw. darf, wird diesem Verhalten vorgebeugt. Denn dann wird in der dritten Zeile aus \asm{FooBar} \glqq Foo@ \%\grqq, wobei hier als Platzhalter der String \glqq @ -\grqq{} gewählt wurde. Nun matcht der Inhalt des zweiten Parameters nur noch seinem eigentlichen Aufkommen am Ende der Zeile. Sobald alle Parameter auf diese Weise ersetzt wurden, können die Platzhalter einfach mit einem leeren String ersetzt werden. Hier ist es wichtig, dass der Platzhalter so gewählt wird, dass er nicht zufällig in seinem letzten Zeichen dem ersten Zeichen eines Namens entspricht, weshalb das \glqq \%\grqq{} gewählt wurde.
+
+\subsubsection{Lokale Referenzen}\label{chap:local-refs}
+
+Der letzte Schritt bezüglich dem Ersetzen von Makros bezieht sich auf das Referenzverhalten von Variablen. Weil bei der gewählten Implementierung zuerst alle Makroreferenzen ersetzt werden, ohne dass das Lokalverhalten beachtet wird, muss an dieser Stelle noch erkennbar sein, wo sich Aufrufe von Makros befinden. Dafür dienen die zu Beginn des letzten Abschnitt erwähnten Strings. Diese Stelle bietet für zukünftige Arbeiten Platz für Optimierung insofern, dass der kommende Schritt mit vorherigem kombiniert wird, aus Zeitgründen ist das jedoch vernachlässigt worden.
+
+Um das Ersetzen der Makros abzuschließen müssen folgende Dinge getan werden: 
+
+\begin{itemize}
+	\item Nicht global definierte Label müssen, je Referenz, durch einen einzigartigen Namen ersetzt werden
+	\item Global definierte Label müssen zu \glqq normalen\grqq{} Label umgewandelt werden
+	\item Variablen die mittels \asm{SET} deklariert wurden und keinen globalen Kontext besitzen müssen einen einzigartigen Namen erhalten
+\end{itemize}
 
 \subsection{Parser}
 
@@ -387,3 +408,5 @@ Für die Operatoren ist eine Funktion implementiert, die die entsprechende Präz
 \end{algorithm}
 
 \subsubsection{Komplexität}
+
+\
