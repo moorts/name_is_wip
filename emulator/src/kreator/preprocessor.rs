@@ -65,11 +65,11 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             }
         }
 
-        pc += 1;
+        pc += get_byte_amount_of_line(&line);
         if !owned_line.is_empty() {
             preprocessed_code.push(owned_line.trim().to_string());
         } else {
-            pc -= 1;
+            pc -= get_byte_amount_of_line(&line);
         }
     }
 
@@ -657,12 +657,12 @@ mod tests {
 
     #[test]
     fn preprocessing_pc() {
-        let code = vec!["MOV A,B", "JMP $", "END"];
+        let code = vec!["MOV A,B", "LDA 3", "JMP $", "END"];
         let ppc = get_preprocessed_code(&convert_input(code));
-        assert_eq!(Ok(convert_input(vec!["MOV A,B", "JMP 1"])), ppc);
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "LDA 3", "JMP 4"])), ppc);
 
-        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV $, $", "END"]));
-        assert_eq!(Ok(vec!["MOV 0, 0".to_string()]), preprocessed_code);
+        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["LDA 0", "MOV $, $", "END"]));
+        assert_eq!(Ok(convert_input(vec!["LDA 0", "MOV 3, 3"])), preprocessed_code);
     }
 
     #[test]
