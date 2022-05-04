@@ -329,7 +329,7 @@ Das Ergebnis dieses gesamten Vorgangs ist der ursprüngliche Assemblycode, desse
 
 \subsubsection{Lokale Referenzen}\label{chap:local-refs}
 
-Der letzte Schritt bezüglich dem Ersetzen von Makros bezieht sich auf das Referenzverhalten von Variablen innerhalb von Makros. Weil bei der gewählten Implementierung zuerst alle Makroreferenzen ersetzt werden, ohne dass das Lokalverhalten beachtet wird, muss an dieser Stelle noch erkennbar sein, wo sich Aufrufe von Makros befinden. Dafür dienen die zu Beginn des letzten Abschnitt erwähnten Strings. Diese Stelle bietet für zukünftige Arbeiten Platz für Optimierung insofern, dass der kommende Schritt mit vorherigem kombiniert wird, aus Zeitgründen ist das jedoch vernachlässigt worden.
+Der letzte Schritt bezüglich dem Ersetzen von Makros behandelt das Referenzverhalten von Variablen innerhalb der Makroaufrufe. Weil bei der gewählten Implementierung zuerst alle Makroreferenzen ersetzt werden, ohne dass das Lokalverhalten beachtet wird, muss an dieser Stelle noch erkennbar sein, wo sich Aufrufe von Makros befinden. Dafür dienen die zu Beginn des letzten Abschnitt erwähnten Strings. Diese Stelle bietet für zukünftige Arbeiten Platz zur Optimierung insofern, dass der kommende Schritt mit vorherigem kombiniert wird, aus Zeitgründen ist das jedoch vernachlässigt worden.
 
 Um das Ersetzen der Makros abzuschließen müssen folgende Dinge getan werden: 
 
@@ -338,6 +338,52 @@ Um das Ersetzen der Makros abzuschließen müssen folgende Dinge getan werden:
 	\item Global definierte Label müssen zu \glqq normalen\grqq{} Label umgewandelt werden
 	\item Variablen die mittels \asm{SET} deklariert wurden und keinen globalen Kontext besitzen müssen einen einzigartigen Namen erhalten
 \end{itemize}
+
+Die entsprechende Methode beginnt in einer ersten Iteration über den Code damit alle per \asm{EQU} definierten Variablen und Labels, die sich außerhalb von Makroaufrufen befinden, zu finden und die jeweiligen Namen in Vektoren zu speichern.
+
+Nun beginnt der eigentliche Arbeitsvorgang. Dieser produziert einen Ergebnisvektor, der den ursprünglichen Code enthält, mit dem Unterschied, dass alle Makros entsprechend verarbeitet wurden. Es ist somit nicht mehr (direkt) ersichtlich ob eine Zeile Code als solche geschrieben oder mittels Makro generiert wurde. Um das zu bewerkstelligen wird der Quellcode Zeile für Zeile betrachtet und folgende Dinge getan:
+
+\begin{enumerate}
+	\item Es wird, anhand der vorher genannten Strings, geprüft ob es sich um den Beginn / das Ende eines durch Makro generierten Code handelt. Dieser Zustand wird in der Variablen \rust{in_macro} gespeichert.
+	\item Falls die Zeile aus einer Variablenzuweisung per \asm{SET} besteht und diese außerhalb eines Makros steht, wird der Variablenname in einem eigenen Vektor abgelegt.
+	\item Es findet eine Unterscheidung statt, ob sich die momentan betrachtete Zeile innerhalb eines Makros befindet. Ist das nicht der Fall wird sie als solche an den Ergebnisvektor angehängt. Ansonsten treffen die nachfolgenden Schritte zu.
+	\item Die Zeile wird auf lokale Label untersucht, für die ein eigener Name generiert wird. Das so entstandene Paar wird in einer Map hinterlegt.
+	\item Sollte die Zeile ein global definiertes Label beinhalten, wird dieses zu einem lokalen Label umgeformt.
+	\item Wenn es sich um eine Zuweisung mittels \asm{EQU} handelt, wird ähnlich zu den lokalen Labeln ein neuer Name generiert und das Paar in einer Map gespeichert.
+	\item Entsprechend der beiden Maps werden Variablen- und Labelnamen durch ihren synthetischen Partner ersetzt.
+	\item Ist die Zeile eine Zuweisung mittels \asm{SET}, so wird zuerst geprüft, ob der entsprechende Name bereits im zweiten Schritt dieser Liste gefunden wurde. Wenn das nicht der Fall ist, wird abermals ein neuer Name generiert und das Paar gespeichert.
+	\item Variablennamen in der Map aus generierten Namen von \asm{SET}-Statements werden ausgetauscht.
+	\item Die Zeile wird dem Ergebnisvektor angehängt
+\end{enumerate}
+
+\begin{listing}[th]
+\begin{minted}{rust}
+loop {
+    let label_char = char::from_u32(
+        (*generated_label_count / 10000) as u32
+            + 'A' as u32)
+        .unwrap();
+    let label_num = (*generated_label_count % 10000) as u32;
+
+    if label_char.eq(&'[') {
+        return Err("Exceeded maximum amount of local labels!")
+    }
+    let new_label = format!("{}{}", label_char, label_num);
+    if !taken_names.contains(&new_label) {
+        return Ok(new_label)
+    }
+    *generated_label_count += 1;
+}
+\end{minted}
+\label{lst:name-generation}
+\caption{Schleife zur Generierung synthetischer Namen}
+\end{listing}
+
+Das Generieren eines Namens geschieht nach dem Ablauf, der in \ref{lst:name-generation} zu sehen ist. Er basiert auf einem Vektor vergebener Namen (\rust{taken_names}) und einer Anzahl bereits generierter Namen (\rust{generated_label_count}), die als Methodenparameter übergeben werden. Bei der Implementierung wurde sich dafür entschieden Namen zu generieren, die (gemäß Spezifikation) mit einem Großbuchstaben, bzw. dem \glqq A\grqq{} beginnen und von einer bis zu vierstelligen Zahl gefolgt werden.
+
+Sollten auf diese Weise über 10000 Namen generiert werden, wird der ASCII-Wert der den Buchstaben bestimmt, um eins erhöht. Der Zahlwert für den Namen entspricht dem Rest bei einer Division der Anzahl generierter Label durch 10000. Damit kein Name generiert wird, der vom Programmierer zufällig selber benutzt wird, muss sichergestellt werden, dass der generierte Name kein Teil der Liste bereits belegter Namen entspricht. Dieser Prozess der Generierung findet solange statt, bis ein geeigneter Name gefunden wurde, wobei die Anzahl generierter Namen mit jedem Schleifendurchlauf entsprechend inkrementiert wird.
+
+Diese Implementierung ist insofern beschränkt, dass maximal $26 * 10000 = 260000$ Namen generiert werden können. Sollte der Quellcode nutzerdefinierte Label enthalten, die diesem Schema entsprechen, ist die Zahl entsprechend geringer. Allerdings gilt diese Umsetzung als genügend, da der Speicher des Intel 8080 auf 16384 Byte beschränkt ist und deshalb ohnehin keine solche Menge an Namen speichern könnte.
 
 \subsection{Parser}
 
