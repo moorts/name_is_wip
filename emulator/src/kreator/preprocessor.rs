@@ -32,11 +32,6 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             owned_line = decl_regex.replace(&owned_line, "").to_string();
         }
 
-        // replace labels with according values
-        for (key, value) in &labels {
-            owned_line = owned_line.replace(key, &value.to_string());
-        }
-
         owned_line = replace_names(&owned_line, &to_string_map(&labels));
 
         if owned_line.contains(" EQU ") || owned_line.contains(" SET ") {
@@ -694,15 +689,12 @@ mod tests {
 
     #[test]
     fn label_replacement() {
-        let ppc = get_preprocessed_code(&convert_input(vec!["lab: lab", "END"]));
-        assert_eq!(Ok(vec!["0".to_string()]), ppc);
-
         let ppc =
-            get_preprocessed_code(&convert_input(vec!["MOV A, lab", "lab: RRC", "END"]));
-        assert_eq!(Ok(convert_input(vec!["MOV A, 1", "RRC"])), ppc);
+            get_preprocessed_code(&convert_input(vec!["LXI B, lab", "lab: RRC", "END"]));
+        assert_eq!(Ok(convert_input(vec!["LXI B, 3", "RRC"])), ppc);
 
-        let ppc = get_preprocessed_code(&convert_input(vec!["lab:", "MOV A,B", "label:", "MOV label, lab", "END"]));
-        assert_eq!(Ok(convert_input(vec!["MOV A,B", "MOV 1, 0"])), ppc);
+        let ppc = get_preprocessed_code(&convert_input(vec!["lab:", "MOV A,B", "label:", "IN label", "OUT lab", "END"]));
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "IN 1", "OUT 0"])), ppc);
     }
 
     #[test]
