@@ -454,7 +454,7 @@ Wenn alle Tokens abgearbeitet sind und der Stack vollständig geleert ist, verbl
 \If {$t$ ist Zahl}
     \State Lege $t$ in Ablage
 \ElsIf {$t$ ist Operator}
-    \While {$stack$ ist nicht leer}
+    \While {Stack ist nicht leer}
         \If {Präzedenz($t$) ist kleiner-gleich Präzedenz(Stackspitze)}
             \State Wende die Operation an der Stackspitze
             \State \quad auf die obersten 2 Elemente der Ablage an
