@@ -16,5 +16,5 @@ void main() {
   uint texel = uint(texelFetch(u_texture, uv, 0).r * 255.0);
   uint mask = 1u << bit;
   uint result = (texel & mask) != 0u ? 1u : 0u;
-  outColor = vec4(float(result), 0.0, 0.0, 1.0);
+  outColor = vec4(float(result), float(result), float(result), 1.0);
 }
