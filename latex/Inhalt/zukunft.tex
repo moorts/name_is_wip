@@ -1,0 +1,23 @@
+\chapter{Zukunftsideen}
+
+Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu.
+
+\section{Dynamic Recompilation}
+
+Bei Dynamic Recompilation handelt es sich um eine Optimierungsstrategie, bei der Maschinencode des emulierten Systems auf Maschinencode des ausführenden Systems übersetzt wird. In unserem Fall würde dabei Intel 8080 Maschinencode zu WebAssembly kompiliert werden. Diese Rekompilation findet zur Laufzeit statt.
+
+
+\section{Intel Hex}
+
+Momentan gibt der Assembler einen Vektor aus Bytes zurück, welcher in den RAM des Emulators geladen wird um ein Programm zu laden. Ein alternatives Format für die Assembler-Ausgabe wäre das Intel Hex-Format, ein Dateiformat um Binärdaten im ASCII-Format zu speichern. In Intel Hex repräsentiert jede Zeile einen Datensatz, der eine konsekutive Bytefolge enthält. Ein solcher Datensatz enthält 6 Felder:
+
+\begin{enumerate}
+\item Satzbeginn: ein ASCII Doppelpunkt am Anfang der Zeile
+\item Anzahl an Bytes: Wie viele Datenbytes enthalten sind
+\item Speicheradresse: 16-Bit Adresse im Speicher, an der der Datenblock beginnt
+\item Datensatztyp: 00..05
+\item Daten: n Bytes (als 2n Hex-Zeichen kodiert)
+\item Prüfsumme: 2 Hex-Zeichen große Prüfsumme über den Datensatz
+\end{enumerate}
+
+Dieses Format zu verwenden hat den Vorteil, leere Regionen zwischen Assembly Instruktionen nicht abspeichern zu müssen. Außerdem sind ROMs für den 8080 häufig in diesem Format vorliegend, daher wäre es sinnvoll solche Dateien einlesen zu können.
