@@ -37,6 +37,8 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             owned_line = owned_line.replace(key, &value.to_string());
         }
 
+        owned_line = replace_names(&owned_line, &to_string_map(&labels));
+
         if owned_line.contains(" EQU ") || owned_line.contains(" SET ") {
             continue;
         }
@@ -80,6 +82,14 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     // remove "END" from code
     preprocessed_code.remove(preprocessed_code.len() - 1);
     Ok(preprocessed_code)
+}
+
+fn to_string_map(map: &HashMap<String, u16>) -> HashMap<String, String> {
+    let mut new_map: HashMap<String, String> = HashMap::new();
+    for (key, value) in map {
+        new_map.insert(key.to_string(), value.to_string());
+    }
+    new_map
 }
 
 pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static str> {
@@ -168,8 +178,8 @@ pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static 
 
 fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     let mut new_code: Vec<String> = Vec::new();
-    let mut equ_assignments: HashMap<String, String> = HashMap::new();
-    let mut set_assignments: HashMap<String, String> = HashMap::new();
+    let mut equ_assignments: HashMap<String, u16> = HashMap::new();
+    let mut set_assignments: HashMap<String, u16> = HashMap::new();
     let mut in_conditional = false;
     let mut condition = false;
     let name_format = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4})$").unwrap();
@@ -198,7 +208,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
         }
 
         for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
-            line = replace_names(&line, assignment_map);
+            line = replace_names(&line, &to_string_map(&assignment_map));
         }
 
         if line.contains(" SET ") {
@@ -206,7 +216,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
             if get_reserved_names().iter().any(|&reserved_name| reserved_name == name) || !name_format.is_match(&name) {
                 return Err("Supplied illegal variable name");
             }
-            set_assignments.insert(name.to_string(), eval_str(expression.to_string()).to_string());
+            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
         }
 
         if line.contains(" EQU ") {
@@ -217,7 +227,7 @@ fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static s
             if equ_assignments.contains_key(name) {
                 return Err("Can't assign a variable more than once using EQU!");
             }
-            equ_assignments.insert(name.to_string(), eval_str(expression.to_string()).to_string());
+            equ_assignments.insert(name.to_string(), eval_str(expression.to_string()));
         }
 
         new_code.push(line);
@@ -690,6 +700,9 @@ mod tests {
         let ppc =
             get_preprocessed_code(&convert_input(vec!["MOV A, lab", "lab: RRC", "END"]));
         assert_eq!(Ok(convert_input(vec!["MOV A, 1", "RRC"])), ppc);
+
+        let ppc = get_preprocessed_code(&convert_input(vec!["lab:", "MOV A,B", "label:", "MOV label, lab", "END"]));
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "MOV 1, 0"])), ppc);
     }
 
     #[test]
