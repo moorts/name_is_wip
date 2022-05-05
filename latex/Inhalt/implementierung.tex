@@ -214,6 +214,8 @@ Zum jetzigen Zeitpunkt benötigt der Präprozessor einen letzten Durchlauf über
 
 All diese Aufgaben belaufen sich auf simples Überprüfen von Strings auf gewisse Inhalte (bspw. \rust{line.contains("\$")}) oder die Verwendung an anderer Stelle vorgestellter Konzepte und Methoden. So werden Referenzen auf Label mittels dem Quellcode in \ref{lst:var-replacement} ersetzt. Der Wert für den Programmzähler wird, entsprechend dem Vorgehen bei der Bestimmung der Labels mitgeführt und an den jeweiligen Stellen eingefügt. Die Evaluierung von bedingten Anweisungen erfordert ebenfalls keine neue Logik, sondern geschieht nach dem in \ref{chap:var-replacement} erläuterten Konzept (auch hier gibt es Optimierungspotential, das aus zeitlichen Gründen noch nicht erschöpft wurde).
 
+Nach diesem letzten Durchlauf wurden alle Pseudo-Befehle aus dem ursprünglichen Code entfernt. Das Ergebnis ist ein Vektor von Strings, die entweder leer sind, oder einen Opcode beinhalten. Somit sind alle Zeilen eindeutig in ihre entsprechende Repräsentation aus Bytes übersetzbar, was der eigentliche Assembler übernimmt.
+
 \subsection{Makros}\label{chap:macros}
 
 Im Programmcode gelten Makros zwar als Teil der Vorverarbeitung, ihre Mächtigkeit und damit einhergehende Komplexität setzt aber eine differenziertere Betrachtung voraus. Die Verarbeitung von Makros geschieht in drei unterschiedlichen Schritten, die nachfolgend erläutert werden. Zum Zeitpunkt der Makroverarbeitung wurden im Code bereits alle Entwicklerkommentare entfernt worden und es wurde festgestellt, dass das Programm ein korrektes Ende besitzt.
@@ -384,6 +386,42 @@ Das Generieren eines Namens geschieht nach dem Ablauf, der in \ref{lst:name-gene
 Sollten auf diese Weise über 10000 Namen generiert werden, wird der ASCII-Wert der den Buchstaben bestimmt, um eins erhöht. Der Zahlwert für den Namen entspricht dem Rest bei einer Division der Anzahl generierter Label durch 10000. Damit kein Name generiert wird, der vom Programmierer zufällig selber benutzt wird, muss sichergestellt werden, dass der generierte Name kein Teil der Liste bereits belegter Namen entspricht. Dieser Prozess der Generierung findet solange statt, bis ein geeigneter Name gefunden wurde, wobei die Anzahl generierter Namen mit jedem Schleifendurchlauf entsprechend inkrementiert wird.
 
 Diese Implementierung ist insofern beschränkt, dass maximal $26 * 10000 = 260000$ Namen generiert werden können. Sollte der Quellcode nutzerdefinierte Label enthalten, die diesem Schema entsprechen, ist die Zahl entsprechend geringer. Allerdings gilt diese Umsetzung als genügend, da der Speicher des Intel 8080 auf 16384 Byte beschränkt ist und deshalb ohnehin keine solche Menge an Namen speichern könnte.
+
+\subsection{Mapping von Bytes}
+
+Neben dem Übersetzen von Assembly- in Bytecode bietet der Assembler einer weitere Funktionalität: Das Mappen der entstehenden Bytes auf ihre zugehörige Zeile. Diese dient ausschließlich dem Frontend, in dem bei einer schrittweisen Programmausführung angezeigt werden soll, in welcher Zeile sich das Programm momentan befindet. Weil die spätere Ausführung mittels Emulator auf Bytes basiert und nicht zeilenweise geschieht, bedarf es eben dieser Funktionalität, da ein triviales \glqq führe Zeile X aus\grqq{} nicht möglich ist. Das Ergebnis der hier vorgestellten Methodik ist vom Typ \rust{HashMap<u16, usize>}, wobei jeweils der Index eines Byte als Schlüssel dient, der auf den Index der Zeile verweist, in der sich der ursprüngliche Code befindet.
+
+Damit es möglich ist eine Beziehung zwischen dem aktuellen Byte und seiner zugehörigen Zeile herzustellen, muss auf zwei Dinge besonders geachtet werden:
+
+\begin{itemize}
+	\item Leerzeilen und konditionale Strukturen, die als \rust{false} evaluiert sind, erhöhen den Zeilenindex unabhängig vom Byteindex
+	\item Referenzen von Makros zeigen auf die Stelle, an der das Makro definiert wurde
+\end{itemize}
+
+Generell verhält sich die Methode ähnlich der anderen Schritte in der Vorverarbeitung, nämlich so, dass sie den Code Zeile für Zeile betrachtet, nachdem sie mittels dem in Kapitel \ref{chap:var-replacement} erläuterten Verfahren Variablen ersetzt hat. Anstatt dass nur der Zeileninhalt betrachtet wird, muss der Code an dieser Stelle aufgezählt werden, wodurch der Index der Zeile zur Verfügung steht:
+
+\rust{for (index, line) in code.iter().enumerate() { }}
+
+Weil der Code an dieser Stelle noch keiner Vorverarbeitung unterzogen wurde (diese würde Zeilenindizes verfälschen) müssen Deklarationen von Labels, die an dieser Stelle nicht evaluiert werden, bewusst entfernt, bzw. übergangen werden. Außerdem ist, es relevant ob sich die aktuelle Zeile innerhalb eines nicht auszuführenden If-Blocks oder einer Makrodefinition befindet. Diese Information wird entsprechend dem bereits mehrfach erläuterten Verfahren mittels boolscher Variable und einfacher Überprüfung des String-Inhalts bestimmt.
+
+Für jede Zeile, auf die einer der beiden genannten Eigenschaften zutrifft, genügt es den Zeilenindex um eins zu erhöhen und zur nächsten Zeile überzugehen. Ansonsten wird versucht die Zeile in Opcode und gegebenenfalls den Rest aufzuspalten. Für den nachfolgenden Code ist ausschließlich der Opcode interessant. Die Implementierung dieses Verhaltens lässt sich in Rust, ähnlich anderer Sprachen, mittels einer bedingten Zuweisung implementieren. Sie ist im Quellcode in \ref{lst:opcode} zu sehen.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+let operand: &str = if line.contains(" ") {
+    line.split_once(" ").unwrap().0
+} else {
+    &line
+};
+\end{minted}
+\label{lst:opcdoe}
+\end{listing}
+
+Anschließend wird geprüft, ob der Inhalt der Variable \rust{operand} in einem von drei Vektoren vorhanden ist. Diese Vektoren beinhalten alle Opcodes des Intel 8080, sortiert nach deren Anzahl Bytes. Zeilen, die keinen Opcode beinhalten, werden durch diese Implementierung automatisch gefiltert: Beispielweise wird \asm{var SET 5} zu \glqq var\grqq, was keinem Opcode entspricht und somit übergangen wird.
+
+Sofern es sich beim Variableninhalt tatsächlich um einen Opcode handelt wird die Map, die das Ergebnis repräsentiert erweitert. Das geschieht nach dem Muster, dass je nachdem wie vielen Byte der Opcode entspricht ein bis drei Einträge nach dem Muster \rust{(byte_index, line_index)} in der Map erstellt werden, wobei der erste Index entsprechend erhöht wird, sollte es sich um mehrere Byte handeln. Sobald die Einträge in der Map erstellt wurden, werden die beiden Indizes um die entsprechenden Werte erhöht und zur nächsten Zeile übergegangen.
+
+Während bisherige Implementierung den Großteil aller auftretenden Fälle abdeckt fehlt ein entscheidender und bereits zu Beginn des Kapitels erwähnter Teil: Das Mappen von Zeilen innerhalb von Labels, was im folgenden betrachtet werden soll.
 
 \subsection{Parser}
 
