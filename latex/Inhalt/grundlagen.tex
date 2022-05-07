@@ -258,3 +258,47 @@ Das Template der Component sieht folgendermaßen aus:
 Dargestellt wird die Component als HTML-Block. Innerhalb des Blocks befindet sich eine Überschrift. Im \code{<h1>}-Tag sieht man nun ein weiteres Feature von Angular. Hier wird eine sogenannte \textbf{Text interpolation} definiert, die dafür sorgt, dass der Wert der Variable \ts{heading} auf der Webseite angezeigt wird. Unterhalb der Überschrift wird nun ein \code{<button>} angezeigt. Auch hier kommt ein Feature von Angular zum Einsatz, ein sogenanntes \textbf{Event binding}. An das \code{click} Event des Knopfes wird die in der Klasse der Component definierte Methode \ts{onButtonClicked()} gebunden, die nun bei jedem Klick auf den Knopf aufgerufen wird.
 
 \subsection{Services}
+
+Viele Komponenten einer Anwendung greifen auf gemeinsame Daten und Funktionen zu. Für diesen Anwendungsfall stellt Angular \textit{Services} zur Verfügung. Das sind TypeScript Klassen, die mithilfe von Dependency Injection in anderen Services oder auch Components genutzt werden können, um beispielsweise auf ein geteiltes Datenrepository zuzugreifen.
+
+\begin{minted}{typescript}
+    @Injectable({
+        providedIn: 'root'
+    })
+    export class ExampleService {
+        private counter: number = 0;
+        
+        public increaseCounter(): void {
+            this.counter += 1;
+        }
+
+        public getCounter(): number {
+            return this.counter;
+        }
+    }
+\end{minted}
+
+In diesem Codebeispiel sieht man wie ein Service aufgebaut ist. Er besteht lediglich aus einer TypeScript Klasse, die mit der \ts{@Injectable}-Annotation versehen ist. Die Eigenschaft \ts{providedIn: 'root'} gibt hier an, dass der Service als Singleton zur Verfügung gestellt wird und sich schließlich alle Components, die den Service nutzen, die selbe Instanz teilen.
+
+Um den Service zu nutzen muss eine Component diesen einfach nur in dessen Konstruktor anfordern:
+
+\begin{minted}{typescript}
+    @Component({
+        selector: 'example',
+        templateUrl: './example.component.html'
+    })
+    export class ExampleComponent {
+
+        private readonly exampleService: ExampleService;
+
+        constructor(exampleService: ExampleService) {
+            this.exampleService = exampleService;
+        }
+
+        public onButtonClicked(): void {
+            this.exampleService.increaseCounter();
+        }
+    }
+\end{minted}
+
+Das Dependency Injection Framework von Angular sorgt nun bei der Erstellung der Component dafür, dass der Service korrekt injiziert wird.
