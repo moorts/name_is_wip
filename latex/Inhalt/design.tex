@@ -53,3 +53,58 @@ Auch diese Funktionen geben häufig \rust{Result}s zurück, sofern die Ausführu
 \section{WebAssembly API}
 
 \section{Frontend}
+
+Die Webanwendung, mit der Nutzer den Emulator schließlich nutzen können, stellt zwei wesentliche Funktionalitäten zur Verfügung:
+
+\subsection{Code Editor}
+
+Mit einem eingebauten Code Editor können Nutzer direkt in der Webapplikation eigene Assembly-Programme schreiben und direkt ausführen, ohne beispielsweise vorher selbst den Code assemblen zu müssen und dann manuell in den Emulator zu laden.
+
+Für den Code-Editor wird eine quelloffene Bibliothek von Microsoft genutzt, der sogenannte \textit{Monaco Editor}. Monaco ist ein browser-basierter Editor, der praktische Funktionalitäten zur Verfügugung stellt, wie zum Beispiel Autovervollständigung oder Syntax-Highlighting. Die Bibliothek wird unter anderem auch in dem weit verbreiteten und ebenfalls quelloffenen Code-Editor \textit{Visual Studio Code} genutzt, der ebenfalls von Microsoft entwickelt wird.
+
+\begin{figure}
+    \caption{Code-Editor der Webanwendung}
+    \centering
+    \includegraphics[width=1.0\textwidth]{Bilder/CodeEditor.png}
+    \label{fig:codeeditor}
+\end{figure}
+
+In Abbildung \ref{fig:codeeditor} sieht man den Code-Editor in Aktion. Die einzelnen Bestandteile des Assembly-Codes, die Labels, die Instruktionen und die Argumente, sowie Kommentare sind alle unterschiedlich eingefärbt.
+
+\begin{figure}
+    \caption{Autovervollständigung für Instruktionen}
+    \centering
+    \includegraphics[width=0.6\textwidth]{Bilder/Completion_1.png}
+    \label{fig:completion1}
+\end{figure}
+
+\begin{figure}
+    \caption{Autovervollständigung für Argumente}
+    \centering
+    \includegraphics[width=0.6\textwidth]{Bilder/Completion_2.png}
+    \label{fig:completion2}
+\end{figure}
+
+In den Abbildungen \ref{fig:completion1} und \ref{fig:completion2} sieht man außerdem, wie die Autovervollständigung des Code-Editors funktioniert. Basierend auf der Eingabe des Nutzers und der Position im Code wird automatisch erkannt, ob eine Instruktion oder ein Argument vorgeschlagen wird und welche in Frage kommen.
+
+\subsection{Emulator-Zustand}
+
+Hat der Nutzer nun ein Assembly-Programm mithilfe des Code-Editors erstellt, kann er es auch ausführen lassen. Hierfür wird der in Rust entwickelte Emulator genutzt, der mithilfe der WebAssembly-Schnittstelle in die Webapplikation eingebunden wird. Die Interaktion mit dem Emulator erfolgt mithilfe verschiedener Bedienelemente in einer Aktionsleiste am oberen Rand der Anwendung (siehe Abbildung \ref{fig:actionbar}).
+
+\begin{figure}[h]
+    \caption{Aktionsleiste des Emulators}
+    \centering
+    \includegraphics[width=0.75\textwidth]{Bilder/Aktionsleiste.png}
+    \label{fig:actionbar}
+\end{figure}
+
+\begin{figure}
+    \caption{\textit{Load}-Dialog}
+    \centering
+    \includegraphics[width=0.75\textwidth]{Bilder/Load_Dialog.png}
+    \label{fig:loaddialog}
+\end{figure}
+
+Die ersten beiden Schaltflächen der Aktionsleiste, \textit{Load} und \textit{Save}, ermöglichen dem Nutzer, Assemblycode aus Dateien auf seinem Endgerät zu laden oder sie dort zu speichern. \textit{Load} kann außerdem auch bereits assemblierten Code direkt in den Speicher des Emulators laden. Die Auswahl erfolgt mithilfe eines eigenen Auswahldialogs, der in Abbildung \ref{fig:loaddialog} zu sehen ist.
+
+Um den Code, den der Nutzer geschrieben hat, nun zu assemblen, muss dieser in der Aktionsleiste die Funktion \textit{Assemble} nutzen. Ist der Vorgang erfolgreich, werden die Bytes, die der Assembler erzeugt, in den Hauptspeicher des Emulators geschrieben.
