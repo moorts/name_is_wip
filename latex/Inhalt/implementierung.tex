@@ -389,7 +389,7 @@ Diese Implementierung ist insofern beschränkt, dass maximal $26 * 10000 = 26000
 
 \subsection{Mapping von Bytes}
 
-Neben dem Übersetzen von Assembly- in Bytecode bietet der Assembler einer weitere Funktionalität: Das Mappen der entstehenden Bytes auf ihre zugehörige Zeile. Diese dient ausschließlich dem Frontend, in dem bei einer schrittweisen Programmausführung angezeigt werden soll, in welcher Zeile sich das Programm momentan befindet. Weil die spätere Ausführung mittels Emulator auf Bytes basiert und nicht zeilenweise geschieht, bedarf es eben dieser Funktionalität, da ein triviales \glqq führe Zeile X aus\grqq{} nicht möglich ist. Das Ergebnis der hier vorgestellten Methodik ist vom Typ \rust{HashMap<u16, usize>}, wobei jeweils der Index eines Byte als Schlüssel dient, der auf den Index der Zeile verweist, in der sich der ursprüngliche Code befindet.
+Neben dem Übersetzen von Assembly- in Bytecode bietet der Assembler eine weitere Funktionalität: Das Mappen der entstehenden Bytes auf ihre zugehörige Zeile. Diese dient ausschließlich dem Frontend, in dem bei einer schrittweisen Programmausführung angezeigt werden soll, in welcher Zeile sich das Programm momentan befindet. Weil die spätere Ausführung mittels Emulator auf Bytes basiert und nicht zeilenweise geschieht, bedarf es eben dieser Funktionalität, da ein triviales \glqq führe Zeile X aus\grqq{} nicht möglich ist. Das Ergebnis der hier vorgestellten Methodik ist vom Typ \rust{HashMap<u16, usize>}, wobei jeweils der Index eines Byte als Schlüssel dient, der auf den Index der Zeile verweist, in der sich der ursprüngliche Code befindet.
 
 Damit es möglich ist eine Beziehung zwischen dem aktuellen Byte und seiner zugehörigen Zeile herzustellen, muss auf zwei Dinge besonders geachtet werden:
 
@@ -402,9 +402,9 @@ Generell verhält sich die Methode ähnlich der anderen Schritte in der Vorverar
 
 \rust{for (index, line) in code.iter().enumerate() { }}
 
-Weil der Code an dieser Stelle noch keiner Vorverarbeitung unterzogen wurde (diese würde Zeilenindizes verfälschen) müssen Deklarationen von Labels, die an dieser Stelle nicht evaluiert werden, bewusst entfernt, bzw. übergangen werden. Außerdem ist, es relevant ob sich die aktuelle Zeile innerhalb eines nicht auszuführenden If-Blocks oder einer Makrodefinition befindet. Diese Information wird entsprechend dem bereits mehrfach erläuterten Verfahren mittels boolscher Variable und einfacher Überprüfung des String-Inhalts bestimmt.
+Weil der Code an dieser Stelle noch keiner Vorverarbeitung unterzogen wurde (diese würde Zeilenindizes verfälschen) müssen Deklarationen von Labels, die an dieser Stelle nicht evaluiert werden, bewusst entfernt, bzw. übergangen werden. Außerdem ist es relevant ob sich die aktuelle Zeile innerhalb eines nicht auszuführenden If-Blocks oder einer Makrodefinition befindet. Diese Informationen werden entsprechend dem bereits mehrfach erläuterten Verfahren mittels boolscher Variable und einfacher Überprüfung des String-Inhalts bestimmt.
 
-Für jede Zeile, auf die einer der beiden genannten Eigenschaften zutrifft, genügt es den Zeilenindex um eins zu erhöhen und zur nächsten Zeile überzugehen. Ansonsten wird versucht die Zeile in Opcode und gegebenenfalls den Rest aufzuspalten. Für den nachfolgenden Code ist ausschließlich der Opcode interessant. Die Implementierung dieses Verhaltens lässt sich in Rust, ähnlich anderer Sprachen, mittels einer bedingten Zuweisung implementieren. Sie ist im Quellcode in \ref{lst:opcode} zu sehen.
+Für jede Zeile, auf die eine der beiden Eigenschaften zutrifft, genügt es den Zeilenindex um eins zu erhöhen und zur nächsten Zeile überzugehen. Ansonsten wird versucht die Zeile in Opcode und gegebenenfalls den Rest aufzuspalten. Für den nachfolgenden Code ist ausschließlich der Opcode interessant. Die Implementierung dieses Verhaltens lässt sich in Rust, ähnlich anderer Sprachen, mittels einer bedingten Zuweisung implementieren. Sie ist im Quellcode in \ref{lst:opcode} zu sehen.
 
 \begin{listing}[th]
 \begin{minted}{rust}
@@ -414,14 +414,23 @@ let operand: &str = if line.contains(" ") {
     &line
 };
 \end{minted}
-\label{lst:opcdoe}
+\label{lst:opcode}
 \end{listing}
 
 Anschließend wird geprüft, ob der Inhalt der Variable \rust{operand} in einem von drei Vektoren vorhanden ist. Diese Vektoren beinhalten alle Opcodes des Intel 8080, sortiert nach deren Anzahl Bytes. Zeilen, die keinen Opcode beinhalten, werden durch diese Implementierung automatisch gefiltert: Beispielweise wird \asm{var SET 5} zu \glqq var\grqq, was keinem Opcode entspricht und somit übergangen wird.
 
-Sofern es sich beim Variableninhalt tatsächlich um einen Opcode handelt wird die Map, die das Ergebnis repräsentiert erweitert. Das geschieht nach dem Muster, dass je nachdem wie vielen Byte der Opcode entspricht ein bis drei Einträge nach dem Muster \rust{(byte_index, line_index)} in der Map erstellt werden, wobei der erste Index entsprechend erhöht wird, sollte es sich um mehrere Byte handeln. Sobald die Einträge in der Map erstellt wurden, werden die beiden Indizes um die entsprechenden Werte erhöht und zur nächsten Zeile übergegangen.
+Sofern es sich beim Variableninhalt tatsächlich um einen Opcode handelt wird die Map, die das Ergebnis repräsentiert erweitert. Das geschieht nach dem Muster, dass je nachdem wie vielen Byte der Opcode entspricht, ein bis drei Einträge nach dem Muster \rust{(byte_index, line_index)} in der Map erstellt werden. Dabei wird der erste Index entsprechend erhöht, sollte es sich um mehrere Byte handeln. Sobald die Einträge in der Map erstellt wurden, werden die beiden Indizes um die entsprechenden Werte erhöht und zur nächsten Zeile übergegangen.
+\linebreak
 
-Während bisherige Implementierung den Großteil aller auftretenden Fälle abdeckt fehlt ein entscheidender und bereits zu Beginn des Kapitels erwähnter Teil: Das Mappen von Zeilen innerhalb von Labels, was im folgenden betrachtet werden soll.
+Während bisherige Implementierung den Großteil aller auftretenden Fälle abdeckt fehlt ein entscheidender und bereits zu Beginn des Kapitels erwähnter Teil: Das Mappen von Zeilen innerhalb von Makros. Dafür wird eine Map vom Typ \rust{HashMap<String, HashMap<u16, usize>>} benötigt. In dieser verweist der Name des Makros auf seine zugehörige Map. In letzterer befinden sich die Indizes der einzelnen Byte, die auf die jeweilige Zeile verweisen. 
+
+Für jede Zeile des eigentlichen Codes kann dann, sofern es sich um die Referenz auf ein Makro handelt, der entsprechende Eintrag an das finale Ergebnis angehängt werden. Dabei muss darauf geachtet werden, dass die Byteindizes abhängig vom Index des letzten Bytes vor der Referenz bestimmt werden. Die Zeilen hingegen sind statisch, weil die Definition des Makros nur an einer bestimmten Stelle steht.
+
+Zur Bestimmung der eigentlichen Maps wurde ein rekursiver Methodenaufruf verwendet. Das ist möglich weil der Intel 8080 keine verschachtelten Makrodeklarationen erlaubt, weshalb es keiner Abbruchbedingung bedarf und höchstens ein Rekursionsabstieg stattfindet. Dafür werden die Instruktionen des Makros in einem separaten Vektor an die Methode übergeben, die den Inhalt nun als eigenständiges Programm versteht. Dementsprechend beginnen die Werte der so erstellten Map \rust{local_map} bei 0. Mit dem folgenden Code werden die Zeilenindizes so korrigiert, dass sie dem \glqq wirklichen\grqq{} Programm entsprechen:
+
+\rust{*value += line_index + 1}
+
+Die so entstehende Map kann an die Map aller Makros angehängt und bei Bedarf entsprechend referenziert werden. Im Fall einer Referenz wird für jeden Eintrag der Makro-Map ein neuer Eintrag im Endergebnis erstellt. Die Einträge entsprechen dem Muster \rust{(local_byte + byte_index, *line)}, bei dem jeweils der Byteindex um den aktuellen Wert erweitert, die Zeile als solche übernommen wird.
 
 \subsection{Parser}
 
