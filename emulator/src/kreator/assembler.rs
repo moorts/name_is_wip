@@ -57,7 +57,11 @@ impl Assembler {
                 while byte_code.len() < current_address.into() {
                     byte_code.push(0);
                 }
-                let bytes = to_machine_code(line)?;
+                let bytes = if line.starts_with("DB ") {
+                    convert_db(&line)
+                } else {
+                    to_machine_code(line)?
+                };
                 current_byte_index += bytes.len();
                 byte_code.extend(bytes);
             }
@@ -83,7 +87,7 @@ impl Assembler {
             if line.contains("ORG") {
                 let split = line.split_once(" ").unwrap();
                 origins.push((executed_bytes, evaluate_str(split.1)));
-            } else {
+            } else if !line.starts_with("DB ") {
                 let line = label_regex.replace(&line, "").to_string();
                 executed_bytes = executed_bytes + to_machine_code(line).unwrap().len() as u16;
             }
@@ -459,6 +463,24 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     Err("wrong register!")
 }
 
+fn convert_db(statement: &str) -> Vec<u8> {
+    let (_, operand) = statement.split_once("DB ").unwrap();
+    let mut data_vec: Vec<u8> = Vec::new();
+    if operand.contains(",") {
+        for op in operand.split(",") {
+            let value = eval(op) as u8;
+            data_vec.push(value);
+        }
+    } else if operand.contains("'") {
+        for char in operand.trim().replace("'", "").chars() {
+            data_vec.push(char as u8);
+        }
+    } else {
+        data_vec.push(eval(operand) as u8);
+    }
+    data_vec
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -806,6 +828,20 @@ mod tests {
         let result: Vec<usize> = vec![0, 2, 2, 2];
 
         assert_eq!(Ok(result), assembler.get_line_map());
+    }
+
+    #[test]
+    fn define_bytes() {
+        let assembler = Assembler::new(
+            "HERE: DB 0A3H\n 
+            WORD1: DB 5*2, 2FH-0AH\n
+            WORD2: DB 5ABCH SHR 8\n 
+            STR: DB 'STRINGSpl'\n 
+            MINUS: DB -03H\n
+            END");
+        let assembled:Vec<u8> = vec![0xA3, 0x0A, 0x25, 0x5A, 0x53, 0x54, 0x52, 0x49, 0x4E, 0x47, 0x53, 0x70, 0x6C, 0xFD];
+
+        assert_eq!(Ok(assembled), assembler.assemble());
     }
 
     #[test]
