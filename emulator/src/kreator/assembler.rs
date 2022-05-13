@@ -61,6 +61,8 @@ impl Assembler {
                     convert_db_statement(&line)
                 } else if line.starts_with("DW ") {
                     convert_dw_statement(&line)
+                } else if line.starts_with("DS ") {
+                    convert_ds_statement(&line)
                 } else {
                     to_machine_code(line)?
                 };
@@ -93,6 +95,8 @@ impl Assembler {
                 executed_bytes = executed_bytes + convert_db_statement(&line).len() as u16;
             } else if line.starts_with("DW ") {
                 executed_bytes = executed_bytes + convert_dw_statement(&line).len() as u16;
+            } else if line.starts_with("DS ") {
+                executed_bytes = executed_bytes + convert_ds_statement(&line).len() as u16;
             } else {
                 let line = label_regex.replace(&line, "").to_string();
                 executed_bytes = executed_bytes + to_machine_code(line).unwrap().len() as u16;
@@ -509,6 +513,14 @@ fn convert_dw_statement(statement: &str) -> Vec<u8> {
     data_vec
 }
 
+fn convert_ds_statement(statement: &str) -> Vec<u8> {
+    let (_, operand) = statement.split_once("DS ").unwrap();
+    let val = eval(operand) as usize;
+    let result: Vec<u8> = vec![0; val];
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -893,12 +905,28 @@ mod tests {
             FILL: RLC\n
             END"
         );
-        let mut data: Vec<u8> = vec![0x1C, 0x3B, 0xB4, 0x3E, 0x01, 0x3C, 0xAE, 0x3C];
-        data.extend(vec![0; 0x3B1C - data.len()]);
-        data.push(0x07);
-        data.extend(vec![0; 0x3EB4 - 0x3B1C - 1]);
-        data.push(0x07);
+        let mut expected: Vec<u8> = vec![0x1C, 0x3B, 0xB4, 0x3E, 0x01, 0x3C, 0xAE, 0x3C];
+        expected.extend(vec![0; 0x3B1C - expected.len()]);
+        expected.push(0x07);
+        expected.extend(vec![0; 0x3EB4 - 0x3B1C - 1]);
+        expected.push(0x07);
         
+        assert_eq!(Ok(expected), assembler.assemble());
+    }
+
+    #[test]
+    fn define_storage() {
+        let line = "DS 10H";
+        let expected: Vec<u8> = vec![0; 16];
+
+        assert_eq!(expected, convert_ds_statement(line));
+    }
+
+    #[test]
+    fn define_storage_assembled() {
+        let assembler = Assembler::new("HERE: DS 10\nEND");
+        let data: Vec<u8> = vec![0; 10];
+
         assert_eq!(Ok(data), assembler.assemble());
     }
 
