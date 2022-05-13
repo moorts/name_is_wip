@@ -483,6 +483,28 @@ fn convert_db_statement(statement: &str) -> Vec<u8> {
     data_vec
 }
 
+fn convert_dw_statement(statement: &str) -> Vec<u8> {
+    let (_, operand) = statement.split_once("DW ").unwrap();
+    let mut data_vec: Vec<u8> = Vec::new();
+    if operand.contains(",") {
+        for op in operand.split(",") {
+            let value = eval(op) as u16;
+            data_vec.push(value as u8);
+            data_vec.push((value >> 8) as u8);
+        }
+    } else if operand.contains("'") {
+        for char in operand.trim().replace("'", "").chars() {
+            data_vec.push(char as u8);
+            data_vec.push((char as u16 >> 8) as u8);
+        }
+    } else {
+        let val = eval(operand) as u16;
+        data_vec.push(val as u8);
+        data_vec.push((val >> 8) as u8);
+    }
+    data_vec
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -845,6 +867,14 @@ mod tests {
         let assembled:Vec<u8> = vec![0xA3, 0x0A, 0x25, 0, 0, 0, 0x5A, 0x53, 0x54, 0x52, 0x49, 0x4E, 0x47, 0x53, 0x70, 0x6C, 0xFD];
 
         assert_eq!(Ok(assembled), assembler.assemble());
+    }
+
+    #[test]
+    fn define_word() {
+        let line = "DW 3B1CH";
+        let expected: Vec<u8> = vec![0x1C, 0x3B];
+
+        assert_eq!(expected, convert_dw_statement(line));
     }
 
     #[test]
