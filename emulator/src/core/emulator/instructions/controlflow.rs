@@ -21,22 +21,24 @@ impl Emulator {
         Ok(())
     }
 
-    pub fn call_not(&mut self, flag: &str) -> EResult<()> {
+    pub fn call_not(&mut self, flag: &str) -> EResult<usize> {
         if !self.reg.get_flag(flag) {
             self.call_imm()?;
+            Ok(17)
         } else {
             self.pc += 2;
+            Ok(11)
         }
-        Ok(())
     }
 
-    pub fn call_if(&mut self, flag: &str) -> EResult<()> {
+    pub fn call_if(&mut self, flag: &str) -> EResult<usize> {
         if self.reg.get_flag(flag) {
             self.call_imm()?;
+            Ok(17)
         } else {
             self.pc += 2;
+            Ok(11)
         }
-        Ok(())
     }
 
     pub fn call_imm(&mut self) -> EResult<()> {
@@ -52,18 +54,20 @@ impl Emulator {
         Ok(())
     }
 
-    pub fn ret_if(&mut self, flag: &str) -> EResult<()> {
+    pub fn ret_if(&mut self, flag: &str) -> EResult<usize> {
         if self.reg.get_flag(flag) {
             self.ret()?;
+            return Ok(11);
         }
-        Ok(())
+        Ok(5)
     }
 
-    pub fn ret_not(&mut self, flag: &str) -> EResult<()> {
+    pub fn ret_not(&mut self, flag: &str) -> EResult<usize> {
         if !self.reg.get_flag(flag) {
             self.ret()?;
+            return Ok(11);
         }
-        Ok(())
+        Ok(5)
     }
 
     pub fn ret(&mut self) -> EResult<()> {

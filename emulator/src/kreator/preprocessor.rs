@@ -885,7 +885,7 @@ mod tests {
     #[test]
     fn long_labels() {
         let code = convert_input(vec!["instruction: MOV A,B"]);
-        let mut labels:HashMap<String, u16> = HashMap::new();
+        let mut labels: HashMap<String, u16> = HashMap::new();
         labels.insert("instr".to_string(), 0);
 
         assert_eq!(Ok(labels), get_labels(&code));
