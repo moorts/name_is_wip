@@ -98,6 +98,36 @@ Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), ode
 
 Ein Result enthält entweder einen Wert des entsprechenden Typs, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
 
+\subsection{Besitz und (De)Referenzieren}
+
+Die Verwaltung von Variablen und deren Lebensdauer, sowie Variablenzugriffe fallen unter Rusts Konzept von \glqq Ownership\grqq{} (Besitz). Es handelt sich um ein System von Regeln, die der Compiler durchsetzt um eine konsistente Garbage Collection zu ermöglichen.
+
+Grundsatz dieses Konzepts sind die sog. \glqq Owner\grqq (Besitzer) von Variablen. In Rust hat jeder Werte zu jeder Zeit (nur) einen Besitzer, eine Variable. Sollte dieser Besitzer außerhalb des Gültigkeitsbereiches liegen, wird der entsprechende Wert aus dem Speicher entfernt. Mit jeder schließenden, geschwungenen Klammer endet ein solches Scope und darin verwendete Variablen werden gelöscht. In dem Moment, in dem eine Variable von außerhalb in einen anderen Gültigkeitsbereich gegeben wird, wird diese in den neuen Bereich \glqq gemoved\grqq. Das hat zur Folge, dass eine Variable, die als Parameter an eine Methode übergeben wird, anschließend nicht mehr gültig ist. Bestimmte Typen (unter anderem \rust{i32} oder \rust{bool}) implementieren den Trait \rust{Copy}, durch den beim Moven einer Variable in ein neues Scope eine Kopie anstelle des eigentlichen Besitzers übergeben wird. Das funktioniert, weil der Speicherbedarf dieser Typen bereits zur Compilezeit bestimmbar ist.
+
+Die Einschränkung des Movens würde offensichtlich auf Dauer zum Problem werden, gäbe es keine Möglichkeit Variablen innerhalb anderer Gültigkeitsbereiche zu verwenden, ohne sie davor zu klonen oder jedes Mal als zusätzlichen Rückgabewert zurückzuliefern. Dafür bietet Rust die Möglichkeit zum \glqq Borrowing\grqq{} mittels \glqq Referencing\grqq. Das geschieht mittels vorangestelltem Et-Zeichen (\&). So wird anstelle der Variablen (dem eigentlichen Besitzer) lediglich ein Verweis auf diesen übergeben.
+
+Soll nun der Wert einer Variablen, für den ein Gültigkeitsbereich nur eine Referenz besitzt, verändert werden, bietet Rust das \glqq Dereferencing\grqq{} an. Dazu wird der Variablen ein Sternchen (*) vorangestellt. Der beispielhafte Quellcode in \ref{lst:ownership} soll diese Konzepte veranschaulichen. Dabei existieren zwei Methoden von denen beim Aufrufen der ersten ein \glqq Move\grqq{} auftritt, die zweite Methode arbeitet mit einer Referenz. Sollte nach dem Ausführen des Codes ein lesender Zugriff auf die Variable \rust{txt} erfolgen, gäbe es einen Fehler. Im Fall von \rust{num} erhält man den Wert 20.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+fn take_ownrshp(var: String) {
+}   // var goes out of scope and is dropped
+
+fn inc_val(number: &i32) {
+    *number = number + 10;
+    // the value of number may be manipulated by dereferencing
+}
+
+let txt = String::from("text");
+let num = 10;
+
+take_ownrshp(txt); // ownership of txt moves into the method
+inc_val(&num); // inc_val receives a reference to the value of num
+\end{minted}
+\label{lst:ownership}
+\caption{Darstellung einiger Phänomene von Rusts Ownership}
+\end{listing}
+
 
 \section{Intel 8080}
 
