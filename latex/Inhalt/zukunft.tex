@@ -6,6 +6,63 @@ Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu.
 
 Bei Dynamic Recompilation handelt es sich um eine Optimierungsstrategie, bei der Maschinencode des emulierten Systems auf Maschinencode des ausführenden Systems übersetzt wird. In unserem Fall würde dabei Intel 8080 Maschinencode zu WebAssembly kompiliert werden. Diese Rekompilation findet zur Laufzeit statt.
 
+Grundlegende Funktionsweise
+
+Das Ziel ist, Blöcke aus Intel8080 Assembly zu Blöcken aus nativem Assembly (in unserem Fall wäre das WebAssembly Bytecode) zu kompilieren und diese Blöcke in einem Cache zu speichern. Dies sähe ungefähr so aus\footnote{Dieses Beispiel ist orientiert an folgendem Blogpost: \url{https://wiki.pcsx2.net/PCSX2_Documentation/Introduction_to_Dynamic_Recompilation}}:
+
+
+\begin{minted}{rust}
+fn run() {
+    let addr = getBlock(PC);
+    // Execute instructions at addr in memory
+    execute(addr);
+}
+
+fn getBlock(pc: u16) -> u64 {
+    match cache[pc] {
+        Some(addr) => addr,
+        None => {
+            let addr = recompileBlock(pc);
+            cache[pc] = Some(addr);
+            addr
+        }
+    }
+}
+
+fn recompileBlock(start_pc: u16) -> u64 {
+    // Memory location the block will be written to
+    let start_ptr = emitter.get_ptr();
+    let pc = start_pc;
+    loop {
+        match opcodes[pc] {
+            // Call emitter functions
+            // Branching instructions will break the loop
+        }
+    }
+    start_ptr
+}
+\end{minted}
+
+Um den obigen Code zu realisieren, werden 2 Komponenten benötigt: der Code-Emitter und der Cache.
+
+\subsection{Code-Emitter}
+
+Der Code-Emitter hat die Funktion, die entsprechenden nativen Instruktionen auf Grundlage der 8080 Opcodes zu generieren. Dafür speichert er eine Adresse (\rust{emitter.get_ptr()} im obigen Code), wobei es sich um die Speicheradresse handelt, an die die nächste Instruktion geschrieben wird.
+
+Der Emitter übersetzt im simpelsten Fall jeden Opcode in eine äquivalente Instruktion in nativen Assembly. Hier können allerdings auch Optimierungen stattfinden, die durch Verwendung eines moderneren Instruktionssatzes oder durch gesammelte Laufzeitinformationen möglich sind. Beispiele hierfür wären:
+
+\begin{itemize}
+    \item Zusammenfassung mehrerer 8/16-Bit Instruktionen als einzelne 32/64-Bit Instruktionen
+    \item Verwendung von Instruktionen, die komplexere Prozesse (bspw. Stringkopie) realisieren
+    \item Schleifenoptimierung
+\end{itemize}
+
+Der Emitter schreibt diese nativen Instruktionen an die gespeicherte Addresse, welche in den Cache zeigt.
+
+\subsection{Cache}
+
+Beim bereits erwähnten Cache handelt es sich lediglich um eine Speicherregion, die mit dem PC indiziert werden kann und entweder \rust{None} zurückgibt, wenn der entsprechende Maschinencode noch nicht generiert wurde, oder die entsprechend nächste Instruktion zurückgibt.
+
 
 \section{Intel Hex}
 
