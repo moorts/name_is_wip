@@ -59,6 +59,8 @@ impl Assembler {
                 }
                 let bytes = if line.starts_with("DB ") {
                     convert_db_statement(&line)
+                } else if line.starts_with("DW ") {
+                    convert_dw_statement(&line)
                 } else {
                     to_machine_code(line)?
                 };
@@ -89,6 +91,8 @@ impl Assembler {
                 origins.push((executed_bytes, evaluate_str(split.1)));
             } else if line.starts_with("DB ") {
                 executed_bytes = executed_bytes + convert_db_statement(&line).len() as u16;
+            } else if line.starts_with("DW ") {
+                executed_bytes = executed_bytes + convert_dw_statement(&line).len() as u16;
             } else {
                 let line = label_regex.replace(&line, "").to_string();
                 executed_bytes = executed_bytes + to_machine_code(line).unwrap().len() as u16;
@@ -864,7 +868,7 @@ mod tests {
             STR: DB 'STRINGSpl'\n 
             MINUS: DB -03H\n
             END");
-        let assembled:Vec<u8> = vec![0xA3, 0x0A, 0x25, 0, 0, 0, 0x5A, 0x53, 0x54, 0x52, 0x49, 0x4E, 0x47, 0x53, 0x70, 0x6C, 0xFD];
+        let assembled: Vec<u8> = vec![0xA3, 0x0A, 0x25, 0, 0, 0, 0x5A, 0x53, 0x54, 0x52, 0x49, 0x4E, 0x47, 0x53, 0x70, 0x6C, 0xFD];
 
         assert_eq!(Ok(assembled), assembler.assemble());
     }
@@ -875,6 +879,27 @@ mod tests {
         let expected: Vec<u8> = vec![0x1C, 0x3B];
 
         assert_eq!(expected, convert_dw_statement(line));
+    }
+
+    #[test]
+    fn define_word_assembled() {
+        let assembler = Assembler::new(
+            "ADD1: DW COMP\n
+            ADD2: DW FILL\n
+            ADD3: DW 3C01H, 3CAEH\n
+            ORG 3B1CH\n
+            COMP: RLC\n
+            ORG 3EB4H\n
+            FILL: RLC\n
+            END"
+        );
+        let mut data: Vec<u8> = vec![0x1C, 0x3B, 0xB4, 0x3E, 0x01, 0x3C, 0xAE, 0x3C];
+        data.extend(vec![0; 0x3B1C - data.len()]);
+        data.push(0x07);
+        data.extend(vec![0; 0x3EB4 - 0x3B1C - 1]);
+        data.push(0x07);
+        
+        assert_eq!(Ok(data), assembler.assemble());
     }
 
     #[test]
