@@ -6,8 +6,6 @@ Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu. Dabei geht es sowohl um
 
 Bei Dynamic Recompilation handelt es sich um eine Optimierungsstrategie, bei der Maschinencode des emulierten Systems auf Maschinencode des ausführenden Systems übersetzt wird. In unserem Fall würde dabei Intel 8080 Maschinencode zu WebAssembly kompiliert werden. Diese Rekompilation findet zur Laufzeit statt.
 
-Grundlegende Funktionsweise
-
 Das Ziel ist, Blöcke aus Intel8080 Assembly zu Blöcken aus nativem Assembly (in unserem Fall wäre das WebAssembly Bytecode) zu kompilieren und diese Blöcke in einem Cache zu speichern. Dies sähe ungefähr so aus\footnote{Dieses Beispiel ist orientiert an folgendem Blogpost: \url{https://wiki.pcsx2.net/PCSX2_Documentation/Introduction_to_Dynamic_Recompilation}}:
 
 
