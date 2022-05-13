@@ -1,6 +1,6 @@
 \chapter{Zukunftsideen}
 
-Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu.
+Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu. Dabei geht es sowohl um mögliche Erweiterungen der bestehenden Spezifikation, als auch Anpassungen die entsprechend dieser vorgenommen werden sollten, bzw. gemusst hätten, aber primär aus zeitlichen Gründen nicht mehr umzusetzen waren.
 
 \section{Dynamic Recompilation}
 
@@ -21,3 +21,13 @@ Momentan gibt der Assembler einen Vektor aus Bytes zurück, welcher in den RAM d
 \end{enumerate}
 
 Dieses Format zu verwenden hat den Vorteil, leere Regionen zwischen Assembly Instruktionen nicht abspeichern zu müssen. Außerdem sind ROMs für den 8080 häufig in diesem Format vorliegend, daher wäre es sinnvoll solche Dateien einlesen zu können.
+
+\section{Optimierung und Restrukturierung des Assemblers}
+
+Die Entwicklung des Assemblers folgte einem iterativ, inkrementellen Ansatz. Dabei wurden schrittweise neue Funktionen hinzugefügt, wobei mit den einfachen Opcodes angefangen, dann zu Labels und später den Pseudo-Instruktionen übergegangen wurde. Was für die Entwicklung unproblematisch war machte sich jedoch vor allem zum Ende der Implementierung und bei der Dokumentation der Arbeit bemerkbar:
+
+Die Struktur des Assemblers ist suboptimal. Zwar sind viele Funktionen in einzelnen Methoden gekapselt, allerdings gibt es potentielle Fehler in deren aktueller Anordnung. So ist es zum Zeitpunkt der Beendigung der Arbeit beispielsweise nicht möglich ein Label als Bedingung für einen If-Block zu verwenden. Zwar könnte der Code assembled werden, allerdings schlägt das Mapping von Zeilen fehl, weil für diese Makros nicht ersetzt werden, was aber notwendig für die Bestimmung von Labels ist.
+
+In diesem Fall wurde sich dazu entschlossen den Fehler in Kauf zu nehmen. Begründet wird dies vor allem mit dem Verhältnis von Zeitaufwand und möglichem Gewinn: Zwar handelt es sich um einen kritischen Fehler, allerdings ist die Verwendung von Labels in konditionalen Anweisungen wenig sinnvoll. Schließlich ist nur das Label, das noch vor dem ersten Opcode steht, sofern es überhaupt existiert, null. In allen anderen Fällen sind Label ungleich null und damit konstante Werte, die die If-Bedingung erfüllen. Es erscheint, obwohl erlaubt, nur wenig sinnvoll Labels an einer solchen Stelle zu positionieren, weshalb der Fehler toleriert wird.
+
+Neben solchen, durch Eckfälle bedingte Fehler, bietet der Assembler auch Raum für Optimierung. Das gilt bezüglich der Zeit- sowie der Codekomplexität. An Stellen, an denen dies bereits zum Zeitpunkt des Arbeitsabschlusses ersichtlich war, wurde das bereits in Kapitel \ref{chap:impl-assembler} erwähnt. Vor allem die zeitliche Abfolge zum Auslesen und Ersetzen bestimmter Zeileninhalte ist verbesserbar. Allerdings ist die Performanz des Assemblers bisher mehr als ausreichend, weswegen der Fokus nicht auf solchen Verbesserungen lag.
