@@ -19,29 +19,24 @@ impl Emulator {
     fn add_memory(&mut self, use_carry: bool) {
         let address = self.reg["hl"];
         let mut memory_value = self.ram[address] as u16;
-        if use_carry && self.reg.get_flag("carry") {
-            memory_value += 1;
-        }
-        self.add_value(memory_value);
+        self.add_value(memory_value, use_carry);
     }
 
     fn add_register(&mut self, register: char, use_carry: bool) {
         let mut register_value = self.reg[register] as u16;
-        if use_carry && self.reg.get_flag("carry") {
-            register_value += 1;
-        }
-        self.add_value(register_value);
+        self.add_value(register_value, use_carry);
     }
 
-    pub fn add_value(&mut self, value: u16) {
+    pub fn add_value(&mut self, value: u16, use_carry: bool) {
         let accumulator = self.reg['a'] as u16;
-        let result = accumulator + value;
+        let carry = u16::from(use_carry && self.reg.get_flag("carry"));
+        let result = accumulator + value + carry;
         let result_byte = (result & 0xff) as u8;
         self.reg.set_flag("zero", (result & 0xff) == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
         self.reg.set_flag("carry", result > 0xff);
         self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
-        self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F)) > 0x0F);
+        self.reg.set_flag("aux", ((accumulator & 0x0F) + (value & 0x0F) + carry) > 0x0F);
         self.reg['a'] = result_byte;
     }
     
@@ -60,31 +55,25 @@ impl Emulator {
     
     fn sub_memory(&mut self, use_carry: bool) {
         let address = self.reg["hl"];
-        let mut memory_value = self.ram[address] as u16;
-        if use_carry && self.reg.get_flag("carry") {
-            memory_value += 1;
-        }
-        self.sub_value(memory_value);
+        let mut memory_value = self.ram[address];
+        self.sub_value(memory_value, use_carry);
     }
 
     fn sub_register(&mut self, register: char, use_carry: bool) {
-        let mut register_value = self.reg[register] as u16;
-        if use_carry && self.reg.get_flag("carry") {
-            register_value += 1;
-        }
-        self.sub_value(register_value);
+        let mut register_value = self.reg[register];
+        self.sub_value(register_value, use_carry);
     }
     
-    pub fn sub_value(&mut self, value: u16) {
-        let accumulator = self.reg['a'] as u16;
-        let result = accumulator + (!value & 0xFF) + 1;
-        let result_byte = (result & 0xff) as u8;
-        self.reg.set_flag("zero", (result & 0xff) == 0);
+    pub fn sub_value(&mut self, value: u8, use_carry: bool) {
+        let carry = u8::from(use_carry && self.reg.get_flag("carry"));
+        let accumulator = self.reg['a'];
+        let result = accumulator.wrapping_sub(value).wrapping_sub(carry);
+        self.reg.set_flag("zero", result == 0);
         self.reg.set_flag("sign", (result & 0x80) != 0);
-        self.reg.set_flag("carry", !(result > 0xff));
-        self.reg.set_flag("parity", result_byte.count_ones() & 1 == 0);
-        self.reg.set_flag("aux", ((accumulator & 0x0F) + (!value & 0x0F) + 1) > 0x0F);
-        self.reg['a'] = result_byte;
+        self.reg.set_flag("carry", u16::from(accumulator) < u16::from(value) + u16::from(carry));
+        self.reg.set_flag("parity", result.count_ones() & 1 == 0);
+        self.reg.set_flag("aux", (accumulator as i8 & 0x0f) - (value as i8 & 0x0f) - (carry as i8) >= 0x00);
+        self.reg['a'] = result;
     }
     
     pub fn inx(&mut self, register: &str) {
@@ -245,6 +234,22 @@ mod tests {
         emu.execute_next().expect("Fuck");
 
         assert_eq!(emu.reg['a'], 112);
+    }
+
+    #[test]
+    fn adc2() {
+        let mut emu = Emulator::new();
+
+        // ADC A with carry
+        emu.ram.load_vec(vec![0x8F], 0);
+        emu.pc = 0;
+        emu.reg['a'] = 191;
+        emu.reg.set_flag("carry", true);
+        emu.execute_next().expect("Fuck");
+
+        println!("{}", emu.reg['a']);
+        assert_eq!(emu.reg['a'], 127);
+        assert_eq!(emu.reg.get_flag("aux"), true);
     }
     
     #[test]

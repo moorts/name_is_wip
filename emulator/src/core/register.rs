@@ -26,23 +26,30 @@ pub struct RegisterArray {
 
 impl RegisterArray {
     pub fn new() -> Self {
-        RegisterArray {
+        let mut new = RegisterArray {
             wz: Register::new(),
             bc: Register::new(),
             de: Register::new(),
             hl: Register::new(),
             psw: Register::new()
+        };
+
+        // that bit should always be 1, don't ask me why
+        unsafe {
+            new.psw.bytes.0 |= 0b0000_0010;
         }
+
+        new
     }
 
     pub fn get_flag(&self, flag: &str) -> bool {
         unsafe {
             match flag {
-                "zero" => (self.psw.bytes.1 & 0x80) != 0,
-                "carry" => (self.psw.bytes.1 & 0x40) != 0,
-                "sign" => (self.psw.bytes.1 & 0x20) != 0,
-                "parity" => (self.psw.bytes.1 & 0x10) != 0,
-                "aux" => (self.psw.bytes.1 & 0x8) != 0,
+                "zero" => (self.psw.bytes.0 & 0b0100_0000) != 0,
+                "carry" => (self.psw.bytes.0 & 0b0000_0001) != 0,
+                "sign" => (self.psw.bytes.0 & 0b1000_0000) != 0,
+                "parity" => (self.psw.bytes.0 & 0b0000_0100) != 0,
+                "aux" => (self.psw.bytes.0 & 0b0001_0000) != 0,
                 _ => panic!("Invalid flag"),
             }
         }
@@ -52,20 +59,20 @@ impl RegisterArray {
         unsafe {
             if value {
                 match flag {
-                    "zero" => self.psw.bytes.1 |= 0x80,
-                    "carry" => self.psw.bytes.1 |= 0x40,
-                    "sign" => self.psw.bytes.1 |= 0x20,
-                    "parity" => self.psw.bytes.1 |= 0x10,
-                    "aux" => self.psw.bytes.1 |= 0x8,
+                    "zero" => self.psw.bytes.0 |= 0b0100_0000,
+                    "carry" => self.psw.bytes.0 |= 0b0000_0001,
+                    "sign" => self.psw.bytes.0 |= 0b1000_0000,
+                    "parity" => self.psw.bytes.0 |= 0b0000_0100,
+                    "aux" => self.psw.bytes.0 |= 0b0001_0000,
                     _ => panic!("Invalid flag"),
                 }
             } else {
                 match flag {
-                    "zero" => self.psw.bytes.1 &= !0x80,
-                    "carry" => self.psw.bytes.1 &= !0x40,
-                    "sign" => self.psw.bytes.1 &= !0x20,
-                    "parity" => self.psw.bytes.1 &= !0x10,
-                    "aux" => self.psw.bytes.1 &= !0x8,
+                    "zero" => self.psw.bytes.0 &= !0b0100_0000,
+                    "carry" => self.psw.bytes.0 &= !0b0000_0001,
+                    "sign" => self.psw.bytes.0 &= !0b1000_0000,
+                    "parity" => self.psw.bytes.0 &= !0b0000_0100,
+                    "aux" => self.psw.bytes.0 &= !0b0001_0000,
                     _ => panic!("Invalid flag"),
                 }
             }
@@ -75,18 +82,18 @@ impl RegisterArray {
     pub fn flip_flag(&mut self, flag: &str) {
         unsafe {
             match flag {
-                "zero" => self.psw.bytes.1 ^= 0x80,
-                "carry" => self.psw.bytes.1 ^= 0x40,
-                "sign" => self.psw.bytes.1 ^= 0x20,
-                "parity" => self.psw.bytes.1 ^= 0x10,
-                "aux" => self.psw.bytes.1 ^= 0x8,
+                "zero" => self.psw.bytes.0 ^= 0b0100_0000,
+                "carry" => self.psw.bytes.0 ^= 0b0000_0001,
+                "sign" => self.psw.bytes.0 ^= 0b1000_0000,
+                "parity" => self.psw.bytes.0 ^= 0b0000_0100,
+                "aux" => self.psw.bytes.0 ^= 0b0001_0000,
                 _ => panic!("Invalid flag"),
             }
         }
     }
 
     pub fn set_flags(&mut self, flags: u8) {
-        self.psw.bytes.1 = flags;
+        self.psw.bytes.0 = flags;
     }
 }
 
@@ -104,7 +111,7 @@ impl Index<char> for RegisterArray {
                 'e' => &self.de.bytes.0,
                 'h' => &self.hl.bytes.1,
                 'l' => &self.hl.bytes.0,
-                'a' => &self.psw.bytes.0,
+                'a' => &self.psw.bytes.1,
                 _ => panic!("Invalid register"),
             }
         }
@@ -123,7 +130,7 @@ impl IndexMut<char> for RegisterArray {
                 'e' => &mut self.de.bytes.0,
                 'h' => &mut self.hl.bytes.1,
                 'l' => &mut self.hl.bytes.0,
-                'a' => &mut self.psw.bytes.0,
+                'a' => &mut self.psw.bytes.1,
                 _ => panic!("Invalid register"),
             }
         }

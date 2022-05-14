@@ -32,7 +32,8 @@ static CLOCK_CYCLES: [usize; 256] = [
 pub struct Emulator {
     pub pc: u16,
     pub sp: u16,
-    ram: Box<dyn RAM>,
+    #[wasm_bindgen(skip)]
+    pub ram: Box<dyn RAM>,
     pub reg: RegisterArray,
     input_devices: [Option<Rc<RefCell<dyn InputDevice>>>; 256],
     output_devices: [Option<Rc<RefCell<dyn OutputDevice>>>; 256],
@@ -389,7 +390,7 @@ impl Emulator {
             0xC6 => {
                 // ADI d8
                 let value = self.read_byte()?;
-                self.add_value(value as u16);
+                self.add_value(value as u16, false);
             }
             0xC7 => {
                 // RST 0
@@ -421,8 +422,8 @@ impl Emulator {
             }
             0xCE => {
                 // ACI d8
-                let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
-                self.add_value(value);
+                let mut value = self.read_byte()? as u16;
+                self.add_value(value, true);
             }
             0xCF => {
                 // RST 1
@@ -456,7 +457,7 @@ impl Emulator {
             0xD6 => {
                 // SUI D8
                 let value = self.read_byte()?;
-                self.sub_value(value as u16);
+                self.sub_value(value, false);
             }
             0xD7 => {
                 // RST 2
@@ -489,8 +490,8 @@ impl Emulator {
             }
             0xDE => {
                 // SBI d8
-                let mut value = self.read_byte()? as u16 + self.reg.get_flag("carry") as u16;
-                self.sub_value(value);
+                let mut value = self.read_byte()?;
+                self.sub_value(value, true);
             }
             0xDF => {
                 // RST 3
@@ -571,6 +572,11 @@ impl Emulator {
             0xF1 => {
                 // POP PSW
                 self.pop_reg("psw")?;
+                let psw = self.reg["psw"];
+                let flags = (psw & 0xFF) as u8;
+                let fixedFlags = (flags & 0xD5) | 0x02;
+                let fixedPSW = (psw & 0xFF00) | fixedFlags as u16;
+                self.reg["psw"] = fixedPSW;
             }
             0xF2 => {
                 // JP adr

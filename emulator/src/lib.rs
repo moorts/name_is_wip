@@ -1,4 +1,4 @@
-mod core;
+pub mod core;
 mod terminator;
 mod kreator;
 mod utils;

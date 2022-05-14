@@ -18,6 +18,7 @@ impl Emulator {
         let accumulator = self.reg['a'];
         let result = accumulator & value;
         self.set_flags(result);
+        self.reg.set_flag("aux", ((accumulator | value) & 0x08) != 0);
         self.reg['a'] = result;
     }
     
@@ -71,7 +72,7 @@ impl Emulator {
     pub fn cmp_value(&mut self, value: u8) {
         // Perform SUB but restore accumulator afterwards
         let accumulator = self.reg['a'];
-        self.sub_value(value as u16);
+        self.sub_value(value, false);
         self.reg['a'] = accumulator; 
     }
     
@@ -145,7 +146,7 @@ mod tests {
         assert_eq!(emu.reg.get_flag("sign"), false, "Sign bit");
         assert_eq!(emu.reg.get_flag("zero"), false, "Zero bit");
         assert_eq!(emu.reg.get_flag("parity"), true, "Parity bit");
-        assert_eq!(emu.reg.get_flag("aux"), false, "Auxiliary Carry bit");
+        assert_eq!(emu.reg.get_flag("aux"), true, "Auxiliary Carry bit");
         
         emu.execute_next().expect("Fuck");
         
