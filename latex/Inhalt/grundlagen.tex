@@ -98,13 +98,13 @@ Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), ode
 
 Ein Result enthält entweder einen Wert des entsprechenden Typs, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
 
-\subsection{Besitz und (De)Referenzieren}
+\subsection{Ownership und Moving}
 
 Die Verwaltung von Variablen und deren Lebensdauer, sowie Variablenzugriffe fallen unter Rusts Konzept von \glqq Ownership\grqq{} (Besitz). Es handelt sich um ein System von Regeln, die der Compiler durchsetzt um eine konsistente Garbage Collection zu ermöglichen.
 
 Grundsatz dieses Konzepts sind die sog. \glqq Owner\grqq (Besitzer) von Variablen. In Rust hat jeder Werte zu jeder Zeit (nur) einen Besitzer, eine Variable. Sollte dieser Besitzer außerhalb des Gültigkeitsbereiches liegen, wird der entsprechende Wert aus dem Speicher entfernt. Mit jeder schließenden, geschwungenen Klammer endet ein solches Scope und darin verwendete Variablen werden gelöscht. In dem Moment, in dem eine Variable von außerhalb in einen anderen Gültigkeitsbereich gegeben wird, wird diese in den neuen Bereich \glqq gemoved\grqq. Das hat zur Folge, dass eine Variable, die als Parameter an eine Methode übergeben wird, anschließend nicht mehr gültig ist. Bestimmte Typen (unter anderem \rust{i32} oder \rust{bool}) implementieren den Trait \rust{Copy}, durch den beim Moven einer Variable in ein neues Scope eine Kopie anstelle des eigentlichen Besitzers übergeben wird. Das funktioniert, weil der Speicherbedarf dieser Typen bereits zur Compilezeit bestimmbar ist.
 
-Die Einschränkung des Movens würde offensichtlich auf Dauer zum Problem werden, gäbe es keine Möglichkeit Variablen innerhalb anderer Gültigkeitsbereiche zu verwenden, ohne sie davor zu klonen oder jedes Mal als zusätzlichen Rückgabewert zurückzuliefern. Dafür bietet Rust die Möglichkeit zum \glqq Borrowing\grqq{} mittels \glqq Referencing\grqq. Das geschieht mittels vorangestelltem Et-Zeichen (\&). So wird anstelle der Variablen (dem eigentlichen Besitzer) lediglich ein Verweis auf diesen übergeben.
+Die Einschränkung des Movens würde offensichtlich auf Dauer zum Problem werden, gäbe es keine Möglichkeit Variablen innerhalb mehrerer Scopes zu verwenden. Eine Möglichkeit wäre natürlich sie davor zu klonen oder jedes Mal als zusätzlichen Rückgabewert zurückzuliefern, was allerdings ebenso unpraktisch ist. Dafür bietet Rust die Möglichkeit zum \glqq Borrowing\grqq{} mittels \glqq Referencing\grqq. Das geschieht mittels vorangestelltem Et-Zeichen (\&). So wird anstelle der Variablen (dem eigentlichen Besitzer) lediglich ein Verweis auf diesen übergeben.
 
 Soll nun der Wert einer Variablen, für den ein Gültigkeitsbereich nur eine Referenz besitzt, verändert werden, bietet Rust das \glqq Dereferencing\grqq{} an. Dazu wird der Variablen ein Sternchen (*) vorangestellt. Der beispielhafte Quellcode in \ref{lst:ownership} soll diese Konzepte veranschaulichen. Dabei existieren zwei Methoden von denen beim Aufrufen der ersten ein \glqq Move\grqq{} auftritt, die zweite Methode arbeitet mit einer Referenz. Sollte nach dem Ausführen des Codes ein lesender Zugriff auf die Variable \rust{txt} erfolgen, gäbe es einen Fehler. Im Fall von \rust{num} erhält man den Wert 20.
 
@@ -128,6 +128,21 @@ inc_val(&num); // inc_val receives a reference to the value of num
 \caption{Darstellung einiger Phänomene von Rusts Ownership}
 \end{listing}
 
+\subsection{Collections}
+
+Um mehrere Objekte eines Typens zu speichern wurde in der Arbeit und der später dargestellten Implementierung maßgeblich Datentypen genutzt, die in der Standardbibliothek von Rust enthalten sind. Deshalb wird die Rede von Maps und Vektoren sein:
+
+Vektoren dienen dem Speichern einzelner Werte desselben Typs T. So entsprechen sie der Form \rust{Vec<T>}. Sie liegen auf dem Heap und das entsprechende T muss deshalb zur Compilezeit implizit oder explizit festgelegt sein. Die Länge eines Vektors ist variabel und kann im Verlauf der Programmausführung durch typische Methoden wie \rust{pop} und \rust{push} manipuliert werden. Die Initialisierung eines Vektors kann als leere Menge erfolgen, oder auch mittels Makro \rust{vec![]} und einer kommaseparierten Liste von Elementen. Darüber hinaus ist es möglich einen Vektor zu initialisieren, der aus einer Anzahl von gleichen Werten besteht: \rust{vec![0; 10]} erzeugt einen Vektor, der zehn Einträge besitzt, die alle null sind.
+
+Wenn in der Arbeit von einer Map die Rede ist, bezieht sich das konkret auf den Typ \rust{HashMap<K, V>}. Die Funktionsweise ist analog zu der in anderen bekannten Programmiersprachen: Ein Wert vom beliebigen Typ V wird über einen Wert vom beliebigen Typ K identifiziert. Bei ihrer Verwendung ist in Rust zu beachten, dass auch hier das Konzept der Ownership gilt. Wenn also nicht bewusst Referenzen übergeben werden, werden alle Werte, bzw. ihr Besitz, beim Einfügen in die Map gemoved. Das Lesen von Elementen in einer Map geschieht mittels Schlüssel, wobei das Ergebnis im Fall von Rust \rust{Option<&V>} ist: Wenn der Schlüssel in der Map existiert, antwortet die entsprechende Methode mit einem Verweis auf den Wert, gewrappt in \rust{Some()}, ansonsten ist das Ergebnis vom Typ \rust{None}.
+
+\subsection{Tests}
+
+Während das Testen selbst kein expliziter Bestandteil der schriftlichen Ausarbeitung sein wird, war das Schreiben von Tests bei der Entwicklung unerlässlich. Deshalb soll einmal in kurzen Zügen erläutert werden, auf welchen Funktionalitäten von Rust die geschriebenen Tests basieren.
+
+Testen ist in Rust ein fester Bestandteil der Standardbibliothek und einfache Tests sind ohne die Verwendung zusätzlicher Bibliotheken oder Frameworks nötig. Der Übersicht halber bietet es sich für Unittests einer Datei an, ein eigenes Modul zu nutzen. Die Annotation \#\rust{[cfg(test)]} teilt Rust mit, wo die jeweiligen Tests zu finden sind. Außerdem kann der Compiler die Unittests dadurch für das spätere Bauen und Deployen (bzw. im Fall der Arbeit Kompilierung nach \ac{WASM}) der Anwendung vernachlässigen, da diese dort nicht mehr gebraucht werden.
+
+Innerhalb des Test-Moduls können beliebig Tests definiert werden, wobei sich ihr Aufbau und Definition nicht grundlegend von anderen Sprachen unterscheidet: Die Testmethoden besitzen in der Regel keinen Rückgabewert und werden, sofern es sich um einen auszuführenden Test handelt, mit einer Annotation (\#\rust{[test]}) versehen. Mittels verschiedenen Methoden der Standardbibliothek lassen sich dann diverse Assertions (bspw. \rust{assert_eq!()}) durchführen, wobei deren Scope nicht auf Testmethoden beschränkt ist.
 
 \section{Intel 8080}
 
