@@ -48,6 +48,22 @@ Obwohl die Funktionen in unterschiedlichen Dateien/Modulen deklariert sind, sind
 Die verschiedenen Funktionen werden dann im Code von \rust{Emulator::execute_next()} aufgerufen.
 Auch diese Funktionen geben häufig \rust{Result}s zurück, sofern die Ausführung in einem Fehler resultieren kann.
 
+\subsection{Interrupts}
+
+Über die \rust{interrupts_enabled}-Boolean wird geregelt, ob es erlaubt ist Interrupts an den Emulator zu senden. Die Folgende Methode der zentralen Struktur wird verwendet, um Interrupts auszulösen:
+
+\begin{minted}{rust}
+    pub fn interrupt(&mut self, opcode: u8) -> EResult<usize> {
+        if self.interrupts_enabled {
+            self.interrupts_enabled = false;
+            return self.execute_instruction(opcode);
+        }
+        Err("Interrupts disabled")
+    }
+\end{minted}
+
+Die wenn Interrupts erlaubt sind, wird der übergebene Opcode ausgeführt und die Boolean geflipped, andernfalls wird eine Errormeldung zurückgegeben. \rust{interrupts_enabled} ist initial \rust{false} und muss durch die entsprechenden Instruktion (\asm{EI}) gesetzt werden.
+
 \section{Assembler}
 
 \section{Disassembler}
