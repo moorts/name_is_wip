@@ -104,12 +104,12 @@ Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speic
     \item[Carry] Bei der letzten Operation gab es einen Übertrag
     \item[Sign] Das Ergebnis der letzten Operation war negativ
     \item[Parity] Die Anzahl der Einsen im Ergebnis (Basis 2) war gerade
-    \item[Auxiliary Carry] Übertrag im vierten Bit % TODO: Formulate better
+    \item[Auxiliary Carry] Überlauf im unteren Halbbyte\footnote{Siehe: \url{https://de.wikipedia.org/wiki/Hilfs\%C3\%BCbertragsflag}}
 \end{description}
 
 \subsection{Opcodes}\label{sec:opcodes}
 
-Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Diese stellt sogenannte Opcodes (Instruktionen) zur Verfügung. Dabei handelt es sich um jeweils 1 bis 3 Bytes, wobei das erste zur Identifikation der Instruktion gilt und die anderen Bytes ggf. Parameter enthalten.
+Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Diese besteht aus sogenannten Opcodes (Instruktionen). Dabei handelt es sich um jeweils 1 bis 3 Bytes, wobei das erste zur Identifikation der Instruktion gilt und die anderen Bytes ggf. Parameter enthalten.
 
 
 \subsection{Assembly}
