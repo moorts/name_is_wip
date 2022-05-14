@@ -1,0 +1,223 @@
+\chapter{Grundlagen}\label{chap:prereqs}
+
+\section{Entwicklungsumgebung}
+
+\section{WebAssembly}
+
+"\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
+Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach \ac{WASM} zu übersetzen (bspw. C/C++, Rust, usw.).
+
+In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
+
+\section{Rust}
+
+Rust ist eine moderne, performante, speichersichere Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon zur Compilezeit, wodurch die Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (bspw. C/C++). Außerdem ist Rust gut für \ac{WASM}-Anwendungen geeignet, da gute Dokumentation existiert\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
+
+In diesem Abschnitt werden einige grundlegende Sprachkonstrukte/-konzepte erläutert, die nützlich zum Verständnis dieser Arbeit sind.
+Diese Informationen stammen direkt aus der offiziellen Dokumentation: Dem Rust Book \cite{rustBook} und der Dokumentation der Standard-Library \cite{rustDoc}.
+
+\subsection{Traits}
+
+\subsection{Das \rust{match}-Statement}
+
+Das \rust{match}-Statement ist die Rust Alternative zum klassischen \code{switch-case}-Statement. Bis auf die Syntax funktioniert es sehr ähnlich:
+
+\begin{minted}{rust}
+    match x {
+        1 => /* x == 1... */,
+        2..=5 => /* x in [2,3,4,5] */,
+        ...
+        _ => // default case
+    }
+\end{minted}
+
+Rust garantiert zu Compilezeit, dass die match-Arme alle möglichen Fälle abdecken (nur relevant wenn kein default-Case vorhanden ist).
+
+\subsection{Result und Option}
+
+In Rust gibt es keinen \code{null}, stattdessen existiert der \rust{Option<T>} Typ. Option ist wie folgt definiert:
+
+\begin{minted}{rust}
+    enum Option<T> {
+        Some(T),
+        None
+    }
+\end{minted}
+
+\code{T} ist ein generischer Typ Parameter, durch Angabe eines Typen in den Spitzen Klammern, wird der im Option enthaltende Typ festgelegt:
+Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), oder oder eine 32-Bit Integer (Some(i32)). Um an den enthaltenden Wert zu kommen, muss eine Fallunterscheidung durchgeführt werden, bspw. durch ein \rust{match}-Statement. Dies garantiert, dass keine ungewollten null-References möglich sind (wie \zB ein Methodenaufruf auf \code{null}).
+
+\rust{Option<T>} wird verwendet, wenn es akzeptabel ist, dass kein Wert vorhanden ist. Andernfalls sollte \rust{Result<T, E>} verwendet werden.
+
+\begin{minted}{rust}
+    enum Result<T, E> {
+        Ok(T),
+        Err(E)
+    }
+\end{minted}
+
+Ein Result enthält entweder einen Wert des entsprechenden Typs, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
+
+
+\section{Intel 8080}
+
+Das Folgende Kapitel ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen sind dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} entnommen.
+Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis des Emulators sind.
+
+\subsubsection{RAM und Stack}
+
+Im \ac{RAM} liegt sowohl der Programmcode, als auch der Stack.
+Der \ac{RAM} des 8080 wird über 16-Bit Addressen angesprochen, hat also maximal 65536 (0x10000) verfügbare Addressen.
+
+Während der Ausführung eines Programmes zeigt der Program Counter (PC) auf die zunächst auszuführende Instruktion im \ac{RAM} und der Stack Pointer (SP) auf die Spitze des Stacks. Der Stack des 8080 wächst allerdings nach unten (Addressen sinken bei größerem Stack).
+Es ist nicht festgelegt, wo der Stack anfängt, der Programmierer muss den SP per Programm setzen. Der PC ist initial 0, außer der Entwickler setzt den Startpunkt manuell.
+
+Beim Stack handelt es sich um eine Datenstruktur im \ac{RAM}, die 2 zugreifende Operationen unterstützt: Pop und Push. Pop entfernt das oberste Element und lädt es in das angegebene Register, Push legt ein angegebenes Element auf den Stack. Die Operationen in-/dekrementieren automatisch den SP entsprechend.
+
+\subsection{Register}
+
+Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf diese kann aufgrund der Nähe zum Prozessor schnell zugegriffen werden. Der 8080 hat 8 solcher Register.
+6 dieser Register können über Assembly angesteuert werden. Jedes Register speichert einen 8-Bit Wert, zudem können die Register paarweise angesprochen werden (als ein 16-Bit Wert).
+
+\begin{table}[h]
+    \centering
+    \caption{Intel 8080 Register, benachbarte Register können paarweise angesprochen werden}
+    \label{tab:regs}
+    \begin{tabular}{|c|c|}
+        \hline
+        W & Z \\\hline
+        B & C \\\hline
+        D & E \\\hline
+        H & L \\\hline
+    \end{tabular}
+\end{table}
+
+Außerdem gibt es ein weiteres Register, den Akkumulator, welches für arithmetische Operationen verwendet wird.
+Die Abkürzung PSW (Processor Status Word), die im Bezug auf bestimmte Instruktionen verwendet wird, bezieht sich auf den Akkumulator kombiniert mit den Flags (siehe unten).
+
+\subsection{Flags}\label{sec:flags}
+
+Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), dafür gibt sogenannte Flags. Diese werden in Hardware als 5 Flip-Flops\footnote{flüchtiger 1-Bit Datenspeicher} realisiert, im Endeffekt handelt es sich einfach um Booleans. Es gibt die folgenden Flags:
+
+\begin{description}
+    \item[Zero] Letzte Operation hat 0 ergeben
+    \item[Carry] Bei der letzten Operation gab es einen Übertrag
+    \item[Sign] Das Ergebnis der letzten Operation war negativ
+    \item[Parity] Die Anzahl der Einsen im Ergebnis (Basis 2) war gerade
+    \item[Auxiliary Carry] Übertrag im vierten Bit % TODO: Formulate better
+\end{description}
+
+
+\subsection{Assembly}
+
+Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Programme in Maschinensprache sind für Menschen jedoch schlecht lesbar, daher ist die typische Abstraktion über der Maschinensprache eines Prozessors die entsprechende Assembly-Syntax.
+Es folgt eine kurze Einführung in Intel 8080 Assembly.
+
+\subsubsection{Notation}
+
+In den folgenden Sektionen werden einige Instruktionen aufgelistet und erklärt. Für diese Erklärungen wird eine einfache Notation verwendet, um wichtige Konzepte darzustellen. Buchstaben repräsentieren die entsprechenden Register (Buchstabenpaare analog die Registerpaare), eckige Klammern bedeuten, dass das innere Register(paar) als Addresse interpretiert wird und der dortige Wert gemeint ist.
+Eine kurze Übersicht ist in \cref{tab:notation} auffindbar.
+
+\begin{table}[h]
+    \centering
+    \caption{Notation zur Beschreibung der Assembly-Instruktionen}
+    \label{tab:notation}
+    \begin{tabular}{l | l}
+        A & Wert im Akkumulator\\
+        B & Wert in Register B\\
+        BC & Wert in Registerpaar BC\\
+        $[HL]$ & Wert an Addresse HL\\
+        10X & 10 in Zahlensystem X (H: Hex, D: Dez, O/Q: Oct, B: Bin)
+    \end{tabular}
+\end{table}
+
+Zahlenliterale werden durch Suffixe den entsprechenden Zahlensystemen zugewiesen --- H für Hexadezimal (Basis 16), D für Dezimal (Basis 10), O/Q für Octal (Basis 8) und B für Binär (Basis 2).
+
+\subsubsection{Registerzugriff}
+
+\begin{table}[h]
+    \centering
+    \caption{Beispielhafte Befehle zum Registerzugriff}
+    \label{tab:mov}
+    \begin{tabular}{l | l}
+        \asm{MOV B, A} & Setze B auf Wert in A\\
+        \asm{MOV M, A} & Setze $[HL]$ auf A\\
+        \asm{MOV A, M} & Setze A auf $[HL]$\\
+        \asm{MVI B, 0FFH} & Setze B auf 0FFH\\
+        \asm{LXI B, 1234H} & Setze BC auf 1234H\\
+    \end{tabular}
+\end{table}
+
+\subsubsection{Verzweigungen}
+
+Bei Assembly gibt es grundlegend 2 Verzweigungstypen: Jumps und Calls. Bei Jumps handelt es sich um direkte Sprünge zu einer Addresse im \ac{RAM}. Die äquivalente in Programmiersprachen wie C ist der \rust{goto} Befehl.
+
+Calls hingegen entsprechen grob dem Funktionsaufruf aus higher-level Sprachen. Beim Aufruf einer Call-Instruktion wird die momentane Position im Code (der PC) auf dem Stack abgelegt, dies ist die sogenannte Return-Addresse, und anschließend ein Sprung zur angegebenen Addresse (zum Funktions-Code) ausgeführt. Die Return-Instruktion stellt das Ende einer Funktion dar, sie setzt den PC auf das oberste Element des Stacks, bei korrekter Verwendung ist dies die Return-Addresse.
+
+\begin{table}[h]
+    \centering
+    \caption{Beispielhafte Befehle für Verzweigungen}
+    \label{tab:jmp}
+    \begin{tabular}{l | l}
+        \asm{JMP 0FFH} & Setze PC auf 0FFH\\
+        \asm{JZ  0FFH} & Setze PC auf 0FFH falls Zero-Flag gesetzt ist \\
+        \asm{CALL 0FFH} & Speichere PC auf dem Stack und setze ihn auf FFH \\
+        \asm{RET} & Setze PC auf oberstes Stack Element (und entferne es) \\
+    \end{tabular}
+\end{table}
+
+\subsubsection{Arithmetik}
+
+Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als Zahlen im Zweierkomplement interpretiert. Die Ergebnisse der Operationen werden hauptsächlich im Akkumulator gespeichert --- Ausnahmen sind \zB Inkrementierungen der Register. Viele der Operationen bearbeiten auch die Flags, um Informationen über das Ergebnis zurückzugeben (siehe \cref{sec:flags} für Details).
+\Cref{tab:arith} zeigt einige arithmetische Anweisungen mit einer kurzen Erklärung.
+
+\begin{table}[h]
+    \centering
+    \caption{Beispielhafte Befehle für arithmetische Operationen}
+    \label{tab:arith}
+    \begin{tabular}{l | l}
+        \asm{ADD B} & Addiere B auf Akkumulator\\
+        \asm{CMP B} & Setze Zero-Flag falls $A = B$, sonst setze Zero-Flag zurück\\
+        \asm{INR B} & Inkrementiere B um 1 \\
+    \end{tabular}
+\end{table}
+
+\subsubsection{Labels}
+
+Einen integralen Bestandteil der Programmierung mit Assembly machen \glqq Label\grqq{} aus. Es handelt sich um Sprungmarken, mittels welcher die Reihenfolge der Ausführung der Statements beeinflusst werden kann. Außerdem enthalten Labels bestimmte Werte, welche für arithmetische Operationen verwendet werden können.
+
+Die Deklaration eines Labels folgt diesem Aufbau: \asm{label: Opcode}, wobei das Label selbst optional ist. Zusätzlich kann ein Label allein in einer einzelnen Zeile stehen, in diesem Fall bezieht es sich auf die nächste vom Assembler angetroffene Instruktion. Dadurch ergibt sich auch die Möglichkeit mehrere Label auf dasselbe Byte zu beziehen, was legal ist. In all diesen Fällen referenziert ein Label den Index des Bytes im Bytecode, vor welchem es deklariert wurde. Die alleinige Deklaration eines Labels hat noch keinen Einfluss auf das vorliegende Programm.
+
+Der Name eines Labels muss mit einem Buchstaben des Alphabets, einem \glqq @\grqq{} oder \glqq ?\grqq{} beginnen, besteht aus einem bis fünf Zeichen und muss mit einem  \glqq :\grqq{} enden. Nicht erlaubt ist die Verwendung reservierter Namen (beispielsweise Namen der Register) oder mehrfache Verwendung desselben Namens. Sofern der Name eines Labels länger als fünf Zeichen ist, wird er auf die ersten fünf gekürzt.
+
+\subsubsection{Pseudo-Instruktionen}\label{chap:pseudo-instructions}
+
+Neben den eigentlichen Instruktionen bietet der Intel 8080 dem Entwickler diverse Befehle, die keinen Bytecode erzeugen, weshalb es sich um sogenannte \glqq Pseudo-Instruktionen\grqq{} handelt. Sie spielen bei der Entwicklung auf Assembly-Level eine zentrale Rolle, insofern dass sie es erlauben Konzepte wie If-Verzweigungen oder Variablen umzusetzen.
+
+Eine Pseudo-Instruktion folgt einem ähnlichen Aufbau wie herkömmliche Befehle, manche legen allerdings fest, ob das vorangestellte Namensfeld eines Befehls vorhanden sein muss, beziehungsweise darf. Bis auf einige Ausnahmen können auch hier Labels, Sprungmarken die das nachfolgende Byte referenzieren, definiert werden. Dem Entwickler stehen insgesamt fünf Pseudo-Instruktionen zur Verfügung, deren Aufbau und Funktion nun folgt:
+\linebreak
+
+\textit{Origin} erlaubt es die Adresse, in der das nächste Byte assembled wird, festzulegen. Die Syntax dafür lautet \asm{ORG exp}, wobei es sich beim zweiten Teil um eine 16-Bit-Adresse, beziehungsweise deren Repräsentation als mathematischer Ausdruck handelt. Nur Instruktionen, die auf diesen Befehl folgen, sind von ihm betroffen.
+
+\textit{Equate} erlaubt die Definition einer Konstanten mittels \asm{name EQU exp}. Jedes Vorkommnis von \glqq name\grqq{} nach dessen Definition wird vom Assembler mit dem entsprechenden Ausdruck ersetzt. Eine so definierte Variable darf nicht erneut definiert werden.
+
+\textit{Set} funktioniert identisch zu Equate (\asm{name SET exp}), erlaubt allerdings das wiederholte Definieren von Variablen.
+
+\textit{End Of Assembly} definiert das (physikalische) Ende des Programms mittels \asm{END}. Dieser Befehl muss vorkommen, allerdings nicht mehr als einmal.
+
+\textit{Conditional Assembly} dient der Programmierung mit Bedingungen und funktioniert identisch zu den bekannten If-Statements. Die Definition beginnt mit \asm{IF exp} beginnt und endet mit \asm{ENDIF}. Der Code, der sich zwischen diesen beiden Zeilen befindet, wird aufgerufen sofern der mathematische Ausdruck, der auf das \asm{IF} folgt, als wahr (ungleich 0) interpretiert wird.
+
+\textit{Macro Definition} ist die umfangreichste Pseudo-Instruktion die der Intel 8080 bietet. Mittels \asm{name MACRO list} und \asm{ENDM} lassen sich Methoden ohne Rückgabewert realisieren. Ein Makro besteht aus einem Namen, einer Menge von Befehlen und optional einer Menge von Ausdrücken, die als Parameter dienen (\asm{list}). Sofern im Assembler nun der definierte Name als Instruktion angetroffen wird, wird an dieser Stelle der Inhalt des Makros' (gegebenenfalls unter Beachtung der Parameter), eingesetzt und in Bytecode übersetzt.
+
+\subsection{Interrupts}
+
+Durch sogenannte Interrupts kann die normale Ausführung der CPU unterbrochen werden. Interrupts sind externe Signale (bspw. von Peripheriegeräten), bei denen es sich um eine einzelne Instruktion handelt. Diese Instruktion wird ausgeführt, anschließend wird die normale Ausführung fortgesetzt. Meistens handelt es sich bei dieser Instruktion um eine \asm{RST}-Instruktion, eine Gruppe von Instruktionen, die \asm{CALL}s auf fixe Addressen realisieren. Dadurch kann der Entwickler den entsprechenden Code um die Interrupts zu bearbeiten an diesen Addressen ablegen, sodass er somit ausgeführt werden kann.
+
+Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{EI}-Anweisung (Enable Interrupts) bzw. \asm{DI}-Anweisung (Disable Interrupts). Diese setzen eine interne Flag, die bestimmt ob Interrupts zugelassen sind. Interrupts während der Wert des Flags \rust{false} ist werden ignoriert. Bei Programmstart ist dies der Fall.
+
+\subsection{Peripherie}
+
+Über sogenannte Ports regelt der Intel 8080 die Datenübergabe zwischen dem Chip und den angeschlossenen Geräten. 
+Es gibt 256 verfügbare Ports, über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
+
+So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Interrupt-Routine die aktuellen Pixelwerte mitgeteilt werden, wenn das Display ein Interrupt-Signal sendet.

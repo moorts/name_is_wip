@@ -2,23 +2,19 @@ use super::super::{Emulator};
 
 impl Emulator {
     pub fn daa(&mut self) {
-        let mut acc = self.reg['a'];
-        let mut low = acc & 0x0F;
-        if low > 9 || self.reg.get_flag("aux") {
-            acc = acc.wrapping_add(6);
-            low = low + 6;
+        let mut a: u8 = 0;
+        let mut c = self.reg.get_flag("carry");
+        let lsb = self.reg['a'] & 0x0F;
+        let msb = self.reg['a'] >> 4;
+        if lsb > 9 || self.reg.get_flag("aux") {
+            a += 0x06;
         }
-        let mut high = (acc & 0xF0) >> 4;
-        if high > 9 || self.reg.get_flag("carry") {
-            high += 6;
+        if msb > 9 || self.reg.get_flag("carry") || (msb >= 9 && lsb > 9) {
+            a += 0x60;
+            c = true;
         }
-        let result = ((high & 0x0F) << 4) + (low & 0x0F);
-        self.reg.set_flag("aux", low > 0x0F);
-        self.reg.set_flag("carry", high > 0x0F);
-        self.reg.set_flag("zero", result == 0);
-        self.reg.set_flag("sign", (result & 0x80) != 0);
-        self.reg.set_flag("parity", result.count_ones() & 1 == 0);
-        self.reg['a'] = result;
+        self.add_value(a as u16, false);
+        self.reg.set_flag("carry", c);
     }
 }
 

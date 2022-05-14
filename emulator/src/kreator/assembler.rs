@@ -1,10 +1,9 @@
 use super::parser::eval;
-use super::preprocessor::get_preprocessed_code;
+use super::preprocessor::{get_preprocessed_code, get_line_map};
 use core::fmt;
 use regex::Regex;
-use std::{collections::HashMap, hash::Hash};
 
-pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
+pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]*:)";
 
 pub fn get_reserved_names() -> Vec<&'static str> {
     vec![
@@ -31,32 +30,48 @@ impl fmt::Display for Assembler {
 
 impl Assembler {
     pub fn new(input_code: &str) -> Self {
-        let mut lines = Vec::new();
-        let comment_regex = Regex::new(r";.*").unwrap();
+        let mut lines:Vec<String> = Vec::new();
 
         for line in input_code.split("\n") {
-            let line = comment_regex.replace(line, "");
-            let line = line.trim_end();
-            lines.push(String::from(line));
+            lines.push(line.trim().to_string());
         }
 
         Self { code: lines }
     }
 
     pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
-        let label_regex = Regex::new(LABEL_DECL).unwrap();
         let preprocessed_code = get_preprocessed_code(&self.code)?;
+        let origins = self.get_origins();
 
-        let mut machine_code = Vec::new();
+        let mut byte_code: Vec<u8> = Vec::new();
+        let mut current_address: u16 = 0;
+        let mut current_byte_index: usize = 0;
 
         for line in preprocessed_code {
-            let line = label_regex.replace(&line, "").trim().to_string();
-
             if !line.is_empty() && !line.contains("ORG ") {
-                machine_code.extend(to_machine_code(line)?);
+                for (origin_index, next_address) in &origins {
+                    if current_byte_index == usize::from(*origin_index) {
+                        current_address = *next_address;
+                    }
+                }
+                while byte_code.len() < current_address.into() {
+                    byte_code.push(0);
+                }
+                let bytes = to_machine_code(line)?;
+                current_byte_index += bytes.len();
+                byte_code.extend(bytes);
             }
         }
-        Ok(machine_code)
+        Ok(byte_code)
+    }
+
+    pub fn get_line_map(&self) -> Result<Vec<usize>, &'static str> {
+        let mapping = get_line_map(&self.code)?;
+        let mut mapped_vec: Vec<usize> = vec![0; mapping.len()];
+        for (byte, line) in mapping {
+            mapped_vec[byte as usize] = line;
+        }
+        Ok(mapped_vec)
     }
 
     pub fn get_origins(&self) -> Vec<(u16, u16)> {
@@ -273,7 +288,7 @@ fn to_machine_code(instruction: String) -> Result<Vec<u8>, &'static str> {
             "XTHL" => return Ok(vec![0xe3]),
             _ => return Err("Could not match instruction"),
         },
-    };
+    }
 }
 
 fn evaluate_str(str: &str) -> u16 {
@@ -448,7 +463,7 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use std::fs::File;
+    use std::fs::{File, self};
     use std::io::{self, BufRead};
 
     const OPCODE_TEST_DATA: &str = "./test_data/test_input";
@@ -458,7 +473,7 @@ mod tests {
         let code_file = "MOV A B \n JMP label \nlabel: INC ACC   ";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B\n JMP label\nlabel: INC ACC";
+        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -467,7 +482,7 @@ mod tests {
         let code_file = "MOV A B \r\n JMP label \r\nlabel: INC ACC  ";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "MOV A B\n JMP label\nlabel: INC ACC";
+        let expected_text = "MOV A B\nJMP label\nlabel: INC ACC";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -479,11 +494,11 @@ mod tests {
     }
 
     #[test]
-    fn display_remove_comments() {
+    fn display_with_comments() {
         let code_file = " \n;comment\nMOV A B ;comment\n;";
         let assembler = Assembler::new(code_file);
 
-        let expected_text = "\n\nMOV A B\n";
+        let expected_text = "\n;comment\nMOV A B ;comment\n;";
         assert_eq!(expected_text, format!("{}", assembler));
     }
 
@@ -767,6 +782,30 @@ mod tests {
         let jumps: Vec<(u16, u16)> = vec![(0, 0x1000), (6, 0x1050)];
 
         assert_eq!(jumps, assembler.get_origins());
+    }
+
+    #[test]
+    fn origins() -> io::Result<()> {
+        let code = fs::read_to_string("./src/core/asm/origins.s")?;
+        let assembler = Assembler::new(&code);
+
+        let result = assembler.assemble().unwrap();
+        assert_eq!(result[0], 0x06);
+        assert_eq!(result[1], 0x01);
+        assert_eq!(result[0x20], 0x06);
+        assert_eq!(result[0x21], 0x02);
+        assert_eq!(result[0x40], 0x06);
+        assert_eq!(result[0x41], 0x03);
+        Ok(())
+    }
+
+    #[test]
+    fn line_mapping() {
+        let code = "MOV A,B\n\nJMP 0\nEND";
+        let assembler = Assembler::new(&code);
+        let result: Vec<usize> = vec![0, 2, 2, 2];
+
+        assert_eq!(Ok(result), assembler.get_line_map());
     }
 
     #[test]

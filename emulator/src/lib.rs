@@ -1,12 +1,14 @@
-mod core;
+pub mod core;
 mod terminator;
 mod kreator;
 mod utils;
 
+use std::collections::HashMap;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
+use serde::{Serialize, Deserialize};
 
 use crate::core::emulator::Emulator;
 use crate::core::io::{InputDevice, OutputDevice};
@@ -48,6 +50,24 @@ pub fn assemble(code: &str) -> Vec<u8> {
     }
     
     return vec![];
+}
+
+#[wasm_bindgen]
+pub fn get_linemap(code: &str) -> JsValue {
+    let asm = Assembler::new(code);
+    let result = asm.get_line_map();
+    
+    match result {
+        Ok(map) => {
+            return JsValue::from_serde(&map).unwrap();
+        }
+        Err(msg) => {
+            log("Error while retrieving linemap: ");
+            log(msg);
+        }
+    }
+    
+    return JsValue::NULL;
 }
 
 #[wasm_bindgen]

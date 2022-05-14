@@ -1,1 +1,293 @@
-\chapter{Implementierung}
+\chapter{Implementierung}\label{chap:impl}
+
+\section{Emulator}
+
+\subsection{Registerarray}
+
+Im folgenden werden drei Aspekte der Implementierungen des Registerarrays gezeigt: Die Repräsentation der Register, der Zugriff auf die Register und der Zugriff auf die Flaggen.
+
+\subsubsection{Datentyp}
+
+Naive Implementierungen eines Registerarrays würden die Register einzeln implementieren und für Registerpaare die entsprechenden Inhalte konkatenieren.
+Dies ist jedoch unnötig umständlich. Der effizientere Ansatz ist die Register in Paaren zu speichern (als 16-Bit Unsigned Integer) und die Möglichkeit beizubehalten, die beiden Bytes individuell anzusprechen. In einer Sprache wie C ist dies mit Pointer-Arithmetik gut lösbar, in Rust ist es sinnvoller ein Union zu verwenden.
+
+\begin{minted}{rust}
+#[repr(C)]
+union Register {
+    bytes: (u8, u8),
+    value: u16,
+}
+\end{minted}
+
+Ein Union wird ähnlich wie ein Struct deklariert, jedoch teilen alle Felder den gleichen Speicherplatz\footnote{ausführliche Erklärung: \url{https://doc.rust-lang.org/reference/items/unions.html}}. Das bedeutet man kann den Wert eines solchen \rust{Register} entweder durch \rust{Register::bytes} als Tupel aus 2 Bytes oder durch \rust{Register::value} als 16-Bit-Wert auslesen. Dadurch ist keinerlei Konkatenation der Registerwerte notwendig.
+
+\subsubsection{Registerzugriff}
+
+Der Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer Teil der zu implementierenden Instruktionen sie benötigt. Um dies möglichst einfach zu machen, wurde Indizierung für den Registerarray implementiert. Über String-Indizierung --- \rust{reg["bc"] // Registerpaar BC} --- ist Zugriff auf Registerpaare geregelt, über Character-Indizierung --- \rust{reg['b'] // Register B} --- der normale Zugriff.
+
+\subsubsection{Flaggenzugriff}
+
+Die Flags sind bekannterweise Teil des PSW-Registerpaars, sprich sie sind als einzelnes Byte gespeichert. Um die Werte der einzelnen Flaggen zu erhalten, werden Bitmasken verwendet. Um bspw. herauszufinden, ob das Bit mit dem höchsten Stellenwert gesetzt ist, muss der Ausdruck \rust{byte & 0x80 != 0} berechnet werden. Wenn dieser \rust{true} ist, ist das Bit gesetzt\footnote{\rust{0x80 == 0b10000000}}.
+
+\subsection{Ein-/Ausgabegeräte}
+
+Wie in \cref{chap:design} zu sehen ist, beinhaltet die zentrale Struktur zwei Arrays aus 256 Elementen, um Ein- und Ausgabegeräte zu realisieren. Der Übersichtlichkeit halber wurde der Datentyp dieser Arrays vereinfacht. Bei der Umsetzung als Array ist es problematisch, dass initial keine Geräte registriert sind, der Array also leer wäre. Da es in Rust kein \rust{null} gibt, muss der Array mit dem \rust{Option}-Typ befüllt werden:
+
+\rust{[Option<InputDevice>; 256]}
+
+Diese Implementierung ist jedoch noch immer ungenügend, weil verschiedene Geräte registriert werden können. In klassischen objektorientierten Sprachen wären deshalb Input- bzw. OutputDevice als Interfaces realisiert, analog dazu gibt es in Rust Traits (siehe \cref{chap:prereqs}). Da die Größe von Trait-Objekten nicht zur Compilezeit bestimmt werden kann, kann ein solches Objekt nicht auf dem Stack gelagert werden, was für die Initialisierung der eigentlichen Arrays aber  erforderlich ist. Deshalb muss ein Pointer verwendet werden. Rust verwendet sogenannte \glqq Smartpointer\grqq{} um die klassischen Probleme bei Verwendung von Pointern zu vermeiden. Meistens wird der Typ \rust{Box} genutzt, der es allerdings verhindert Daten mehrfach zu referenzieren. Diese Möglichkeit ist jedoch notwendig, da sowohl von außen, als auch von innen mit den Geräten kommuniziert werden muss. Durch Kombination von \rust{Rc}, einem referenzzählendem Pointer, mit \rust{RefCell}, einer schreibbaren Speicherregion, kann das gewünschte Verhalten erreicht werden. Die Syntax um einen derartigen Array zu deklarieren ist wie folgt:
+
+\rust{[Option<Rc<RefCell<dyn InputDevice>>>; 256]}
+
+Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit mit einer mutable Referenz auf ein solches InputDevice gearbeitet werden. Außerdem dürfen beliebig viele non-mutable Referenzen existieren, sofern im aktuellen Scope keine mutable Referenz auf das Gerät existiert.
+
+\section{Assembler}
+
+Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \glqq preprocessor\grqq{} zur Vorverarbeitung und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels beispielhafter Code-Beispiele illustriert wird. Generell gilt, dass alle Zeilen des Programmcodes vor ihrer Behandlung durch eine Methode mittels \rust{.trim()} zugeschnitten und gegebenenfalls übergangen werden, sofern eine Leerzeile entsteht. Der Übersichtlichkeit halber ist dieser Teil des Codes an vielen Stellen ausgelassen.
+
+\subsection{Assembler.rs}
+
+Der in der Klasse \rust{assembler.rs} definierte Struct 
+\begin{minted}{rust}
+    pub struct Assembler {
+        code: Vec<String>,
+    }
+\end{minted}
+bildet eine Schnittstelle für den eigentlichen Emulator und das \ac{WASM}-Interface. Der Emulator benötigt den zu Bytecode übersetzten Input des Nutzers und liefert dem Assembler dafür bei der Initialisierung ein String-Slice, das diesen Input repräsentiert. Basierend darauf erzeugt der Assembler das Objekt \rust{code}, wobei je Zeile ein neuer String erzeugt wird. Bereits zu diesem Zeitpunkt können Kommentare (mittels Regex) entfernt werden. Dabei ist zu beachten, dass nur der Text der Kommentare entfernt werden darf, die dadurch entstehenden Leerzeilen müssen erhalten bleiben (siehe \ref{chap:preprocessor}) Obiges Struct implementiert neben der Methode \rust{assemble()} zur Generierung des Bytecodes eine Methode, die diese Bytes auf den Index der jeweiligen Zeile mappt. Das nutzt die Web-Schnittstelle um bei schrittweiser Ausführung die aktuelle Zeile ersichtlich zu machen.
+Der Assembler selbst beschränkt sich nach außen hin auf diese beiden Methoden, wobei zunächst \rust{assemble} zu betrachten ist, auf das Mapping wird in \ref{chap:preprocessor} genauer eingegangen.
+
+In seiner einfachsten Form besitzt \rust{assemble()} den Aufbau aus Listing \ref{lst:assemble}.
+
+\begin{listing}[ht]
+\begin{minted}{rust}
+pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
+	let ppc = get_preprocessed_code(&self.code)?;
+	let mut byte_code: Vec<u8> = Vec::new();
+    for line in ppc {
+        if !line.contains("ORG ") {
+	        let bytes = to_machine_code(line)?;
+            byte_code.extend(bytes);
+        }
+    }
+    Ok(byte_code)
+}
+\end{minted}
+\label{lst:assemble}
+\end{listing}
+
+Diese Implementierung erzeugt aus dem, dem Assembler bei Initialisierung übergebenen Code, einen Vektor von positiven 8-Bit-Werten. Da es sich beim ursprünglichen Code um Nutzereingaben handelt, besteht die Gefahr, dass Syntaxfehler eine Übersetzung fehlschlagen lassen. Deshalb ist die Rückgabe vom Typ \rust{Result}, womit bei einem Fehlschlag eine entsprechende Fehlermeldung zurückgegeben werden kann, anstatt dass das Programm abstürzt.
+
+Die grundlegende Funktionsweise ist letztlich das Iterieren über alle Zeilen des vom Präprozessor behandelten Codes und ein Übersetzen der jeweiligen Zeile in Bytecode. Zeilen, in denen eine nutzerdefinierte Speicheradresse (vergleiche Origins, \ref{chap:pseudo-instructions}) deklariert ist, werden durch die Vorverarbeitung mittels Präprozessor (Zeile 2) nicht entfernt, weshalb diese Zeilen noch einmal gesondert übergangen werden müssen. Die Origindeklarationen müssen erhalten werden, da der Assembler die vom Nutzer deklarierten Speicheradressen selber ausliest, dafür allerdings den vorverarbeiteten Code nutzt.
+
+Während der Entwicklung ist aufgefallen, dass es inhaltlich sinnvoll wäre, wenn der Assembler, der die Origins ohnehin ausliest, diese auch direkt auswertet. Deshalb wurde das if-Statement im Listing \ref{lst:assemble} um folgende Schleifen erweitert:
+
+\begin{listing}[ht]
+\begin{minted}{rust}
+let origins = self.get_origins();
+for (origin_index, next_address) in &origins {
+	if current_byte_index == usize::from(*origin_index) {
+        current_address = *next_address;
+    }
+}
+while byte_code.len() < current_address.into() {
+    byte_code.push(0);
+}
+\end{minted}
+\end{listing}
+
+Zunächst werden alle Origins bestimmt, welche sich als Kombination aus Byte-Index und Speicheradresse verstehen lassen. Das bedeutet der Assembler erstellt in der ersten Zeile einen \rust{Vec<(u16, u16)>}, bei dem der erste Wert der Index eines Bytes des Bytecodes ist, der zweite Wert ist die vom Nutzer definierte Speicheradresse, in die geschrieben werden soll, sobald das entsprechende Byte vom Emulator erreicht wurde. Um Bezug auf diese Angaben zu nehmen muss je Zeile überprüft werden, ob das aktuelle Byte (\rust{current_byte_index}) ein Byte ist, für das es eine explizite Speicheradresse gibt. Sofern dies der Fall ist wird die aktuelle Adresse auf den Wert der neuen Speicheradresse gesetzt. 
+
+Damit der Vektor nun an der richtigen Stelle fortgeführt wird, werden die Adressen zwischen der zuletzt beschriebenen und der neuen aktuellen Adresse mit dem Wert 0 aufgefüllt. Es sei zu beachten, dass dieser Wert ein Platzhalter ist und nicht als \glqq 0\grqq{} verstanden werden darf. Auch der Emulator muss an dieser Stelle darauf achten, dass er diese Werte nur an den Stellen als solche versteht, an denen ein entsprechender Wert erwartet wird (beispielsweise bei Befehlen wie \asm{LXI}, denen eine Zahl folgt).
+
+Wegen dieser Erweiterung werden die generierten Bytes im Listing \ref{lst:assemble} in einer separaten Variable gespeichert, da der Index des aktuellen Bytes davon abhängt und entsprechend mittels
+\rust{current_byte_index += bytes.len();}
+aktuell gehalten wird.
+
+\subsection{Vorverarbeitung}\label{chap:preprocessor}
+
+Unter Vorverarbeitung versteht sich im Bezug auf diese Arbeit und den Assembler alles was zwar vom Assembler übersetzt wird, allerdings keine Verarbeitung eines Opcodes ist. Dabei wird der vom Nutzer eingegebenen Code (ohne Kommentare) auf die Zeilen reduziert, die in den eigentlichen Bytecode übersetzt werden. Dazu zählen unter anderem das Ersetzen von Labels oder auch If-Verzweigungen. Im Quellcode wird diese Aufgabe von der Klasse \rust{preprocessor.rs} übernommen. Dabei handelt es sich um eine reine Konstruktion innerhalb des Assemblers, die außerhalb der Dokumentation beziehungsweise dem eigentlichen Aufbau des originalen Intel 8080s existiert.
+
+Neben der Vorverarbeitung bietet die Hilfsklasse eine Methode zum Mappen von Zeilen an, die der Assembler als eine Art Adapter nach außen hin bietet. Auf sie wird am Ende dieses Kapitels näher eingegangen. Zunächst sind die maßgeblichen Schritte der eigentlichen Vorverarbeitung zu betrachten. Die nachfolgende Sammlung von Vorgängen (als einzelne Methoden realisiert) fasst der Präprozessor in einer einzelnen, öffentlichen Methode \rust{get_preprocessed_code(code: &Vec<String>)} zusammen, die dem Assembler zur Verfügung gestellt wird. Man beachte das der Parametertyp einer Referenz auf den des im Assembler-Struct gespeicherten Codes entspricht.
+
+\subsubsection{Bestimmung des Programmendes}
+
+Weil dieser Schritt eindeutig und essentiell bezüglich der Korrektheit eines Assembler-Programms ist, ist es der erste Schritt in der Vorverarbeitung. Sinn dieses Schrittes ist es festzustellen, ob ein Programm ordnungsgemäß mit dem \asm{END}-Befehl abgeschlossen wurde. Sollte dies nicht der Fall sein ist jeder folgende Schritt überflüssig und das Übersetzen kann mit einer Fehlermeldung abgebrochen werden.
+
+Zur Bestimmung genügt es über alle Zeilen des Codes zu iterieren und festzustellen, ob eine einzelne Zeile \asm{END} lautet. Dabei ist wichtig, dass tatsächlich alle Codezeilen untersucht werden und nicht nach dem ersten \asm{END} ein \rust{true} geliefert wird. Deshalb bringt es auch keine nennenswerten Performanceersparnisse, sollte die Iteration am Ende des Codes beginnen. 
+
+\begin{listing}
+\begin{minted}{rust}
+let mut has_end = false;
+for line in code {
+	if line.is_empty() {
+		continue;
+	}
+	if line.trim().eq("END") {
+		if has_end {
+			return false;
+		}
+		has_end = true;
+		continue;
+	}
+	if has_end {
+		return false;
+	}
+}
+has_end
+\end{minted}
+\label{lst:end}
+\end{listing}
+
+Das Listing in \ref{lst:end} zeigt die Implementierung der Überprüfung nach dem \asm{END}. Es sind drei Fälle zu beachten, in denen das Programm inkorrekt ist und der vorliegende Code mit einem \rust{false} antworten muss. Der einfachste Fall ist die Absenz des Befehls, wobei die entsprechende Variable nie \rust{true} wird und als solche zurückgegeben wird. Im zweiten Fall folgt auf das \asm{END} eine nicht-leere Zeile (An dieser Stelle dürfen keine Kommentare im Code vorkommen), was vom letzten If-Statement gedeckt wird, welches mit einem \rust{false} antwortet, sobald ein \asm{END} gefunden wurde, die aktuell betrachtete Zeile allerdings nicht leer ist. Der letzte Fall ist das Vorhandensein mehrerer \asm{END}s, was mit einer verschachtelten If-Klausel in Zeile 6 abgedeckt wird.
+
+\subsubsection{Ersetzen von Variablen}
+
+Damit Instruktionen wie If-Verzweigungen korrekt funktionieren und ausgewertet werden können sind im nächsten Schritt Variablen durch ihre konstanten Werte zu ersetzen. Entsprechend dem besonderen Verhalten von Makros im Bezug auf Variablen (siehe Kapitel \ref{chap:pseudo-instructions}) sind zum aktuellen Zeitpunkt bereits alle Werte bestimmbar.
+
+Auch für diesen Schritt wird einmal der Code einmal Zeile für Zeile durchlaufen, wobei das Bestimmen gültiger Variablen sowie deren Ersetzung parallel erfolgen. Das schließt von vornherein aus, dass verwendete Variablen, die noch nicht deklariert wurden, fälschlicherweise ersetzt werden. Für Variablen, die mittels \asm{SET} deklariert wurden, sieht das Ganze, auf seine grundlegende Logik reduziert, wie folgt aus:
+
+\begin{listing}[th]
+\begin{minted}{rust}
+for (key, value) in &set_assignments {
+	line = replace_names(&line, assignment_map);
+}
+if line.contains(" SET ") {
+	let (name, exp) = line.split_once(" SET ").unwrap();
+    set_assignments.insert(
+    	name.to_string(),
+    	eval_str(exp.to_string())
+    );
+}
+\end{minted}
+\label{lst:var-replacement}
+\end{listing}
+
+Es sei zu beachten, dass eine Variable in vier unterschiedlichen Konstellationen auftreten kann. Im obigen Ausschnitt sind lediglich die Fälle behandelt, dass eine Variable entweder frei im Programm steht oder am Ende einer Zeile. Das vorangestellte und folgende Leerzeichen stellt sicher, dass nur Variablen ersetzt werden, deren Name vollständig entsprechend ist. Sollten diese Leerzeichen fehlen würde folgendes Beispiel nicht erwartungsgemäß funktionieren: Der Entwickler deklariert eine Variable namens \glqq Foo\grqq{} und eine zweite Variable namens \glqq FooBa\grqq. In dem Fall, dass Foo als erstes in der Map \rust{set_assignments} auftaucht, wird auch ein Aufkommen von FooBa durch Foo ersetzt, weil nicht überprüft werden würde, ob sich die beiden Namen vollständig entsprechen.
+Die übrigen Fälle, die hier fehlen, funktionieren analog, allerdings mit dem Unterschied, dass auch unmittelbar vor einer Variablen ein Komma stehen darf, auf das entsprechend geprüft wird.
+
+Für den Fall, dass sich der hintere Teil zweier Namen entspricht wird entsprechend der zwei vorangehenden Zeilen Code das Ende überprüft. Der möglicherweise intuitive Ansatz eines Entwicklers zur schöneren Implementierung mittels Regex ist an dieser Stelle nicht möglich, weil das entsprechende Crate in Rust zum Zeitpunkt der Arbeit nicht den, zur Verbesserung notwendigen, Lookahead und -behind anbietet. Diese sind notwendig da ansonsten möglicherweise wichtige Kommata und Leerzeichen verschwinden könnten.
+
+Neben dem Ersetzen von Variablen gilt es die entsprechenden Werte auszulesen, was mit einer simplen Überprüfung nach den entsprechenden Pseudo-Befehlen geschieht. Sofern ein solcher vorhanden ist, wird die Zeile aufgeteilt und in eine Map vom Typ \rust{HashMap<(String, u16)>} aufgenommen. Das geschieht unter der Bedingung, dass der Name dem vom Intel 8080 vorgegebenen Format entspricht, wofür getestet wird, dass der Name keinem reservierten Namen (Opcodes, Pseudo-Instruktionen etc.) entspricht und einem vorschriftsgemäßen Aufbau folgt. Diese Überprüfung ist einerseits das Nicht-Vorhandensein in einem Array aus reservierten Namen, andererseits das entsprechen eines Regex .
+
+Aus Gründen der Übersichtlichkeit ist die namentliche Überprüfung, sowie das Verfahren bei \asm{EQU} nicht mitaufgenommen. Letzteres funktioniert beinah analog wobei der einzige Unterschied zu \asm{SET} ist, dass in dem Fall, dass ein Variablenname bereits in der Map liegt der zugehörige Wert nicht überschrieben, sondern eine Fehlermeldung propagiert wird.
+
+\subsubsection{Bestimmung von Labels}
+
+Im nächsten Schritt sollen die im Kapitel \ref{chap:labels} vorgestellten Labels ausgelesen werden. Weil diese sich nicht auf einen Zeilenindex, sondern Byteindizes beziehen, müssen auch an dieser Stelle Origins beachtet werden, genauso wie der Inhalt der eigentlichen Zeile. Allerdings hat die Vorverarbeitung keinen Zugriff auf die Methode \rust{to_machine_code} des Assemblers zur Überführung einer Zeile in ihren Bytecode. Deshalb sind an dieser Stelle einmal alle Opcodes, in Abhängigkeit von ihrer produzierten Anzahl von Bytes (ein bis drei) in Arrays verfügbar gemacht. An dieser Stelle geht es nur um die Bestimmung deklarierter Label, ein Ersetzen der Werte erfolgt an anderer Stelle.
+
+Ähnlich der vorhergehenden Schritte wird zeilenweise über den Code iteriert. In einer Variable \rust{mem_address} wird der aktuelle Byteindex gespeichert und aktualisiert, sofern eine Zeile ein \asm{ORG}-Statement oder einen Opcdoe beinhaltet. In der resultierenden \rust{HashMap<String, u16>} verweist dann ein gefundenes Label auf den Wert der Variable, zum Zeitpunkt ihres Funds.
+
+Das Identifizieren von Labels erfolgt mittels folgendem Regex:
+
+\rust{"^( *[a-zA-Z@?][a-zA-Z@?0-9]*:)"}, was die in den Grundlagen vorgestellte Spezifikation abbildet. Es sei zu beachten, dass dieser Ausdruck alle Namen matcht, auch die mit einer Länge von mehr als fünf Zeichen. Deshalb muss jeder so gefundene Name, bevor er weiterverarbeitet wird entsprechend gekürzt werden. Sofern die Bezeichnung des Labels valide ist und überschüssige Zeichen gekürzt wurden wird das Label einem Vektor für \glqq temporäre\grqq{} Label hinzugefügt.
+
+Weil eine beliebige Menge Label auf dasselbe Byte verweisen kann wird prinzipiell davon ausgegangen, dass ein Label nicht unmittelbar vor einem Opcode steht. Stattdessen werden sie in einem separaten Vektor gesammelt und in dem Fall, dass die Methode auf einen Opcode trifft, dem eigentlichen Ergebnis beigefügt. Dieser Vektor hat einen weiteren Vorteil: In dem Fall, dass ein Label auf nichts verweist (man stelle sich vor die letzte Zeile eines Programms lautet \asm{instr:}) ist der Vektor zum Schleifenende hin nicht leer. Das kann überprüft werden und gegebenenfalls ein entsprechender Fehler zurückgeliefert werden.
+
+\subsection{Makros}
+
+Im Programmcode gelten Makros zwar als Teil der Vorverarbeitung, ihre Mächtigkeit und damit einhergehende Komplexität setzt aber eine differenziertere Betrachtung voraus. Die Verarbeitung von Makros geschieht in drei unterschiedlichen Schritten, die nachfolgend erläutert werden. Zum Zeitpunkt der Makroverarbeitung wurden im Code bereits alle Variablen durch ihre zugewiesenen Werte ersetzt. Außerdem sind alle Entwicklerkommentare entfernt worden und es wurde festgestellt, dass das Programm ein korrektes Ende besitzt.
+
+\subsubsection{Deklarationen}
+
+Bevor ein Makro aufgerufen werden kann muss es deklariert werden. Die Syntax dafür wurde bereits in Kapitel \ref{chap:pseudo-instructions} vorgestellt. Damit der Assembler eine Makroreferenz ersetzen kann, muss auch er entsprechend davor ermitteln welche Makros überhaupt deklariert wurden, was den ersten Schritt der Verarbeitung von Makros ausmacht. Das Ergebnis ist ein Tupel von zwei \rust{HashMap<String, Vec<String>>}s, wobei einmal der Name des Makros auf die enthaltenen Instruktionen und das andere Mal auf seine Liste von Parametern gemappt wird.
+
+Ähnlich anderer Vorverarbeitungsschritte muss auch an dieser Stelle über den gesamten Code iteriert werden. Besonderer Behandlung bedarf es dabei vor allem der Zeilen in denen der Start eines Makros steht (\asm{name MACRO list}) und denen in welchen ein Makro abgeschlossen wird (\asm{ENDM}). Das gesamte Verhalten während des Schleifenablaufs wird maßgeblich von der Variablen \rust{in_macro: bool} beeinflusst. Sie ist als \rust{false} initialisiert und wird in Abhängigkeit von Makrostart und -ende entsprechend verändert. 
+
+Sollte ein weiterer Makrobeginn festgestellt werden, während die Variable wahr ist, kann bereits an dieser Stelle abgebrochen werden, da der Intel 8080 es nicht erlaubt ein Makro innerhalb eines Makros zu definieren. Auch aufkommende \asm{ENDM}-Befehle, die keinen entsprechenden Anfang besitzen können mittels dieser Variable identifiziert werden. Alle anderen Zeilen werden, sofern \rust{in_macro == true} gilt in einen separaten Vektor aufgenommen, auf den später der Makroname gemappt wird. In jedem anderen Fall handelt es sich um eine Zeile, die außerhalb eines Makros steht und für den weiteren Verlauf nicht mehr relevant ist.
+
+Der restliche Arbeitsaufwand für das Finden von Makrodeklarationen beläuft sich auf das Auftrennen von Strings und eine geeignete Speicherung all dieser Werte. Listing \ref{lst:split} illustriert das Ganze beispielhaft.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+let split: Vec<&str> = line.split("MACRO").collect();
+macro_name = split[0].to_string();
+if macro_name.is_empty() {
+    return Err("Cannot define macro without name");
+}
+for par in split[1].split(",") {
+    if !par.is_empty() {
+        parameters.push(par.trim().to_string());
+    }
+}
+\end{minted}
+\label{lst:split}
+\caption{Auftrennen einer Definition eines Makros}
+\end{listing}
+
+Dabei wird eine Zeile, sofern sie das Schlüsselwort \glqq MACRO\grqq{} enthält, an eben diesem aufgetrennt. Das Ergebnis ist der Einfachheit halber ein Vektor, dessen erstes Element der Name des Makros ist, das zweite eine mögliche Liste von Parametern als String. Darauf aufbauend kann der Name (an dieser Stelle vereinfacht) validiert werden und der String der Parameter mittels einem wiederholten Auftrennen in einen Vektor aus den einzelnen Parameternamen überführt werden.
+
+Sowohl die Parameter, als auch der Code eines Makros werden, solange kein Ende gefunden wurde, in temporären Variablen gespeichert. Ihre Inhalte werden in das Endergebnis geschrieben und die Variablen geleert, sobald ein \asm{ENDM} aufkommt.
+
+\subsubsection{Referenzierungen}
+
+Sobald der Assembler eine Liste aller existierenden Makros besitzt und die Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. Außerdem kann nun der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept entspricht dem der vorhergehenden Implementierung mittels boolscher Variable, weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
+
+Bei der Erkennung von Makros wird je Zeile überprüft, ob ihr Inhalt einem Eintrag in der, im vorherigen Schritt generierten, Map vorhanden ist. In diesem Fall müssen zuerst eventuelle Parameter ermittelt werden. Das ist auf dieselbe Art und Weise implementiert, wie bereits in Listing \ref{lst:split} vorgestellt. Damit die Variablen innerhalb eines Makros durch ihre eigentlichen Werte ersetzbar sind, müssen diese entsprechend gemappt werden, was in Listing \ref{lst:var-map} zu sehen ist.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+let params = macro_params.get(macro_name).unwrap();
+for (index, parameter) in params.iter().enumerate() {
+	let value = if index >= inputs.len() {
+    	String::new()
+    } else {
+    	inputs[index].to_string()
+    };
+    input_map.insert(parameter.to_string(), value);
+}
+\end{minted}
+\label{lst:var-map}
+\caption{Mapping von Nutzereingaben auf Parameter}
+\end{listing}
+
+Dazu wird über die entsprechende Menge von Parametern, die für das Makro definiert wurden, iteriert. An dieser Stelle ist wichtig, dass über eine Aufzählung der eigentlichen Werte iteriert wird, weil der Index der Parameter über die Zuordnung bestimmt. Das ist in Zeile 6 ersichtlich, in der der beim Makroaufruf angegebene Wert ausgelesen wird. Gemäß der Spezifikation des Assemblers ist es zulässig nicht alle definierten Parameter anzugeben. In dem Fall muss der Assembler davon ausgehen, dass nur die ersten (links beginnend) Parameter übergeben wurden und ersetzt die übrigen Werte mit einem leeren String. Im Code wird dies durch einen Vergleich zwischen Index und Anzahl aller beim Aufruf übergebenen Parameter realisiert, wobei eben jene Parameter fehlen, für die es keinen Index gibt.
+
+Anschließend wird jede Instruktion des Makros an den resultierenden Vektor (\rust{Vec<String>}) angehängt. Bei diesem Vorgang werden entsprechende Vorkommnisse von Parametern in den Befehlen ersetzt. Im Gegensatz zum Ersetzen von Variablen ist die hier geforderte Implementierung komplexer, weil der Nutzer wiederum Variablennamen als Parameter angeben kann. Das führt möglicherweise zu unerwarteten Seiteneffekten sobald ein Parameter Substring eines anderen ist, weshalb das genaue Vorgehen an der vereinfachen Fassung in Listing \ref{lst:param-replace} zu sehen ist.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+while let Some(reg_match) = var_regex.find(&line) {
+    let last_match =  line.get(reg_match.end()..);
+    let start = match first_match {
+        " " | "," | "+" | "-" | "*" | "/" => reg_match.start()+1,
+        _ => reg_match.start()
+    };
+    let end = match last_match {
+        " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
+        _ => reg_match.end() -1
+    };
+let value_string = &format!("{}{}", &value, substr_prot);
+line.replace_range(start..end - 1, value_string);
+// identischer Ablauf für letztes Aufkommen eines Namens
+line.replace(replacement_protection, "").trim().to_string()
+\end{minted}
+\label{lst:param-replace}
+\caption{Ersetzung von Variablen in Makros einer einzelnen Instruktion (vereinfacht)}
+\end{listing}
+
+Der Quellcode basiert auf den Regex \rust{var_regex} und \rust{end_regex}, die mit den Strings 
+
+\rust{&format!(r"[ ,]{}[ ,+\-*/,].", variable)}, bzw. 
+
+\rust{&format!(r"[ ,]{} ?\$", variable)} definiert sind. Sie matchen Vorkommnisse von Parameternamen in einer Zeile und Verhindern, dass nur ein Substring des eigentlichen Namens gefunden wird. Mittels dem ersten der beiden Regex werden alle Namen, die nicht am Ende der Zeile stehen gefunden. Im Fall eines Treffers gibt die Methode \rust{find()} ein \rust{Option<Range>}-Objekt zurück dessen Inhalt, sofern vorhanden, in \rust{reg_match} gespeichert wird. Die darin enthaltene Range läuft vom ersten Index des Matches bis zum letzten. Aus dieser Range lassen sich das erste und letzte Zeichen des gematchten Strings bestimmen, welche in den Variablen \rust{first_match} und \rust{last_match} gespeichert sind. Die Bestimmung von letzterem ist als Referenz in Zeile 2 zu sehen.
+
+Abhängig davon, ob sich vor dem ersten (bzw. nach dem letzten) Symbol des verglichenen Namens ein weiteres Symbol befindet, muss der Index angepasst werden. Das geschieht in den Zeilen 3 bis 10. Sie definieren in Abhängigkeit des ersten und letzten Zeichens einen weiteren Index. Die beiden Indizes \rust{start} und \rust{end} verweisen somit auf den ersten und letzten Buchstaben des gefunden Namens im gesamten String \rust{line}.
+
+Nach einer erfolgreichen Bestimmung kann der so ermittelte Bereich durch den eigentlichen Wert ersetzt werden. Die erforderliche Methode stellt Rust dafür standardmäßig bereit. Allerdings wird der Wert mit einem Platzhalter (\rust{substr_prot}) erweitert. Bei ihm handelt es sich um einen String, der keiner legalen Nutzereingabe entspricht. Er dient dazu bereits ersetzte Namen kein weiteres Mal zu ersetzen.
+
+Zur Verdeutlichung ist in Tabelle \ref{tab:replace} ein Beispiel illustriert. Für das Beispiel sei das Makro \asm{mac} angenommen, das die zwei Parameter \asm{FooBar} und \asm{Foo} (in der Reihenfolge) besitzt. Der Inhalt des Makros ist der Befehl \asm{MOV FooBar, Foo}. Außerdem wurde \asm{Foo} vorher im Programm als Variable initialisiert.
+
+\begin{table}[h]
+    \centering
+    \caption{Ersetzung ohne Platzhalter}
+    \label{tab:replace}
+    \begin{tabular}{l | l}
+        \asm{mac Foo, A} & Referenz von \asm{mac} wobei FooBar = Foo, Foo = A\\
+        \asm{MOV FooBar, Foo} & Befehl vor Ersetzung\\
+        \asm{MOV Foo, Foo} & FooBar mit seinem Wert ersetzt\\
+        \asm{MOV A, Foo} & Erster Aufkommen des Parameters Foo ersetzt\\
+        \asm{MOV A, A} & Zweites Aufkommen des Parameters Foo ersetzt\\
+    \end{tabular}
+\end{table}
+
+Es wird schnell ersichtlich, dass dieses Ergebnis nicht das ist, was der Programmierer erwarten würde. Durch das Hinzufügen eines Werts, den der Nutzer nicht benutzen kann, bzw. darf, wird diesem Verhalten vorgebeugt. Denn dann wird in der dritten Zeile aus \asm{FooBar} \glqq Foo@ \%\grqq, wobei hier als Platzhalter der String \glqq @ -\grqq{} gewählt wurde. Nun matcht der Inhalt des zweiten Parameters nur noch seinem eigentlichen Aufkommen am Ende der Zeile. Sobald alle Parameter auf diese Weise ersetzt wurden, können die Platzhalter einfach mit einem leeren String ersetzt werden. Hier ist es wichtig, dass der Platzhalter so gewählt wird, dass er nicht zufällig in seinem letzten Zeichen dem ersten Zeichen eines Namens entspricht, weshalb das \glqq \%\grqq{} gewählt wurde.

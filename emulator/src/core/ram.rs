@@ -4,7 +4,7 @@ use std::io;
 use std::io::*;
 
 
-const RAM_SIZE: usize = 0x4000;
+const RAM_SIZE: usize = 0xFFFF;
 
 pub struct DefaultRam {
     mem: [u8; RAM_SIZE],
@@ -69,14 +69,14 @@ impl Index<u16> for DefaultRam {
     type Output = u8;
 
     fn index(&self, index: u16) -> &Self::Output {
-        &self.mem[(index & 0x3fff) as usize]
+        &self.mem[(index & 0xFFFF) as usize]
     }
 }
 
 impl IndexMut<u16> for DefaultRam {
     fn index_mut(&mut self, index: u16) -> &mut Self::Output {
         self.lastChange = index;
-        &mut self.mem[(index & 0x3fff) as usize]
+        &mut self.mem[(index & 0xFFFF) as usize]
     }
 }
 
@@ -97,10 +97,10 @@ mod tests {
         let mut r = DefaultRam::new();
 
         r[0] = 1;
-        r[0x5132] = 69;
+        //r[0x5132] = 69;
         assert_eq!(r[0], 1);
-        assert_eq!(r[0x4000], 1);
-        assert_eq!(r[0x1132], 69);
+        //assert_eq!(r[0x4000], 1);
+        //assert_eq!(r[0x1132], 69);
 
         r[1] = 2; r[2] = 3; r[3] = 4; r[4] = 5;
         let slice = &r[0..5];

@@ -12,15 +12,14 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
         return Err("A program must only contain one END statement and it has to be the last");
     }
 
-    let mut equate_assignments: HashMap<String, u16> = HashMap::new();
-    let mut set_assignments: HashMap<String, u16> = HashMap::new();
     let mut in_conditional = false;
     let mut condition = false;
     let mut preprocessed_code: Vec<String> = Vec::new();
     let mut pc = 0;
 
-    let labels = get_labels(code)?;
-    let code = replace_macros(code)?;
+    let code = replace_macros(&code)?;
+    let code = replace_variable_usages(&code)?;
+    let labels = get_labels(&code)?;
 
     for line in code {
         let mut owned_line = line.trim().to_string();
@@ -33,36 +32,10 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             owned_line = decl_regex.replace(&owned_line, "").to_string();
         }
 
-        // replace labels with according values
-        for (key, value) in &labels {
-            owned_line = owned_line.replace(key, &value.to_string());
-        }
+        owned_line = replace_names(&owned_line, &to_string_map(&labels));
 
-        // determine if a variable is being declared by EQU
-        if owned_line.contains("EQU") {
-            let (name, expression) = owned_line.split_once(" EQU ").unwrap();
-            if equate_assignments.contains_key(name) {
-                return Err("Can't assign a variable more than once using EQU!");
-            }
-            equate_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+        if owned_line.contains(" EQU ") || owned_line.contains(" SET ") {
             continue;
-        }
-
-        // determine if a variable is being declared by SET
-        if owned_line.contains("SET") {
-            let (name, expression) = owned_line.split_once(" SET ").unwrap();
-            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
-            continue;
-        }
-
-        // replace values of variables declared by EQU
-        for (key, value) in &equate_assignments {
-            owned_line = owned_line.replace(&format!(" {}", key), &format!(" {}", value));
-        }
-
-        // replace values of variables declared by SET
-        for (key, value) in &set_assignments {
-            owned_line = owned_line.replace(&format!(" {}", key), &format!(" {}", value));
         }
 
         // check if conditional is exited (before check for entering since "IF" is contained in "ENDIF")
@@ -89,11 +62,11 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
             }
         }
 
-        pc += 1;
+        pc += get_byte_amount_of_line(&line);
         if !owned_line.is_empty() {
             preprocessed_code.push(owned_line.trim().to_string());
         } else {
-            pc -= 1;
+            pc -= get_byte_amount_of_line(&line);
         }
     }
 
@@ -104,6 +77,167 @@ pub fn get_preprocessed_code(code: &Vec<String>) -> Result<Vec<String>, &'static
     // remove "END" from code
     preprocessed_code.remove(preprocessed_code.len() - 1);
     Ok(preprocessed_code)
+}
+
+fn to_string_map(map: &HashMap<String, u16>) -> HashMap<String, String> {
+    let mut new_map: HashMap<String, String> = HashMap::new();
+    for (key, value) in map {
+        new_map.insert(key.to_string(), value.to_string());
+    }
+    new_map
+}
+
+pub fn get_line_map(code: &Vec<String>) -> Result<HashMap<u16, usize>, &'static str> {
+    let (one_byte_labels, two_byte_labels, three_byte_labels) = get_opc_by_byte_size();
+    let label_decl = Regex::new(LABEL_DECL).unwrap();
+    let code = replace_variable_usages(code)?;
+    
+    let mut byte_to_line_map: HashMap<u16, usize> = HashMap::new();
+    let mut macro_map = HashMap::new();
+    let mut line_index: usize = 0;
+    let mut byte_index: u16 = 0;
+    let mut in_macro = false;
+    let mut in_unmet_conditional = false;
+    
+    for (index, line) in code.iter().enumerate() {
+        let line = label_decl.replace(line, "").trim().to_string();
+
+        // check if macro or conditional ends
+        if line.contains("ENDM") {
+            in_macro = false;
+        } else if line.contains("ENDIF") {
+            in_unmet_conditional = false;
+        }
+
+        if in_macro || in_unmet_conditional {
+            line_index += 1;
+            continue;
+        }
+
+        // check for (unmet) conditional
+        if line.contains("IF ") {
+            let condition = line.split_once(" ").unwrap().1;
+            if eval(condition) == 0 {
+                in_unmet_conditional = true;
+            }
+        }
+
+        // check for macros
+        if line.contains(" MACRO") {
+            in_macro = true;
+            let macro_name = line.split_once(" ").unwrap().0.to_string();
+            let mut macro_lines: Vec<String> = Vec::new();
+            let mut counter = 1;
+            while !get_commentless_code(&vec![code.get(index + counter).unwrap().to_string()]).get(0).unwrap().trim().eq("ENDM") {
+                macro_lines.push(code.get(index + counter).unwrap().to_string());
+                counter += 1;
+            }
+            let mut local_map = get_line_map(&macro_lines)?;
+            for value in local_map.values_mut() {
+                *value += line_index + 1;
+            }
+            macro_map.insert(macro_name, local_map);
+            line_index += 1;
+            continue;
+        }
+
+        let operand: &str = if line.contains(" ") {
+            line.split_once(" ").unwrap().0
+        } else {
+            &line
+        };
+        // add a line that would be assembled to the map
+        if macro_map.contains_key(&operand.to_string()) {
+            let local_map = macro_map.get(&operand.to_string()).unwrap();
+            for (local_byte, line) in local_map {
+                byte_to_line_map.insert(local_byte + byte_index, *line);
+            }
+            byte_index += local_map.len() as u16;
+        } else if one_byte_labels.contains(&operand) {
+            byte_to_line_map.insert(byte_index, line_index);
+            byte_index += 1;
+        } else if two_byte_labels.contains(&operand) {
+            byte_to_line_map.insert(byte_index, line_index);
+            byte_to_line_map.insert(byte_index + 1, line_index);
+            byte_index += 2;
+        } else if three_byte_labels.contains(&operand) {
+            byte_to_line_map.insert(byte_index, line_index);
+            byte_to_line_map.insert(byte_index + 1, line_index);
+            byte_to_line_map.insert(byte_index + 2, line_index);
+            byte_index += 3;
+        }
+        line_index += 1;
+    }
+    Ok(byte_to_line_map)
+}
+
+fn replace_variable_usages(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
+    let mut new_code: Vec<String> = Vec::new();
+    let mut equ_assignments: HashMap<String, u16> = HashMap::new();
+    let mut set_assignments: HashMap<String, u16> = HashMap::new();
+    let mut in_conditional = false;
+    let mut condition = false;
+    let name_format = Regex::new(r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4})$").unwrap();
+
+    for line in code {
+        let mut line = line.trim().to_string();
+
+
+        if line.eq("ENDIF") {
+            in_conditional = false;
+            condition = false;
+        } else if line.contains("IF") {
+            in_conditional = true;
+            let mut condition_str = line.split_once(" ").unwrap().1.to_string();
+            for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
+                for (key, value) in assignment_map {
+                    if condition_str.trim().eq(key) {
+                        condition_str = condition_str.replace(key, &value.to_string());
+                    }
+                }
+            }
+            condition = eval_str(condition_str) != 0;
+        } else if in_conditional && !condition {
+            new_code.push(line);
+            continue;
+        }
+
+        for assignment_map in vec![&equ_assignments.clone(), &set_assignments.clone()] {
+            line = replace_names(&line, &to_string_map(&assignment_map));
+        }
+
+        if line.contains(" SET ") {
+            let (name, expression) = line.split_once(" SET ").unwrap();
+            if get_reserved_names().iter().any(|&reserved_name| reserved_name == name) || !name_format.is_match(&name) {
+                return Err("Supplied illegal variable name");
+            }
+            set_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+        }
+
+        if line.contains(" EQU ") {
+            let (name, expression) = line.split_once(" EQU ").unwrap();
+            if get_reserved_names().iter().any(|&reserved_name| reserved_name == name) || !name_format.is_match(&name) {
+                return Err("Supplied illegal variable name");
+            }
+            if equ_assignments.contains_key(name) {
+                return Err("Can't assign a variable more than once using EQU!");
+            }
+            equ_assignments.insert(name.to_string(), eval_str(expression.to_string()));
+        }
+
+        new_code.push(line);
+    }
+    Ok(new_code)
+}
+
+fn get_commentless_code(code: &Vec<String>) -> Vec<String> {
+    let comment_regex = Regex::new(r";.*").unwrap();
+    let mut new_code = Vec::new();
+
+    for line in code {
+        new_code.push(comment_regex.replace_all(line, "").to_string());
+    }
+    new_code
 }
 
 fn eval_str(str: String) -> u16 {
@@ -156,37 +290,7 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
                 }
 
                 for instruction in instructions {
-                    let replacement_protection = "@";
-                    let mut line = instruction.to_string();
-
-                    for (variable, value) in &input_map {
-                        let var_regex = Regex::new(&format!(r"[ ,]{}[ ,+\-*/,].", variable)).unwrap();
-                        let end_regex = Regex::new(&format!("[ ,]{} ?$", variable)).unwrap();
-
-                        while let Some(reg_match) = var_regex.find(&line.clone()) {
-                            let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
-                            let last_match_symbol =  line.get(reg_match.end()..).unwrap();
-                            let start = match first_match_symbol {
-                                " " | "," => reg_match.start() + 1,
-                                _ => reg_match.start()
-                            };
-                            let end = match last_match_symbol {
-                                " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
-                                _ => reg_match.end() -1
-                            };
-                            line.replace_range(start..end - 1, &format!("{}{}", &value, replacement_protection));
-                        }
-                        if let Some(reg_match) = end_regex.find(&line.clone()) {
-                            let first_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
-                            let start = match first_symbol {
-                                " " | "," => reg_match.start() + 1,
-                                _ => reg_match.start()
-                            };
-                            line.replace_range(start..reg_match.end(), &format!("{}{}", &value, replacement_protection));
-                        }
-                    }
-                    line = line.replace(replacement_protection, "");
-                    macroless_code.push(line.trim().to_string());
+                    macroless_code.push(replace_names(&instruction, &input_map));
                 }
                 macroless_code.push(MACRO_END.to_string());
                 continue 'outer;
@@ -197,6 +301,39 @@ fn replace_macros(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
     }
     macroless_code = handle_macro_locals(&macroless_code).unwrap();
     Ok(macroless_code)
+}
+
+fn replace_names(line: &str, names: &HashMap<String, String>) -> String {
+    let replacement_protection = "@";
+    let mut line = line.trim().to_string();
+    
+    for (variable, value) in names {
+        let var_regex = Regex::new(&format!(r"[ ,+\-*/]{}[ ,+\-*/].", variable)).unwrap();
+        let end_regex = Regex::new(&format!(r"[ ,+\-*/]{}$", variable)).unwrap();
+
+        while let Some(reg_match) = var_regex.find(&line.clone()) {
+            let first_match_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
+            let last_match_symbol =  line.get(reg_match.end()..).unwrap();
+            let start = match first_match_symbol {
+                " " | "," | "+" | "-" | "*" | "/" => reg_match.start() + 1,
+                _ => reg_match.start()
+            };
+            let end = match last_match_symbol {
+                " " | "," | "+" | "-" | "*" | "/" => reg_match.end() - 2,
+                _ => reg_match.end() -1
+            };
+            line.replace_range(start..end - 1, &format!("{}{}", &value, replacement_protection));
+        }
+        if let Some(reg_match) = end_regex.find(&line.clone()) {
+            let first_symbol = line.get(reg_match.start()..reg_match.start() + 1).unwrap();
+            let start = match first_symbol {
+                " " | "," | "+" | "-" | "*" | "/" => reg_match.start() + 1,
+                _ => reg_match.start()
+            };
+            line.replace_range(start..reg_match.end(), &format!("{}{}", &value, replacement_protection));
+        }
+    }
+    line.replace(replacement_protection, "").trim().to_string()
 }
 
 fn handle_macro_locals(code: &Vec<String>) -> Result<Vec<String>, &'static str> {
@@ -357,17 +494,23 @@ fn get_labels(code: &Vec<String>) -> Result<HashMap<String, u16>, &'static str> 
     let mut mem_address: u16 = 0;
 
     for line in code {
+        if line.trim().is_empty() {
+            continue;
+        }
         if line.starts_with("ORG ") {
             mem_address = eval(line.split_once("ORG ").unwrap().1) as u16;
         }
         if label_regex.is_match(&line) {
-            let split = line.split(":").collect::<Vec<&str>>();
-            let label = split[0].trim_start();
-            if reserved_names.contains(&label) {
+            let (label_name, operand) = line.split_once(":").unwrap();
+            let mut label = label_name.trim_start().to_string();
+            while label.len() > 5 {
+                label.pop();
+            }
+            if reserved_names.contains(&&label[..]) {
                 return Err("illegal label name");
             }
             temp_labels.push(label.to_string());
-            if !split[1].trim().is_empty() {
+            if !operand.trim().is_empty() {
                 while let Some(new_label) = temp_labels.pop() {
                     if labels.contains_key(&new_label) {
                         return Err("label must not be assigned twice");
@@ -492,7 +635,7 @@ fn has_correct_end(code: &Vec<String>) -> bool {
         if line.is_empty() {
             continue;
         }
-        if line.trim().contains("END") && !line.contains("ENDIF") && !line.contains("ENDM") {
+        if line.trim().eq("END") {
             if has_end {
                 return false;
             }
@@ -503,20 +646,28 @@ fn has_correct_end(code: &Vec<String>) -> bool {
             return false;
         }
     }
-    return has_end;
+    has_end
 }
 
 mod tests {
     use super::*;
 
     #[test]
-    fn preprocessing_pc() {
-        let code = vec!["MOV A,B", "JMP $", "END"];
-        let ppc = get_preprocessed_code(&convert_input(code));
-        assert_eq!(Ok(convert_input(vec!["MOV A,B", "JMP 1"])), ppc);
+    fn remove_comments() {
+        let ppc = get_commentless_code(&convert_input(vec![";comment\nMOV A, B;asdf\n;END;\nEND"]));
+        let expected = convert_input(vec!["\nMOV A, B\n\nEND"]);
 
-        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["MOV $, $", "END"]));
-        assert_eq!(Ok(vec!["MOV 0, 0".to_string()]), preprocessed_code);
+        assert_eq!(ppc, expected);
+    }
+
+    #[test]
+    fn preprocessing_pc() {
+        let code = vec!["MOV A,B", "LDA 3", "JMP $", "END"];
+        let ppc = get_preprocessed_code(&convert_input(code));
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "LDA 3", "JMP 4"])), ppc);
+
+        let preprocessed_code = get_preprocessed_code(&convert_input(vec!["LDA 0", "MOV $, $", "END"]));
+        assert_eq!(Ok(convert_input(vec!["LDA 0", "MOV 3, 3"])), preprocessed_code);
     }
 
     #[test]
@@ -538,12 +689,12 @@ mod tests {
 
     #[test]
     fn label_replacement() {
-        let ppc = get_preprocessed_code(&convert_input(vec!["lab: lab", "END"]));
-        assert_eq!(Ok(vec!["0".to_string()]), ppc);
-
         let ppc =
-            get_preprocessed_code(&convert_input(vec!["MOV A, lab", "lab: RRC", "END"]));
-        assert_eq!(Ok(convert_input(vec!["MOV A, 1", "RRC"])), ppc);
+            get_preprocessed_code(&convert_input(vec!["LXI B, lab", "lab: RRC", "END"]));
+        assert_eq!(Ok(convert_input(vec!["LXI B, 3", "RRC"])), ppc);
+
+        let ppc = get_preprocessed_code(&convert_input(vec!["lab:", "MOV A,B", "label:", "IN label", "OUT lab", "END"]));
+        assert_eq!(Ok(convert_input(vec!["MOV A,B", "IN 1", "OUT 0"])), ppc);
     }
 
     #[test]
@@ -671,6 +822,19 @@ mod tests {
     }
 
     #[test]
+    fn variables_in_macros_with_if() {
+        let code = convert_input(vec!["mac MACRO", "IF var", "var SET 5", "ENDIF", "ENDM", "var SET 0", "mac", "OUT var", "END"]);
+        let ppc = get_preprocessed_code(&code).unwrap();
+
+        assert_eq!(vec!["OUT 0"], ppc);
+
+        let code = convert_input(vec!["mac MACRO", "IF var", "var SET 5", "ENDIF", "ENDM", "var SET 1", "mac", "OUT var", "END"]);
+        let ppc = get_preprocessed_code(&code).unwrap();
+
+        assert_eq!(vec!["OUT 5"], ppc);
+    }
+
+    #[test]
     fn valid_labels() {
         let code = convert_input(vec!["label:", "MOV A,B", " @LAB:", "test:", "MOV A,B"]);
         let mut labels = HashMap::new();
@@ -701,11 +865,14 @@ mod tests {
     fn duplicate_labels() {
         let labels = get_labels(&convert_input(vec!["label:", "label:", "MOV A,B"]));
         assert_eq!(Err("label must not be assigned twice!"), labels);
+
+        let code = convert_input(vec!["instr:", "instruction:", "MOV A,B"]);
+        assert_eq!(Err("label must not be assigned twice!"), get_labels(&code));
     }
 
     #[test]
     fn empty_label() {
-        let labels = get_labels(&convert_input(vec!["label:"]));
+        let labels = get_labels(&convert_input(vec!["label:", ""]));
         assert_eq!(Err("labels must not point to an empty address!"), labels);
     }
 
@@ -713,6 +880,15 @@ mod tests {
     fn illegal_label() {
         let labels = get_labels(&vec!["IF: RRC".to_string()]);
         assert_eq!(Err("illegal label name"), labels);
+    }
+
+    #[test]
+    fn long_labels() {
+        let code = convert_input(vec!["instruction: MOV A,B"]);
+        let mut labels: HashMap<String, u16> = HashMap::new();
+        labels.insert("instr".to_string(), 0);
+
+        assert_eq!(Ok(labels), get_labels(&code));
     }
 
     #[test]
@@ -765,6 +941,82 @@ mod tests {
     }
 
     #[test]
+    fn line_mapping() {
+        let code = convert_input(vec!["MOV A,B", "", "JMP 1", "label:", "lab:", "MVI D, 3H"]);
+        let mut map = HashMap::new();
+
+        map.insert(0, 0);
+        map.insert(1, 2);
+        map.insert(2, 2);
+        map.insert(3, 2);
+        map.insert(4, 5);
+        map.insert(5, 5);
+
+        assert_eq!(Ok(map.clone()), get_line_map(&code));
+
+        let code = convert_input(vec!["mac MACRO", "", "MOV A,B", "ENDM", "label:", "mac", "", "JMP 0", "mac"]);
+        map.clear();
+
+        map.insert(0, 2);
+        map.insert(1, 7);
+        map.insert(2, 7);
+        map.insert(3, 7);
+        map.insert(4, 2);
+
+        assert_eq!(Ok(map), get_line_map(&code));
+    }
+
+    #[test]
+    fn variables_apply_only_after_definition() {
+        let code = convert_input(vec!["OUT test", "test EQU 5", "OUT test"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT test", ppc[0]);
+        assert_eq!("OUT 5", ppc[2]);
+    }
+
+    #[test]
+    fn longer_variable_names() {
+        let code = convert_input(vec!["test EQU 5", "te EQU 4", "OUT te", "OUT test"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT 4", ppc[2]);
+        assert_eq!("OUT 5", ppc[3]);
+
+        let code = convert_input(vec!["Ba SET 5", "FooBa SET 10", "OUT FooBa"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT 10", ppc[2]);
+    }
+
+    #[test]
+    fn illegal_variable_names() {
+        for input in vec!["EQU", "    AAA:", "longboi"] {
+            let code = format!("{} SET 5", &input);
+            let ppc = replace_variable_usages(&vec![code]);
+
+            assert_eq!(Err("Supplied illegal variable name"), ppc);
+        }
+    }
+
+    #[test]
+    fn variable_as_variable() {
+        let code = convert_input(vec!["VAL SET 5", "test SET   VAL+ 1", "OUT test"]);
+        let ppc = replace_variable_usages(&code).unwrap();
+
+        assert_eq!("OUT 6", ppc[2]);
+    }
+
+    #[test]
+    fn variable_in_expression() {
+        let line = "OUT 5+var".to_string();
+        let mut map = HashMap::new();
+        map.insert("var".to_string(), "5".to_string());
+
+        assert_eq!("OUT 5+5", replace_names(&line, &map));
+    }
+
+    #[test]
     fn complete_code() {
         let code = convert_input(vec![
             "VAR1 EQU 123",
@@ -782,7 +1034,7 @@ mod tests {
             "ENDM",
             "",
             "macr0 input",
-            "IF 1",
+            "IF VAR1",
             "EI",
             "ENDIF",
             "END",
@@ -792,6 +1044,17 @@ mod tests {
         let result = convert_input(vec!["JMP 0 +6", "ADD C", "POP B", "RZ", "EI"]);
 
         assert_eq!(Ok(result), get_preprocessed_code(&code));
+
+        let mut map = HashMap::new();
+        map.insert(0, 1);
+        map.insert(1, 1);
+        map.insert(2, 1);
+        map.insert(3, 2);
+        map.insert(4, 8);
+        map.insert(5, 11);
+        map.insert(6, 16);
+
+        assert_eq!(Ok(map), get_line_map(&code));
     }
 
     fn convert_input(lines: Vec<&str>) -> Vec<String> {

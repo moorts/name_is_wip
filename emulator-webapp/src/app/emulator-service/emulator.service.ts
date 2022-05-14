@@ -1,5 +1,5 @@
 import { Injectable, EventEmitter } from '@angular/core';
-import init, { assemble, createEmulator, disassemble, Emulator, InitOutput, registerSpaceInvadersDevices } from "emulator";
+import init, { assemble, createEmulator, disassemble, Emulator, get_linemap, InitOutput, registerSpaceInvadersDevices } from "emulator";
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +17,7 @@ export class EmulatorService {
   private _emulatorMemory: Uint8Array = new Uint8Array();
   private _step: number = 0;
   private _loop: number = 0;
+  private _linemap: any;
   private _videoloop: number = 0;
 
   private _cpmMode: boolean = false;
@@ -52,6 +53,10 @@ export class EmulatorService {
 
   public get emulator() {
     return this._emulator;
+  }
+
+  public get linemap() {
+    return this._linemap;
   }
 
   public get registers() {
@@ -99,7 +104,9 @@ export class EmulatorService {
   public assemble(assembly: string) {
     console.log("Assembling: " + assembly);
     const result = assemble(assembly);
+    const linemap = get_linemap(assembly);
     this._initialMemory = result;
+    this._linemap = linemap;
   }
 
   public disassemble(bytes: Uint8Array): string {
