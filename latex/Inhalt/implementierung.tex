@@ -76,6 +76,7 @@ pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
 }
 \end{minted}
 \label{lst:assemble}
+\caption{Grundlegender Aufbau der Methode \rust{assemble}}
 \end{listing}
 
 Diese Implementierung erzeugt aus dem, dem Assembler bei Initialisierung übergebenen Code, einen Vektor von positiven 8-Bit-Werten. Da es sich beim ursprünglichen Code um Nutzereingaben handelt, besteht die Gefahr, dass Syntaxfehler eine Übersetzung fehlschlagen lassen. Deshalb ist die Rückgabe vom Typ \rust{Result}, womit bei einem Fehlschlag eine entsprechende Fehlermeldung zurückgegeben werden kann, anstatt dass das Programm abstürzt.
@@ -84,7 +85,7 @@ Die grundlegende Funktionsweise ist das Iterieren über alle Zeilen des vom Prä
 
 Während der Entwicklung ist aufgefallen, dass es inhaltlich sinnvoll wäre, wenn der Assembler, der die Origins ohnehin ausliest, diese auch direkt auswertet. Deshalb wurde das if-Statement im Quellcode \ref{lst:assemble} um folgende Schleifen erweitert:
 
-\begin{listing}[ht]
+\begin{listing}[th]
 \begin{minted}{rust}
 let origins = self.get_origins();
 for (origin_index, next_address) in &origins {
@@ -96,6 +97,7 @@ while byte_code.len() < current_address.into() {
     byte_code.push(0);
 }
 \end{minted}
+\caption{Beachtung von Origins im Assembler}
 \end{listing}
 
 Zunächst werden alle Origins bestimmt, welche sich als Kombination aus Byte-Index und Speicheradresse verstehen lassen. Das bedeutet der Assembler erstellt in der ersten Zeile einen Vektor vom Typ \rust{Vec<(u16, u16)>}, bei dem der erste Wert der Index eines Bytes des Bytecodes ist, der zweite Wert ist die vom Nutzer definierte Speicheradresse, in die geschrieben werden soll, sobald das entsprechende Byte vom Emulator erreicht wurde. Um Bezug auf diese Angaben zu nehmen muss je Zeile überprüft werden, ob das aktuelle Byte (\rust{current_byte_index}) ein Byte ist, für das es eine explizite Speicheradresse gibt. Sofern dies der Fall ist wird die aktuelle Adresse auf den Wert der neuen Speicheradresse gesetzt. 
@@ -103,6 +105,7 @@ Zunächst werden alle Origins bestimmt, welche sich als Kombination aus Byte-Ind
 Damit der Vektor nun an der richtigen Stelle fortgeführt wird, werden die Adressen zwischen der zuletzt beschriebenen und der neuen aktuellen Adresse mit dem Wert 0 aufgefüllt. Wichtig ist, dass dieser Wert ein Platzhalter ist und nicht als \glqq 0\grqq{} verstanden werden darf. Auch der Emulator muss an dieser Stelle darauf achten, dass er diese Werte nur an den Stellen als solche versteht, an denen ein entsprechender Wert erwartet wird (beispielsweise bei Befehlen wie \asm{LXI}, denen eine Zahl folgt).
 
 Aufgrund dieser Erweiterung werden die generierten Bytes im Quellcode \ref{lst:assemble} in einer separaten Variable gespeichert, da der Index des aktuellen Bytes davon abhängt und entsprechend mittels
+
 \rust{current_byte_index += bytes.len();}
 aktuell gehalten wird.
 
@@ -126,7 +129,9 @@ Neben der Vorverarbeitung bietet der \glqq Präprozessor\grqq{} eine Methode zum
 
 Generell gilt, dass die meisten dieser Methoden dem Schema
 
-\rust{fn method(code: &Vec<String>) -> Result<Vec<String>, &'static str>} folgen. Das bedeutet, dass sie auf der Referenz eines Vektors aus Strings operieren und einen neuen Vektor aus Strings zurückgeben. Diesem Vektor werden, je nach Auswertung, entsprechende Zeilen angehängt. Der Rückgabewert wird im folgenden auch als \glqq Ergebnisvektor\grqq{} einer Methode bezeichnet und beinhaltet eine veränderte Form des ursprünglichen Programmcodes.
+\rust{fn method(code: &Vec<String>) ->}
+
+\rust{	Result<Vec<String>, &'static str>} folgen. Das bedeutet, dass sie auf der Referenz eines Vektors aus Strings operieren und einen neuen Vektor aus Strings zurückgeben. Diesem Vektor werden, je nach Auswertung, entsprechende Zeilen angehängt. Der Rückgabewert wird im folgenden auch als \glqq Ergebnisvektor\grqq{} einer Methode bezeichnet und beinhaltet eine veränderte Form des ursprünglichen Programmcodes.
 
 \subsubsection{Bestimmung des Programmendes}
 
@@ -180,6 +185,7 @@ if line.contains(" SET ") {
 }
 \end{minted}
 \label{lst:var-replacement}
+\caption{Bestimmen und Ersetzen von mittels \asm{SET} deklarierter Variablen}
 \end{listing}
 
 Die genaue Funktionsweise der Methode \rust{replace_names} aus Zeile zwei ist im Quellcode in \ref{lst:param-replace} näher beschrieben. Letztlich beläuft sie sich darauf, die Vorkommen der Schlüssel der angegebenen Map in einem String mit den entsprechenden Werten zu ersetzen.
@@ -415,6 +421,7 @@ let operand: &str = if line.contains(" ") {
 };
 \end{minted}
 \label{lst:opcode}
+\caption{Bedingte Zuweisung}
 \end{listing}
 
 Anschließend wird geprüft, ob der Inhalt der Variable \rust{operand} in einem von drei Vektoren vorhanden ist. Diese Vektoren beinhalten alle Opcodes des Intel 8080, sortiert nach deren Anzahl Bytes. Zeilen, die keinen Opcode beinhalten, werden durch diese Implementierung automatisch gefiltert: Beispielweise wird \asm{var SET 5} zu \glqq var\grqq, was keinem Opcode entspricht und somit übergangen wird.
