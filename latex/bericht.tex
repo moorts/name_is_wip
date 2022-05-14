@@ -32,6 +32,8 @@
 \usepackage{amsmath}
 \usepackage{cleveref}
 
+\usepackage[toc,page]{appendix}
+
 \crefname{listing}{Quellcode}{Quellcode}
 \crefname{algorithm}{Algorithmus}{Algorithmus}
 \usepackage{graphicx}
@@ -43,6 +45,7 @@
 
 \renewcommand\listingscaption{Quellcode}
 \renewcommand\listoflistingscaption{Quellcodeverzeichnis}
+\renewcommand{\appendixtocname}{Anhang}
 
 \floatname{algorithm}{Algorithmus}
 
@@ -173,6 +176,8 @@ Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \include{Inhalt/design}
 \include{Inhalt/implementierung}
 \include{Inhalt/auswertung}
+
+\include{appendices}
 
 \renewcommand{\thepage}{\Roman{page}}
 \printbibliography
