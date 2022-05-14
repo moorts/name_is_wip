@@ -7,7 +7,6 @@
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
 
-
 \usepackage{fancyhdr}
 
 \usepackage{syntax}
@@ -43,7 +42,7 @@
 \usepackage{acronym}
 
 \renewcommand\listingscaption{Quellcode}
-\renewcommand\listoflistingscaption{Quellcode Verzeichnis}
+\renewcommand\listoflistingscaption{Quellcodeverzeichnis}
 
 \floatname{algorithm}{Algorithmus}
 
@@ -109,12 +108,28 @@
 }
 \makeatother
 
+\makeatletter
+\renewenvironment{abstract}{%
+  \if@twocolumn
+    \section*{\abstractname}%
+  \else
+    \small
+    \begin{center}%
+      {\bfseries \abstractname\vspace{-.5em}\vspace{\z@}}%
+    \end{center}%
+    \quotation
+  \fi}
+  {\if@twocolumn\else\endquotation\fi}
+\makeatother
+
 
 %\crefname{code}{Auflistung}{Auflistungen}
 
 \begin{document}
+\pagenumbering{Roman}
 
-\begin{titlepage}
+%\begin{titlepage}
+\thispagestyle{empty}
 \begin{center}
 \vspace*{-2cm}
 \hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
@@ -137,16 +152,21 @@ Kurs			         & \Kursbezeichnung		\\
 Ausbildungsfirma	         & \FirmenName			\\
 Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \end{tabular}
-\end{titlepage}
+%\end{titlepage}
 
 \include{erklaerung}
+\include{abstract}
 
 \tableofcontents
 
 \listoftables
+\addcontentsline{toc}{section}{Tabellenverzeichnis}
 \listoflistings
+\addcontentsline{toc}{section}{Quellcodeverzeichnis}
+\include{acro.tex}
 
-
+\clearpage
+\pagenumbering{arabic}
 \include{Inhalt/einleitung}
 \include{Inhalt/grundlagen}
 \include{Inhalt/analyse}
@@ -154,8 +174,7 @@ Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \include{Inhalt/implementierung}
 \include{Inhalt/auswertung}
 
-\include{acro.tex}
-
+\renewcommand{\thepage}{\Roman{page}}
 \printbibliography
 
 \end{document}
