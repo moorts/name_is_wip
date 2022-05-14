@@ -68,6 +68,25 @@ Die wenn Interrupts erlaubt sind, wird der übergebene Opcode ausgeführt und di
 
 \section{Disassembler}
 
+Ein Disassembler übersetzt Maschinencode zurück nach Assembly. Damit kann er zum Beispiel verwendet werden um fremden Programme verstehen zu können.
+Die Funktionsweise des Disassemblers ist sehr simpel: Die Eingabe wird Byte für Byte durchlaufen, durch ein großes Match-Statement wird der Opcode unterschieden und entsprechend des Opcodes werden 0, 1 oder 2 Bytes an Parametern gelesen. Der Opcode und die Parameter werden dann benutzt, um die entsprechende Assembly Instruktion als String zu erzeugen.
+
+\begin{minted}{rust}
+fn decode_next(&mut self) -> Result<String, &'static str> {
+    // Get next Opcode
+    let instr = self.read_byte();
+    match instr {
+        0x00 => Ok(String::from("NOP")),
+        0x01 => Ok(format!(
+            "LXI B,{}",
+            Disassembler::fmt_hex::<u16>(self.read_addr())
+        )),
+        // ...
+}
+\end{minted}
+
+Der Disassembler liefert einen Iterator über \rust{Result<String, &'static str}, wobei die Results die einzelnen Zeilen des Assembly Programmes enthalten. Der Iterator läuft bis die Eingabe vollständig abgearbeitet ist.
+
 \section{WebAssembly API}
 
 \section{Frontend}
