@@ -2,9 +2,8 @@ use super::parser::eval;
 use super::preprocessor::{get_preprocessed_code, get_line_map};
 use core::fmt;
 use regex::Regex;
-use std::{collections::HashMap, hash::Hash};
 
-pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]{0,4}:)";
+pub const LABEL_DECL: &str = r"^( *[a-zA-Z@?][a-zA-Z@?0-9]*:)";
 
 pub fn get_reserved_names() -> Vec<&'static str> {
     vec![
@@ -41,7 +40,6 @@ impl Assembler {
     }
 
     pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
-        let label_regex = Regex::new(LABEL_DECL).unwrap();
         let preprocessed_code = get_preprocessed_code(&self.code)?;
         let origins = self.get_origins();
 
@@ -50,8 +48,6 @@ impl Assembler {
         let mut current_byte_index: usize = 0;
 
         for line in preprocessed_code {
-            let line = label_regex.replace(&line, "").trim().to_string();
-
             if !line.is_empty() && !line.contains("ORG ") {
                 for (origin_index, next_address) in &origins {
                     if current_byte_index == usize::from(*origin_index) {
