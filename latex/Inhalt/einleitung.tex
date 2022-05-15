@@ -1,1 +1,14 @@
 \chapter{Einleitung}
+
+Zu sagen Maschinensprache sei allgegenwärtig ist für nicht-Informatiker eine Aussage, mit der vermutlich zuerst nicht viel angefangen werden kann. Schließlich erfolgt der Kontakt mit den meisten elektronischen Geräten im Alltag entweder durch ein Touch Panel oder unterschiedliche Formen von Schaltern und Knöpfen, keine Eingabe von Nullen und Einsen. Wird sich länger mit der Thematik befasst, muss man feststellen, dass letzten Endes alle diese Interfaces nur eine Abstraktion darstellen. Keins steuert unmittelbar das Verhalten des darunterliegenden Systems insofern, dass ein System PC wüsste, was bspw. \glqq drucke Dokument\grqq{} bedeutet.
+
+Damit Steuerungsanweisungen für elektronische Systeme verständlich werden, müssen diese in Zahlen vorliegen und zusätzlich müssen diese Zahlen interpretiert werden können. Schließlich handelt es sich um keine natürliche Form der Information. Die Interpretation geschieht seither mithilfe einer \ac{CPU}. Diese ist dazu in der Lage numerische Daten in Befehle umzusetzen und ein System mittels der Belegung von Pins, an die eventuelle Ein- und Ausgabegeräte angeschlossen sind, zu steuern.
+
+In der heutigen Zeit gibt es nur noch für wenige Entwickler den Bedarf direkt auf die \ac{CPU} zuzugreifen, höherlevelige Sprachen vereinfachen den Zugriff soweit, dass die Informationsdarstellung dem Menschen in den meisten Fällen verständlich bleibt. Um ein tieferes Verständnis von der grundlegenden Funktionsweise digitaler Systeme zu erhaletn, bietet es sich trotzdem an, einmal mit Assembler, der Sprache am nähesten an Maschinensprache, zu arbeiten.
+\medskip
+
+Durch die Leistung heutiger PCs ist zur Ausführung von Maschinencode (zu bspw. Lernzwecken) keine zusätzliche \ac{CPU} in Hardware mehr notwendig. Stattdessen lässt sich deren Verhalten, je nach benötigter Leistung des gewünschten Systems, mit modernen Prozessoren simulieren. Vorliegende Arbeit befasst sich mit eben dieser Simulation eines älteren Mikroprozessors, dem Intel 8080.
+
+Die Wahl fiel deshalb auf den Intel 8080, weil dieser als \glqq Einsteigerprozessor\grqq{} bekannt ist, sich also einerseits für Entwickler eignet, die erste Berührpunkte mit der Entwicklung auf Systemebene suchen, andererseits für die, die sich nocht nicht in großem Maß mit der Emulation solcher Systeme befasst haben. Der Ruf rührt vor allem daher, dass eine umfangreiche Dokumentation vorhanden ist und es sich um ein 8-Bit-System handelt, das eine überschaubare Menge an Befehlen unterstützt.
+
+Die Simulation ist vor allem interessant, um einen tieferen Einblick in die Funktionsweise solcher Systeme, die Vorreiter unserer heutigen Generation von PCs sind, zu erhalten. Deshalb soll nicht nur der Prozessor als solcher emuliert werden, es soll auch eine Oberfläche entwickelt werden, die dem Anwender den Systemzustand zeigt und es ermöglicht eigenen Assemblercode zu schreiben, der so nah am Maschinencode wie möglich ist.
