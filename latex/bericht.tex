@@ -7,8 +7,13 @@
 \usepackage[utf8]{inputenc}
 \usepackage[ngerman]{babel}
 
-
 \usepackage{fancyhdr}
+
+\usepackage{syntax}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
 \usepackage{parskip}
 \usepackage{csquotes}
 \usepackage{mdframed}
@@ -28,7 +33,10 @@
 \usepackage{amsmath}
 \usepackage{cleveref}
 
+\usepackage[toc]{appendix}
+
 \crefname{listing}{Quellcode}{Quellcode}
+\crefname{algorithm}{Algorithmus}{Algorithmus}
 \usepackage{graphicx}
 
 \usepackage[chapter]{minted}
@@ -37,7 +45,10 @@
 \usepackage{acronym}
 
 \renewcommand\listingscaption{Quellcode}
-\renewcommand\listoflistingscaption{Quellcode Verzeichnis}
+\renewcommand\listoflistingscaption{Quellcodeverzeichnis}
+\renewcommand{\appendixtocname}{Anhang}
+
+\floatname{algorithm}{Algorithmus}
 
 \bibliography{bericht}
 
@@ -84,11 +95,46 @@
 
 \newcommand{\code}[1]{\texttt{#1}} % Ist einfacher zu schreiben als ständig \texttt und erlaubt
 
+\newcommand{\regex}[1]{\ensuremath{
+  \begingroup
+  \makeord{+}
+  \makeord{*}
+  \makeord{?}
+  #1
+  \endgroup
+}}
+
+\makeatletter
+\newcommand{\makeord}[1]{
+  \@tempcnta=\mathcode`#1
+  \divide\@tempcnta by "1000
+  \multiply\@tempcnta by "1000
+  \mathcode`#1=\numexpr\the\mathcode`#1-\@tempcnta\relax
+}
+\makeatother
+
+\makeatletter
+\renewenvironment{abstract}{%
+  \if@twocolumn
+    \section*{\abstractname}%
+  \else
+    \small
+    \begin{center}%
+      {\bfseries \abstractname\vspace{-.5em}\vspace{\z@}}%
+    \end{center}%
+    \quotation
+  \fi}
+  {\if@twocolumn\else\endquotation\fi}
+\makeatother
+
+
 %\crefname{code}{Auflistung}{Auflistungen}
 
 \begin{document}
+\pagenumbering{Roman}
 
-\begin{titlepage}
+%\begin{titlepage}
+\thispagestyle{empty}
 \begin{center}
 \vspace*{-2cm}
 \hfill\includegraphics[width=4cm]{dhbw-logo}\\[2cm]
@@ -111,16 +157,21 @@ Kurs			         & \Kursbezeichnung		\\
 Ausbildungsfirma	         & \FirmenName			\\
 Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \end{tabular}
-\end{titlepage}
+%\end{titlepage}
 
 \include{erklaerung}
+\include{abstract}
 
 \tableofcontents
 
 \listoftables
+\addcontentsline{toc}{section}{Tabellenverzeichnis}
 \listoflistings
+\addcontentsline{toc}{section}{Quellcodeverzeichnis}
+\include{acro}
 
-
+\clearpage
+\pagenumbering{arabic}
 \include{Inhalt/einleitung}
 \include{Inhalt/grundlagen}
 \include{Inhalt/analyse}
@@ -128,8 +179,9 @@ Gutachter der Studienakademie	 & \BetreuerDHBW		\\
 \include{Inhalt/implementierung}
 \include{Inhalt/auswertung}
 
-\include{acro}
+\include{appendices}
 
+\renewcommand{\thepage}{\Roman{page}}
 \printbibliography
 
 \end{document}

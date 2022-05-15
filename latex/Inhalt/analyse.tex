@@ -15,14 +15,33 @@ Dieses soll einen Editor beinhalten, um Assembly Programme zu schreiben, die Aus
 
 Es soll sowohl möglich sein Schritt für Schritt durch ein Programm zu gehen, als auch das Programm automatisch laufen zu lassen.
 
+\section{Verwandte Arbeiten}
+
+Im folgenden sollen einige öffentlich verfügbare Projekte, die sich gleichermaßen mit der Emulation eines Intel 8080 Prozessors befasst haben, betrachtet werden. Sie sind als Beispiele zu verstehen um eine anschließende Abgrenzung dieser Arbeit zu ermöglichen. Weil es sich bei dem gewählten Prozessor um ein sehr altes, simples System handelt, existiert eine Vielzahl von Arbeiten, die im Umfang dieser Arbeit nicht alle berücksichtigt werden können.
+
+\subsection{Intel 8080 CPU Emulator (Stefan Tramm)}
+
+Bei dieser Implementierung handelt es sich um eine vollständige Emulation des Intel 8080. Der Emulator unterstützt vier Laufwerke und 13 unterschiedliche I/O-Ports. Das System realisiert ein \ac{CPM}, ein Betriebssystem, unter anderem für Intel 8080-basierte System entwickelt \cite{cpm}. Es wird durch ein VT100 Terminal im Browser bedient. Die von den Laufwerken gelesenen Daten werden innerhalb einer lokalen Web-SQL Datenbank gespeichert. Die Emulation erfolgt in nativem JavaScript \cite{intelTramm}.
+
+\subsection{8080 (superzazu)}
+
+Diese Version des Emulators wurde in C99, einem Sprachdialekt von C, entwickelt. Ziele bei der Entwicklung waren Korrektheit (überprüft mittels Test-Roms), Lesbarkeit und Portierbarkeit für andere Maschinen. Der Emulator erlaubt unter anderem die Emulation des Arcade-Klassikers \glqq Space Invaders\grqq{} (der eine zusätzliche Visualisierung benötigt)\cite{intelSuper, spaceSuper}.
+
+\subsection{js-8080-sim (Eli Bendersky)}
+
+Diese letzte Arbeit kommt der vorliegenden Aufgabe vermutlich am nähesten im Bezug auf das Ziel: Die Emulation des Intel 8080 und eine Darstellung im Webbrowser. Neben dieser Darstellung ist auch eine Ausführung über ein beliebiges Command Line Interface möglich. Das Projekt basiert auf einer JavaScript-Implementierung des Intel 8080 \cite{8080js}, das an einigen Stellen, gemäß Bedarf, angepasst wurde. Neben der Simulation des Maschinencodes mittels Fremdbibliothek wurde ein eigener Assembler und eine Weboberfläche entwickelt, die ebenfalls auf JavaScript basieren \cite{intelEli}.
+
+\subsection{Abgrenzung}
+
+Wie die herangezogenen Beispiele zeigen und auch bei weiterer Recherche festgestellt wurde, basieren viele der verfügbaren Emulatoren auf JavaScript (vor allem wenn diese im Web verfügbar sein sollten) oder (Sprachdialekten von) C. Daneben existieren vereinzelt Projekte, die auf anderen Sprachen basieren, darunter ist auch Rust vertreten \cite{intelRust}.
+
+Ein maßgeblicher Unterschied zur bisherigen Entwicklung in diesem Feld ist die Verwendung von \ac{WASM}, die bisher bei keinem Projekt festgestellt werden konnte. Unter Verwendung dieser Schnittstelle sollen die zwei vorherrschenden Aspekte der Performanz und Bedienbarkeit optimal genutzt werden: Ein schneller Emulator, geschrieben in Rust anstelle von JavaScript und eine Weboberfläche, die die Ausführung von Programmcode auf Client-Seite ermöglicht.
+
 \section{Beitrag}
 
-Unser Beitrag ist \Emu, ein in Rust geschriebener Intel 8080 Emulator mit Web-Frontend. \Emu erfüllt die gestellten Ziele vollständig.
+Unser Beitrag ist \Emu, ein in Rust geschriebener Intel 8080 Emulator mit Web-Frontend. \Emu{} erfüllt die oben vorgestellten Ziele vollständig.
 
-Dadurch, dass unser Emulator nach Web-Assembly kompiliert wird, läuft der Emulator nativ im Browser des Clienten. Durch eine explizit definierte Schnittstelle, kann der Emulator mittels JavaScript Code bedient werden.
+Dadurch, dass unser Emulator nach Web-Assembly kompiliert wird, läuft der Emulator naiv im Browser des Clienten. Durch eine explizit definierte Schnitstelle, kann der Emulator mittels JavaScript-Code bedient werden. Außerdem findet eine Übersetzung von Assembly- zu Bytecode mittels einem eigens definierten Assembler statt, der eine vollständige Unterstützung aller Opcodes und Pseudo-Instruktionen implementiert.
 
-Der Editor unterstützt Syntax-Highlighting und Code-Completion und verfügt über Knöpfe um Kompilation und Ausführung des Programmes zu ermöglichen.
-Es gibt Anzeigen für den Zustand der CPU (Register, Flaggen, etc.), für den Arbeitsspeicher und für die Peripherie-Geräte.\\
-
-In \cref{chap:design} wird unser Design für den Emulator, die API und das Frontend
-erläutert. Darauf folgend werden in \cref{chap:impl}
+Der Editor unterstützt Syntax-Highlighting sowie automatische Vervollständigung von Code und verfügt über Knöpfe um Kompilation und schrittweise, bzw. automatische, Ausführung des Programmes zu ermöglichen.
+Es gibt Anzeigen für den Zustand der CPU (Register, Flags, etc.), für den Arbeitsspeicher und für die Peripherie-Geräte.\\

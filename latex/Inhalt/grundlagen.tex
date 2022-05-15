@@ -11,12 +11,52 @@ In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript dekl
 
 \section{Rust}
 
-Rust ist eine moderne, performante, speichersichere Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon zur Compilezeit, wodurch die Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (bspw. C/C++). Außerdem ist Rust gut für \ac{WASM}-Anwendungen geeignet, da gute Dokumentation existiert\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
+Rust ist eine moderne, performante, speichersichere Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon zur Compilezeit, wodurch die Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (bspw. C/C++). Außerdem eignet sich Rust aufgrund der umfassenden Dokumentation sehr gut für \ac{WASM}-Anwendungen\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
 
 In diesem Abschnitt werden einige grundlegende Sprachkonstrukte/-konzepte erläutert, die nützlich zum Verständnis dieser Arbeit sind.
 Diese Informationen stammen direkt aus der offiziellen Dokumentation: Dem Rust Book \cite{rustBook} und der Dokumentation der Standard-Library \cite{rustDoc}.
 
+\subsection{Structs}
+
+Klassen der Objektorientierung werden in Rust mithilfe von sog. \glqq Structs\grqq{} (Structures) realisiert. Dabei handelt es sich um eigens definierbare Datentypen die über einen Namen mehrere Attribute zusammenfassen. Die Definition eines solchen Structs ist im Folgenden zu sehen. Sie sind Grundlage für die Entwicklung in der vorliegenden Arbeit, die primär auf objektorientierten Ansätzen aufbaut.
+
+\begin{minted}{rust}
+    struct Example {
+        name: String,
+	    valid: bool,
+    }
+    let ex = Example { name: String::from("Name"), valid: true};
+\end{minted}
+
+
+Wie im Beispielcode zu sehen, befinden sich in der Definition des Structs \rust{Example} keine Methoden. Das liegt daran, dass diese nicht an dieser Stelle stehen dürfen. Stattdessen geschieht dies mittels einem eigenen \glqq Implementation Block\grqq. Dieser lässt sich mittels \rust{impl Example { }} definieren. In diesem Block können nach belieben Methoden implementiert werden, die dann vom entsprechenden Struct zur Verfügung gestellt werden. 
+
+Bei ihrer Implementierung sind Methoden implizit von privatem Scope, können also nur innerhalb der \rust{.rs}-Datei genutzt werden, in der sie beschrieben sind. Das Schlüsselwort \rust{pub} erlaubt es auch in anderen Dateien entsprechende Methoden zu verwenden. Methoden die innerhalb eines mit \rust{impl} geöffneten Blocks stehen beziehen sich immer auf einen Struct und können mittels dem \rust{&self}-Objekt auf die entsprechende Instanz und deren Felder zugreifen.
+
 \subsection{Traits}
+
+Mithilfe von Traits lässt sich in Rust das Verhalten von Structs (oder allgemeiner: Typen) definieren. Die Analogie zu herkömmlichen Sprachen ist das \textit{Interface}. Genau wie diese definieren Structs eine oder mehrere Funktionalitäten, die der Compiler bei einem Objekt erwarten kann. Ihre Definition sieht ebenfalls ähnlich der von Interfaces aus:
+
+\begin{minted}{rust}
+    pub trait Behaviour {
+        fn print(&self) -> {
+            print_ln!("Not yet implemented!");
+        }
+    }
+\end{minted}
+
+
+Das Beispiel beschränkt sich auf eine Methode, \rust{print}. Traits können jedoch beliebig viele Methoden definieren. Ein entscheidender Unterschied zu herkömmlichen Interfaces ist, wie hier zu sehen, die Möglichkeit einen Methodenkörper anzugeben. So ermöglicht Rust Standardimplementierungen, auf die zurückgegriffen wird, sollte ein Typ die Methode nicht selber implementieren. Wird diese Implementierung weggelassen, also nur der Methodenkopf angegeben, setzt Rusts Compiler voraus, dass alle, den Trait implementierenden Typen, die entsprechenden Methoden implementieren.
+
+Um das Verhalten eines Typen mittels Trait zu beschreiben wird, wie im vorigen Kapitel ein Implementation Block genutzt. Der einzige Unterschied ist, dass im Anfang des Blocks der jeweilige Trait zu stehen hat:
+
+\rust{impl Behaviour for Example}
+
+Innerhalb des so geöffneten Blocks ist es dann möglich, bzw. erforderlich, die relevanten Methoden zu implementieren. Sollte lediglich die Standardimplementierung genutzt werden wollen, ist es erlaubt den Block leer zu lassen.
+
+Sobald ein Typ einen Trait definiert, lässt er sich an allen Stellen benutzen, die diesen Trait voraussetzen, abermals ähnlich zu Interfaces. Die Syntax dafür lautet 
+
+\rust{fn use_type_with_trait(item: &impl Behaviour)}
 
 \subsection{Das \rust{match}-Statement}
 
@@ -58,6 +98,51 @@ Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), ode
 
 Ein Result enthält entweder einen Wert des entsprechenden Typs, oder einen Error mit einer Error-Message des entsprechenden Typs (oft ein String).
 
+\subsection{Ownership und Moving}
+
+Die Verwaltung von Variablen und deren Lebensdauer, sowie Variablenzugriffe fallen unter Rusts Konzept von \glqq Ownership\grqq{} (Besitz). Es handelt sich um ein System von Regeln, die der Compiler durchsetzt um eine konsistente Garbage Collection zu ermöglichen.
+
+Grundsatz dieses Konzepts sind die sog. \glqq Owner\grqq (Besitzer) von Variablen. In Rust hat jeder Werte zu jeder Zeit (nur) einen Besitzer, eine Variable. Sollte dieser Besitzer außerhalb des Gültigkeitsbereiches liegen, wird der entsprechende Wert aus dem Speicher entfernt. Mit jeder schließenden, geschwungenen Klammer endet ein solches Scope und darin verwendete Variablen werden gelöscht. In dem Moment, in dem eine Variable von außerhalb in einen anderen Gültigkeitsbereich gegeben wird, wird diese in den neuen Bereich \glqq gemoved\grqq. Das hat zur Folge, dass eine Variable, die als Parameter an eine Methode übergeben wird, anschließend nicht mehr gültig ist. Bestimmte Typen (unter anderem \rust{i32} oder \rust{bool}) implementieren den Trait \rust{Copy}, durch den beim Moven einer Variable in ein neues Scope eine Kopie anstelle des eigentlichen Besitzers übergeben wird. Das funktioniert, weil der Speicherbedarf dieser Typen bereits zur Compilezeit bestimmbar ist.
+
+Die Einschränkung des Movens würde offensichtlich auf Dauer zum Problem werden, gäbe es keine Möglichkeit Variablen innerhalb mehrerer Scopes zu verwenden. Eine Möglichkeit wäre natürlich sie davor zu klonen oder jedes Mal als zusätzlichen Rückgabewert zurückzuliefern, was allerdings ebenso unpraktisch ist. Dafür bietet Rust die Möglichkeit zum \glqq Borrowing\grqq{} mittels \glqq Referencing\grqq. Das geschieht mittels vorangestelltem Et-Zeichen (\&). So wird anstelle der Variablen (dem eigentlichen Besitzer) lediglich ein Verweis auf diesen übergeben.
+
+Soll nun der Wert einer Variablen, für den ein Gültigkeitsbereich nur eine Referenz besitzt, verändert werden, bietet Rust das \glqq Dereferencing\grqq{} an. Dazu wird der Variablen ein Sternchen (*) vorangestellt. Der beispielhafte Quellcode in \ref{lst:ownership} soll diese Konzepte veranschaulichen. Dabei existieren zwei Methoden von denen beim Aufrufen der ersten ein \glqq Move\grqq{} auftritt, die zweite Methode arbeitet mit einer Referenz. Sollte nach dem Ausführen des Codes ein lesender Zugriff auf die Variable \rust{txt} erfolgen, gäbe es einen Fehler. Im Fall von \rust{num} erhält man den Wert 20.
+
+\begin{listing}[th]
+\begin{minted}{rust}
+fn take_ownrshp(var: String) {
+}   // var goes out of scope and is dropped
+
+fn inc_val(number: &i32) {
+    *number = number + 10;
+    // the value of number may be manipulated by dereferencing
+}
+
+let txt = String::from("text");
+let num = 10;
+
+take_ownrshp(txt); // ownership of txt moves into the method
+inc_val(&num); // inc_val receives a reference to the value of num
+\end{minted}
+\label{lst:ownership}
+\caption{Darstellung einiger Phänomene von Rusts Ownership}
+\end{listing}
+
+\subsection{Collections}
+
+Um mehrere Objekte eines Typens zu speichern wurde in der Arbeit und der später dargestellten Implementierung maßgeblich Datentypen genutzt, die in der Standardbibliothek von Rust enthalten sind. Deshalb wird die Rede von Maps und Vektoren sein:
+
+Vektoren dienen dem Speichern einzelner Werte desselben Typs T. So entsprechen sie der Form \rust{Vec<T>}. Sie liegen auf dem Heap und das entsprechende T muss deshalb zur Compilezeit implizit oder explizit festgelegt sein. Die Länge eines Vektors ist variabel und kann im Verlauf der Programmausführung durch typische Methoden wie \rust{pop} und \rust{push} manipuliert werden. Die Initialisierung eines Vektors kann als leere Menge erfolgen, oder auch mittels Makro \rust{vec![]} und einer kommaseparierten Liste von Elementen. Darüber hinaus ist es möglich einen Vektor zu initialisieren, der aus einer Anzahl von gleichen Werten besteht: \rust{vec![0; 10]} erzeugt einen Vektor, der zehn Einträge besitzt, die alle null sind.
+
+Wenn in der Arbeit von einer Map die Rede ist, bezieht sich das konkret auf den Typ \rust{HashMap<K, V>}. Die Funktionsweise ist analog zu der in anderen bekannten Programmiersprachen: Ein Wert vom beliebigen Typ V wird über einen Wert vom beliebigen Typ K identifiziert. Bei ihrer Verwendung ist in Rust zu beachten, dass auch hier das Konzept der Ownership gilt. Wenn also nicht bewusst Referenzen übergeben werden, werden alle Werte, bzw. ihr Besitz, beim Einfügen in die Map gemoved. Das Lesen von Elementen in einer Map geschieht mittels Schlüssel, wobei das Ergebnis im Fall von Rust \rust{Option<&V>} ist: Wenn der Schlüssel in der Map existiert, antwortet die entsprechende Methode mit einem Verweis auf den Wert, gewrappt in \rust{Some()}, ansonsten ist das Ergebnis vom Typ \rust{None}.
+
+\subsection{Tests}
+
+Während das Testen selbst kein expliziter Bestandteil der schriftlichen Ausarbeitung sein wird, war das Schreiben von Tests bei der Entwicklung unerlässlich. Deshalb soll einmal in kurzen Zügen erläutert werden, auf welchen Funktionalitäten von Rust die geschriebenen Tests basieren.
+
+Testen ist in Rust ein fester Bestandteil der Standardbibliothek und einfache Tests sind ohne die Verwendung zusätzlicher Bibliotheken oder Frameworks nötig. Der Übersicht halber bietet es sich für Unittests einer Datei an, ein eigenes Modul zu nutzen. Die Annotation \#\rust{[cfg(test)]} teilt Rust mit, wo die jeweiligen Tests zu finden sind. Außerdem kann der Compiler die Unittests dadurch für das spätere Bauen und Deployen (bzw. im Fall der Arbeit Kompilierung nach \ac{WASM}) der Anwendung vernachlässigen, da diese dort nicht mehr gebraucht werden.
+
+Innerhalb des Test-Moduls können beliebig Tests definiert werden, wobei sich ihr Aufbau und Definition nicht grundlegend von anderen Sprachen unterscheidet: Die Testmethoden besitzen in der Regel keinen Rückgabewert und werden, sofern es sich um einen auszuführenden Test handelt, mit einer Annotation (\#\rust{[test]}) versehen. Mittels verschiedenen Methoden der Standardbibliothek lassen sich dann diverse Assertions (bspw. \rust{assert_eq!()}) durchführen, wobei deren Scope nicht auf Testmethoden beschränkt ist.
 
 \section{Intel 8080}
 
@@ -182,7 +267,7 @@ Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als 
     \end{tabular}
 \end{table}
 
-\subsubsection{Labels}
+\subsubsection{Labels}\label{chap:labels}
 
 Einen integralen Bestandteil der Programmierung mit Assembly machen \glqq Label\grqq{} aus. Es handelt sich um Sprungmarken, mittels welcher die Reihenfolge der Ausführung der Statements beeinflusst werden kann. Außerdem enthalten Labels bestimmte Werte, welche für arithmetische Operationen verwendet werden können.
 
