@@ -33,7 +33,7 @@ Darauf folgen zwei Boolean, einer sagt aus, ob der Emulator am Laufen ist und de
 
 \subsection{Modularität}
 
-Der Intel 8080 ist lediglich die CPU, RAM und I/O-Geräte arbeiten prinzipiell unabhängig. Diese müssen zwar eine entsprechende Schnittstelle bereitstellen um angeschlossen werden zu können, aber können beliebig implementiert sein. Unsere Implementierung ermöglicht verschiedene Implementierungen für RAM und Input/Output-Devices zu haben. Es handelt sich bei diesen Typen jedoch nicht um Interfaces, da Rust diese nicht unterstützt. Wie genau das in Rust umgesetzt ist, wird in \cref{chap:impl} erläutert. Prinzipiell ist die Funktionsweise identisch zu der klassischer Interfaces, aber ihre Implementierungen sind beliebig.
+Der Intel 8080 ist lediglich die CPU, \ac{RAM} und I/O-Geräte arbeiten prinzipiell unabhängig. Diese müssen zwar eine entsprechende Schnittstelle bereitstellen um angeschlossen werden zu können, aber können beliebig implementiert sein. Unsere Implementierung ermöglicht verschiedene Implementierungen für \ac{RAM} und Input/Output-Devices zu haben. Es handelt sich bei diesen Typen jedoch nicht um Interfaces, da Rust diese nicht unterstützt. Wie genau das in Rust umgesetzt ist, wird in \cref{chap:impl} erläutert. Prinzipiell ist die Funktionsweise identisch zu der klassischer Interfaces, aber ihre Implementierungen sind beliebig.
 
 \subsection{Ausführung}
 
@@ -104,6 +104,67 @@ fn decode_next(&mut self) -> Result<String, &'static str> {
 
 Der Disassembler liefert einen Iterator über \rust{Result<String, &'static str>}, wobei die Results die einzelnen Zeilen des Assembly Programmes enthalten. Der Iterator läuft bis die Eingabe vollständig abgearbeitet ist.
 
-\section{WebAssembly API}
-
 \section{Frontend}
+
+Die Webanwendung, mit der Nutzer den Emulator schließlich nutzen können, stellt zwei wesentliche Funktionalitäten zur Verfügung, die nachfolgend vorgestellt werden.
+
+\subsection{Code Editor}
+
+Mit einem eingebauten Code Editor können Nutzer direkt in der Webapplikation eigene Assembly-Programme schreiben und direkt ausführen, ohne beispielsweise vorher selbst den Code assemblen zu müssen und dann manuell in den Emulator zu laden.
+
+Für den Code-Editor wird eine quelloffene Bibliothek von Microsoft genutzt, der sogenannte \textit{Monaco Editor}. Monaco ist ein browser-basierter Editor, der praktische Funktionalitäten zur Verfügung stellt, wie zum Beispiel Autovervollständigung oder Syntax-Highlighting. Die Bibliothek wird unter anderem auch in dem weit verbreiteten und ebenfalls quelloffenen Code-Editor \textit{Visual Studio Code} genutzt.
+
+\begin{figure}
+    \caption{Code-Editor der Webanwendung}
+    \centering
+    \includegraphics[width=1.0\textwidth]{Bilder/CodeEditor.png}
+    \label{fig:codeeditor}
+\end{figure}
+
+In Abbildung \ref{fig:codeeditor} sieht man den Code-Editor in Aktion. Die einzelnen Bestandteile des Assembly-Codes, die Labels, die Instruktionen und die Argumente, sowie Kommentare sind alle unterschiedlich eingefärbt.
+
+\begin{figure}
+    \caption{Autovervollständigung für Instruktionen}
+    \centering
+    \includegraphics[width=0.6\textwidth]{Bilder/Completion1.png}
+    \label{fig:completion1}
+\end{figure}
+
+In Abbildung \ref{fig:completion1} sieht man außerdem, wie die Autovervollständigung des Code-Editors funktioniert. Basierend auf der Eingabe des Nutzers und der Position im Code wird automatisch erkannt, ob eine Instruktion oder ein Argument vorgeschlagen werden soll und welche in Frage kommen.
+
+\subsection{Emulator-Zustand}
+
+Hat der Nutzer nun ein Assembly-Programm mithilfe des Code-Editors erstellt, kann er es ausführen. Hierfür wird der in Rust entwickelte Emulator genutzt, der mithilfe der \ac{WASM}-Schnittstelle in die Webapplikation eingebunden wird. Die Interaktion mit dem Emulator erfolgt mithilfe verschiedener Bedienelemente in einer Aktionsleiste am oberen Rand der Anwendung (siehe Abbildung \ref{fig:actionbar}).
+
+\begin{figure}[h]
+    \caption{Aktionsleiste des Emulators}
+    \centering
+    \includegraphics[width=0.75\textwidth]{Bilder/Aktionsleiste.png}
+    \label{fig:actionbar}
+\end{figure}
+
+\begin{figure}
+    \caption{\textit{Load}-Dialog}
+    \centering
+    \includegraphics[width=0.75\textwidth]{Bilder/LoadDialog.png}
+    \label{fig:loaddialog}
+\end{figure}
+
+Die ersten beiden Schaltflächen der Aktionsleiste, \textit{Load} und \textit{Save}, ermöglichen dem Nutzer, Assemblycode aus Dateien von seinem Endgerät zu laden oder sie dort zu speichern. \textit{Load} kann außerdem auch bereits übersetzten Code direkt in den Speicher des Emulators laden. Die Auswahl erfolgt mithilfe eines eigenen Auswahldialogs, der in Abbildung \ref{fig:loaddialog} zu sehen ist. Wird ein fertiges Programm geladen, kann außerdem bestimmt werden, an welcher Stelle es im Arbeitsspeicher platziert werden soll. Dies ist notwendig, da viele Programme beispielsweise erwarten, dass sich der Einstiegspunkt an der Speicheradresse 256 befindet.
+
+Um den Code, den der Nutzer geschrieben hat, nun zu assemblen, muss dieser in der Aktionsleiste die Funktion \textit{Assemble} nutzen. Ist der Vorgang erfolgreich, werden die Bytes, die der Assembler erzeugt, in den Hauptspeicher des Emulators geschrieben. Die Emulation kann jetzt mithilfe der grünen Schaltfläche gestartet werden. Da die CPU keinen festgelegten Endzustand hat, läuft dieser solange weiter, bis der Nutzer die Emulation wieder beendet, was mit dem roten Stop-Knopf möglich ist.
+
+Um den Ablauf des Codes nachvollziehen zu können, bietet die Applikation die Möglichkeit, jederzeit den internen Status des Prozessors einzusehen. Hierzu existiert auf der rechten Hälfte der Webseite eine Matrix, die den Arbeitsspeicher repräsentiert, sowie eine Anzeige für jedes der Register (siehe Abbildung \ref{fig:cpustate}).
+
+\begin{figure}
+    \caption{Anzeigen für den CPU-Status}
+    \centering
+    \includegraphics[width=0.75\textwidth]{Bilder/CPUState.png}
+    \label{fig:cpustate}
+\end{figure}
+
+Die \ac{RAM}-Matrix stellt in jeder Zeile 16 Addressen dar, was die einfache Zuordnung von Zeile zu Spalte mithilfe der letzten Hexadezimalstelle erlaubt. Ändert sich im Arbeitsspeicher durch eine Instruktion des Prozessors ein Wert, wird dieser für eine kurze Zeit rot hinterlegt, um einfacher zu sehen, was sich geändert hat. Da der Speicher in der Regel deutlich größer ist, als die dargestellten 16x16 Bytes, nämlich bis zu 64KB, ist es möglich, den angezeigten Speicherbereich zu verschieben.
+
+Die Registeranzeigen rechts von der \ac{RAM}-Matrix sind in zwei Kategorien gegliedert: Die 8-Bit Register (B, C, D, E, H, L, A) und die 16-Bit Register (BC, DE, HL, PSW, SP, PC).
+
+Die aktuell ausgeführte Instruktion des Prozessors (basierend auf dem Program Counter) wird im Code-Editor außerdem rot hinterlegt. Für das Debugging von Programmen gibt es die Möglichkeit, die Ausführung des Emulators mithilfe der gelben Pause-Schaltfläche in der Aktionsleiste zu pausieren. Im pausierten Zustand kann nun jede Instruktion Schritt für Schritt ausgeführt werden.

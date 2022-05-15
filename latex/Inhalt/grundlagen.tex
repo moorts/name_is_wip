@@ -1,7 +1,5 @@
 \chapter{Grundlagen}\label{chap:prereqs}
 
-\section{Entwicklungsumgebung}
-
 \section{WebAssembly}
 
 "\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
@@ -144,7 +142,7 @@ Testen ist in Rust ein fester Bestandteil der Standardbibliothek und einfache Te
 
 Innerhalb des Test-Moduls können beliebig Tests definiert werden, wobei sich ihr Aufbau und Definition nicht grundlegend von anderen Sprachen unterscheidet: Die Testmethoden besitzen in der Regel keinen Rückgabewert und werden, sofern es sich um einen auszuführenden Test handelt, mit einer Annotation (\#\rust{[test]}) versehen. Mittels verschiedenen Methoden der Standardbibliothek lassen sich dann diverse Assertions (bspw. \rust{assert_eq!()}) durchführen, wobei deren Scope nicht auf Testmethoden beschränkt ist.
 
-\section{Intel 8080}
+\section{Intel 8080}\label{chap:basics:intel8080}
 
 Das Folgende Kapitel ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen sind dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} entnommen.
 Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis des Emulators sind.
@@ -310,3 +308,84 @@ Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{E
 Es gibt 256 verfügbare Ports, über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
 
 So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Interrupt-Routine die aktuellen Pixelwerte mitgeteilt werden, wenn das Display ein Interrupt-Signal sendet.
+
+\section{Angular}
+
+Angular ist ein quelloffenes TypeScript Framework zur Entwicklung von \acp{SPA} im Web. Eine \ac{SPA} ist eine Webanwendung, die nur aus einer einzigen Webseite besteht und mithilfe von JavaScript Code Navigation ermöglicht und interaktive Bedienelemente anbietet. Nachfolgend werden einige Aspekte von Angular erläutert, die für die Entwicklung der Weboberfläche des Emulators von Bedeutung sind.
+
+\subsection{Components}
+
+Einer der Hauptbestandteile von Angular sind die \textit{Components}. Components sind wiederverwendbare Bausteine, aus denen die finale Webanwendung aufgebaut wird. Das kann beispielsweise ein Knopf sein, den der Nutzer drückt, oder ein Eingabefeld. Vergleichbar ist dieses Konzept mit den eingebauten Tags, die HTML anbietet. Allerdings können bei Angular die Tags selbst erstellt werden und mit Attributen und Events ausgestattet werden.
+
+\begin{minted}{typescript}
+    @Component({
+        selector: 'example',
+        templateUrl: './example.component.html'
+    })
+    export class ExampleComponent {
+        public heading: string = 'Hello World!';
+        
+        public onButtonClicked(): void {
+            console.log('Button was clicked!');
+        }
+    }
+\end{minted}
+
+In diesem Codeabschnitt wird eine Beispiel-Komponente mithilfe von TypeScript definiert. Eine Komponente besteht aus einer Klasse, die mit der \ts{@Component} Annotation versehen wird. Die Annotation verlangt einige Parameter: Der \ts{selector} bestimmt wie das HTML-Element heißt, durch das die Komponente am Ende auf der Webseite eingefügt werden kann. Die Eigenschaft \ts{templateUrl} gibt den Pfad zu einer HTML-Vorlage an, die bestimmt, wie die Komponente schließlich auf der Webseite dargestellt wird. Innerhalb der Klasse wird im Beispiel eine öffentliche Variable mit dem Namen \ts{heading} definiert, die den Wert \ts{'Hello World'} hat. Außerdem wird eine öffentliche Methode mit dem Namen \ts{onButtonClicked()} definiert, die eine Nachricht in der Konsole des Browsers ausgibt.
+
+Das Template der Komponente sieht folgendermaßen aus:
+
+\begin{minted}{html}
+    <div>
+        <h1>{{ heading }}</h1>
+        <button (click)="onButtonClicked()">Click me</button>
+    </div>
+\end{minted}
+
+Dargestellt wird die Komponente als HTML-Block. Innerhalb des Blocks befindet sich eine Überschrift. Im \code{<h1>}-Tag sieht man nun ein weiteres Feature von Angular. Hier wird eine sogenannte \textbf{Text interpolation} definiert, die dafür sorgt, dass der Wert der Variable \ts{heading} auf der Webseite angezeigt wird. Unterhalb der Überschrift wird nun ein \code{<button>} angezeigt. Auch hier kommt ein Feature von Angular zum Einsatz, ein sogenanntes \textbf{Event binding}. An das \code{click} Event des Knopfes wird die in der Klasse der Komponente definierte Methode \ts{onButtonClicked()} gebunden, die nun bei jedem Klick auf den Knopf aufgerufen wird.
+
+\subsection{Services}
+
+Viele Komponenten einer Anwendung greifen auf gemeinsame Daten und Funktionen zu. Für diesen Anwendungsfall stellt Angular \textit{Services} zur Verfügung. Das sind TypeScript Klassen, die mithilfe von Dependency Injection in anderen Services oder auch Komponenten genutzt werden können, um beispielsweise auf ein geteiltes Datenrepository zuzugreifen.
+
+\begin{minted}{typescript}
+    @Injectable({
+        providedIn: 'root'
+    })
+    export class ExampleService {
+        private counter: number = 0;
+        
+        public increaseCounter(): void {
+            this.counter += 1;
+        }
+
+        public getCounter(): number {
+            return this.counter;
+        }
+    }
+\end{minted}
+
+In diesem Codebeispiel sieht man wie ein Service aufgebaut ist. Er besteht lediglich aus einer TypeScript Klasse, die mit der \ts{@Injectable}-Annotation versehen ist. Die Eigenschaft \ts{providedIn: 'root'} gibt hier an, dass der Service als Singleton zur Verfügung gestellt wird und sich schließlich alle Komponenten, die den Service nutzen, die selbe Instanz teilen.
+
+Um den Service zu nutzen muss eine Komponente diesen einfach nur in dessen Konstruktor anfordern:
+
+\begin{minted}{typescript}
+    @Component({
+        selector: 'example',
+        templateUrl: './example.component.html'
+    })
+    export class ExampleComponent {
+
+        private readonly exampleService: ExampleService;
+
+        constructor(exampleService: ExampleService) {
+            this.exampleService = exampleService;
+        }
+
+        public onButtonClicked(): void {
+            this.exampleService.increaseCounter();
+        }
+    }
+\end{minted}
+
+Das Dependency Injection Framework von Angular sorgt nun bei der Erstellung der Komponente dafür, dass der Service korrekt injiziert wird.
