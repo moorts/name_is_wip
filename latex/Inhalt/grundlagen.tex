@@ -1,39 +1,45 @@
 \chapter{Grundlagen}\label{chap:prereqs}
 
+Bevor die konkrete Arbeit beschrieben wird, gilt es eine theoretische Grundlage zu schaffen. Das folgende Kapitel bietet einen Überblick über die Sprache Rust, verwendete Frameworks sowie den Intel 8080 und \ac{WASM}. Alle der Informationen wurden im Hinblick auf das fundamentale Gerüst der Arbeit zusammengetragen und sollen sowohl den Einstieg in die Thematik erleichtern, als auch ein tieferes Verständnis ermöglichen.
+
 \section{WebAssembly}
 
-"\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine low-level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung naives Maschinen-Codes. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\% Performance-Diskrepanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
+Laut Rust definiert sich \ac{WASM} wie folgt: "\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine Low-Level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung von naivem Maschinen-Code. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\%ige Diskrepanz bei der Performanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
 Für viele Programmiersprachen gibt es entsprechende Compiler, die es ermöglichen nach \ac{WASM} zu übersetzen (bspw. C/C++, Rust, usw.).
 
-In der entsprechenden Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
+In der jeweiligen Sprache muss explizit die Schnittstelle zu JavaScript deklariert werden, um festzulegen welche Funktionalitäten dem Frontend zur Verfügung stehen.
 
 \section{Rust}
 
 Rust ist eine moderne, performante, speichersichere Programmiersprache\footnote{siehe \url{https://www.rust-lang.org/} für mehr}. Rust's Sprachmodell verhindert die meisten Laufzeitfehler schon zur Compilezeit, wodurch die Entwicklung deutlich angenehmer wird als bei vergleichbaren Sprachen (bspw. C/C++). Außerdem eignet sich Rust aufgrund der umfassenden Dokumentation sehr gut für \ac{WASM}-Anwendungen\footnote{siehe \url{https://rustwasm.github.io/docs/book/}}.
 
 In diesem Abschnitt werden einige grundlegende Sprachkonstrukte/-konzepte erläutert, die nützlich zum Verständnis dieser Arbeit sind.
-Diese Informationen stammen direkt aus der offiziellen Dokumentation: Dem Rust Book \cite{rustBook} und der Dokumentation der Standard-Library \cite{rustDoc}.
+Die Informationen stammen direkt aus der offiziellen Dokumentation: Dem Rust Book \cite{rustBook} und der Dokumentation der Standard-Library \cite{rustDoc}.
 
 \subsection{Structs}
 
-Klassen der Objektorientierung werden in Rust mithilfe von sog. \glqq Structs\grqq{} (Structures) realisiert. Dabei handelt es sich um eigens definierbare Datentypen die über einen Namen mehrere Attribute zusammenfassen. Die Definition eines solchen Structs ist im Folgenden zu sehen. Sie sind Grundlage für die Entwicklung in der vorliegenden Arbeit, die primär auf objektorientierten Ansätzen aufbaut.
+Klassen der Objektorientierung werden in Rust mithilfe von sog. \glqq Structs\grqq{} (von structures, \textit{Strukturen}) realisiert. Dabei handelt es sich um eigens definierbare Datentypen, die über einen Namen mehrere Attribute zusammenfassen. Die Definition eines solchen Structs ist im Folgenden zu sehen. Sie sind Grundlage für die Entwicklung in der vorliegenden Arbeit, die primär auf objektorientierten Ansätzen aufbaut.
 
 \begin{minted}{rust}
     struct Example {
         name: String,
 	    valid: bool,
     }
-    let ex = Example { name: String::from("Name"), valid: true};
+    let ex = Example { 
+        name: String::from("Name"), 
+        valid: true
+    };
 \end{minted}
 
+Die Instantiierung eines Structs kann, wie im Beispiel zu sehen, über dessen Namen und explizites Aufführen der Felder geschehen. Sollten sich Namen von Variablen und mit ihnen zu instantiierende Felder gleichen, dürfen diese als implizit definiert angenommen werden. In vielen Fällen implementieren Structs jedoch eine \rust{new()}-Methode, die den Typ \rust{Self} zurückgibt, und somit dem klassischen Konstruktor entspricht, der entsprechende Parameter entgegennehmen kann. Dessen Aufruf ist statisch und geschieht mittels \rust{Example::new()}.
 
-Wie im Beispielcode zu sehen, befinden sich in der Definition des Structs \rust{Example} keine Methoden. Das liegt daran, dass diese nicht an dieser Stelle stehen dürfen. Stattdessen geschieht dies mittels einem eigenen \glqq Implementation Block\grqq. Dieser lässt sich mittels \rust{impl Example { }} definieren. In diesem Block können nach belieben Methoden implementiert werden, die dann vom entsprechenden Struct zur Verfügung gestellt werden. 
+Der Beispielcode zeigt, dass sich in der Definition des Structs \rust{Example} keine Methoden befinden. Das liegt daran, dass diese nicht an dieser Stelle stehen dürfen. Stattdessen geschieht dies mittels einem eigenen \glqq Implementation Block\grqq. Dieser lässt sich mittels \rust{impl Example { }} definieren. In diesem Block können nach belieben Methoden implementiert werden, die dann vom entsprechenden Struct zur Verfügung gestellt werden. 
 
 Bei ihrer Implementierung sind Methoden implizit von privatem Scope, können also nur innerhalb der \rust{.rs}-Datei genutzt werden, in der sie beschrieben sind. Das Schlüsselwort \rust{pub} erlaubt es auch in anderen Dateien entsprechende Methoden zu verwenden. Methoden die innerhalb eines mit \rust{impl} geöffneten Blocks stehen beziehen sich immer auf einen Struct und können mittels dem \rust{&self}-Objekt auf die entsprechende Instanz und deren Felder zugreifen.
 
-\subsection{Traits}
+\subsection{Traits}\label{chap:traits}
 
-Mithilfe von Traits lässt sich in Rust das Verhalten von Structs (oder allgemeiner: Typen) definieren. Die Analogie zu herkömmlichen Sprachen ist das \textit{Interface}. Genau wie diese definieren Structs eine oder mehrere Funktionalitäten, die der Compiler bei einem Objekt erwarten kann. Ihre Definition sieht ebenfalls ähnlich der von Interfaces aus:
+Mithilfe von Traits lässt sich in Rust das Verhalten von Structs (oder allgemeiner: Typen) definieren. Die Analogie zu herkömmlichen Sprachen ist das \textit{Interface}. Genau wie diese definieren Traits eine oder mehrere Funktionalitäten, die der Compiler bei einem Objekt erwarten kann. Ihre Definition sieht ebenfalls ähnlich der von Interfaces aus:
 
 \begin{minted}{rust}
     pub trait Behaviour {
@@ -44,21 +50,21 @@ Mithilfe von Traits lässt sich in Rust das Verhalten von Structs (oder allgemei
 \end{minted}
 
 
-Das Beispiel beschränkt sich auf eine Methode, \rust{print}. Traits können jedoch beliebig viele Methoden definieren. Ein entscheidender Unterschied zu herkömmlichen Interfaces ist, wie hier zu sehen, die Möglichkeit einen Methodenkörper anzugeben. So ermöglicht Rust Standardimplementierungen, auf die zurückgegriffen wird, sollte ein Typ die Methode nicht selber implementieren. Wird diese Implementierung weggelassen, also nur der Methodenkopf angegeben, setzt Rusts Compiler voraus, dass alle, den Trait implementierenden Typen, die entsprechenden Methoden implementieren.
+Das Beispiel beschränkt sich auf eine Methode, \rust{print}. Traits können jedoch beliebig viele Methoden definieren. Ein entscheidender Unterschied zu vielen herkömmlichen Interfaces ist, wie hier zu sehen, die Möglichkeit einen Methodenkörper anzugeben. So ermöglicht Rust Standardimplementierungen, auf die zurückgegriffen wird, sollte ein Typ die Methode nicht selber implementieren. Wird diese Implementierung weggelassen, also nur der Methodenkopf angegeben, setzt Rusts Compiler voraus, dass alle, den Trait implementierenden Typen, die entsprechenden Methoden implementieren.
 
-Um das Verhalten eines Typen mittels Trait zu beschreiben wird, wie im vorigen Kapitel ein Implementation Block genutzt. Der einzige Unterschied ist, dass im Anfang des Blocks der jeweilige Trait zu stehen hat:
+Um das Verhalten eines Typen mittels Trait zu beschreiben wird, wie im vorigen Kapitel, ein Implementation Block genutzt. Der einzige Unterschied ist, dass im Anfang des Blocks der jeweilige Trait zu stehen hat:
 
-\rust{impl Behaviour for Example}
+\qquad\rust{impl Behaviour for Example { }}
 
-Innerhalb des so geöffneten Blocks ist es dann möglich, bzw. erforderlich, die relevanten Methoden zu implementieren. Sollte lediglich die Standardimplementierung genutzt werden wollen, ist es erlaubt den Block leer zu lassen.
+Innerhalb des so geöffneten Blocks ist es dann möglich, bzw. erforderlich, die relevanten Methoden zu implementieren. Sollte lediglich die Standardimplementierung genutzt werden wollen, ist es erlaubt den Block leer-, bzw. jeweilige Methoden wegzulassen.
 
-Sobald ein Typ einen Trait definiert, lässt er sich an allen Stellen benutzen, die diesen Trait voraussetzen, abermals ähnlich zu Interfaces. Die Syntax dafür lautet 
+Sobald ein Typ einen Trait definiert, lässt er sich an allen Stellen benutzen, die diesen Trait voraussetzen, abermals ähnlich zu Interfaces. Die Syntax dafür lautet: 
 
-\rust{fn use_type_with_trait(item: &impl Behaviour)}
+\qquad\rust{fn use_type_with_trait(item: &impl Behaviour)}
 
 \subsection{Das \rust{match}-Statement}
 
-Das \rust{match}-Statement ist die Rust Alternative zum klassischen \code{switch-case}-Statement. Bis auf die Syntax funktioniert es sehr ähnlich:
+Das \rust{match}-Statement ist Rusts Alternative zum klassischen \code{switch-case}-Statement. Bis auf die Syntax funktioniert es sehr ähnlich:
 
 \begin{minted}{rust}
     match x {
@@ -73,7 +79,7 @@ Rust garantiert zu Compilezeit, dass die match-Arme alle möglichen Fälle abdec
 
 \subsection{Result und Option}
 
-In Rust gibt es keinen \code{null}, stattdessen existiert der \rust{Option<T>} Typ. Option ist wie folgt definiert:
+In Rust gibt es keinen Typ \code{null}, stattdessen existiert der Typ \rust{Option<T>}. Option ist wie folgt definiert:
 
 \begin{minted}{rust}
     enum Option<T> {
@@ -82,8 +88,8 @@ In Rust gibt es keinen \code{null}, stattdessen existiert der \rust{Option<T>} T
     }
 \end{minted}
 
-\code{T} ist ein generischer Typ Parameter, durch Angabe eines Typen in den Spitzen Klammern, wird der im Option enthaltende Typ festgelegt:
-Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), oder oder eine 32-Bit Integer (Some(i32)). Um an den enthaltenden Wert zu kommen, muss eine Fallunterscheidung durchgeführt werden, bspw. durch ein \rust{match}-Statement. Dies garantiert, dass keine ungewollten null-References möglich sind (wie \zB ein Methodenaufruf auf \code{null}).
+Dabei ist \code{T} ein generischer Typ Parameter. Durch Angabe eines Typen in den spitzen Klammern wird der, im Option enthaltene, Typ festgelegt:
+Ein Element vom Typ \rust{Option<i32>} enthält also entweder nichts (None), oder oder einen 32-Bit Integer (Some(i32)). Um an den enthaltenden Wert zu kommen, muss eine Fallunterscheidung durchgeführt werden, bspw. durch ein \rust{match}-Statement. Dies garantiert, dass keine ungewollten \code{null}-Referenzen möglich sind (wie \zB ein Methodenaufruf auf \code{null}).
 
 \rust{Option<T>} wird verwendet, wenn es akzeptabel ist, dass kein Wert vorhanden ist. Andernfalls sollte \rust{Result<T, E>} verwendet werden.
 
@@ -98,13 +104,13 @@ Ein Result enthält entweder einen Wert des entsprechenden Typs, oder einen Erro
 
 \subsection{Ownership und Moving}
 
-Die Verwaltung von Variablen und deren Lebensdauer, sowie Variablenzugriffe fallen unter Rusts Konzept von \glqq Ownership\grqq{} (Besitz). Es handelt sich um ein System von Regeln, die der Compiler durchsetzt um eine konsistente Garbage Collection zu ermöglichen.
+Die Verwaltung von Variablen und deren Lebensdauer, sowie Variablenzugriffe fallen unter Rusts Konzept von \enquote{Ownership} (\textit{Besitz}). Es handelt sich um ein System von Regeln, die der Compiler durchsetzt um eine konsistente Garbage Collection zu ermöglichen.
 
-Grundsatz dieses Konzepts sind die sog. \glqq Owner\grqq (Besitzer) von Variablen. In Rust hat jeder Werte zu jeder Zeit (nur) einen Besitzer, eine Variable. Sollte dieser Besitzer außerhalb des Gültigkeitsbereiches liegen, wird der entsprechende Wert aus dem Speicher entfernt. Mit jeder schließenden, geschwungenen Klammer endet ein solches Scope und darin verwendete Variablen werden gelöscht. In dem Moment, in dem eine Variable von außerhalb in einen anderen Gültigkeitsbereich gegeben wird, wird diese in den neuen Bereich \glqq gemoved\grqq. Das hat zur Folge, dass eine Variable, die als Parameter an eine Methode übergeben wird, anschließend nicht mehr gültig ist. Bestimmte Typen (unter anderem \rust{i32} oder \rust{bool}) implementieren den Trait \rust{Copy}, durch den beim Moven einer Variable in ein neues Scope eine Kopie anstelle des eigentlichen Besitzers übergeben wird. Das funktioniert, weil der Speicherbedarf dieser Typen bereits zur Compilezeit bestimmbar ist.
+Grundsatz dieses Konzepts sind die sog. \enquote{Owner} (\textit{Besitzer}) von Variablen. In Rust hat jeder Wert zu jeder Zeit (nur) einen Besitzer, eine Variable. Sollte dieser Besitzer außerhalb des Gültigkeitsbereiches liegen, wird der entsprechende Wert aus dem Speicher entfernt. Mit jeder schließenden, geschwungenen Klammer endet ein solcher Scope und darin verwendete Variablen werden gelöscht. In dem Moment, in dem eine Variable von außerhalb in einen anderen Gültigkeitsbereich gegeben wird, wird diese in den neuen Bereich \enquote{gemoved}. Das hat zur Folge, dass eine Variable, die als Parameter an eine Methode übergeben wird, anschließend nicht mehr gültig ist. Bestimmte Typen (unter anderem \rust{i32} oder \rust{bool}) implementieren den Trait \rust{Copy}, durch den beim Moven einer Variable in ein neues Scope eine Kopie anstelle des eigentlichen Besitzers übergeben wird. Das funktioniert, weil der Speicherbedarf dieser Typen bereits zur Compilezeit bestimmbar ist.
 
-Die Einschränkung des Movens würde offensichtlich auf Dauer zum Problem werden, gäbe es keine Möglichkeit Variablen innerhalb mehrerer Scopes zu verwenden. Eine Möglichkeit wäre natürlich sie davor zu klonen oder jedes Mal als zusätzlichen Rückgabewert zurückzuliefern, was allerdings ebenso unpraktisch ist. Dafür bietet Rust die Möglichkeit zum \glqq Borrowing\grqq{} mittels \glqq Referencing\grqq. Das geschieht mittels vorangestelltem Et-Zeichen (\&). So wird anstelle der Variablen (dem eigentlichen Besitzer) lediglich ein Verweis auf diesen übergeben.
+Die Einschränkung des Movens würde offensichtlich auf Dauer zum Problem werden, gäbe es keine Möglichkeit Variablen innerhalb mehrerer Scopes zu verwenden. Eine Möglichkeit wäre natürlich sie davor zu klonen oder jedes Mal als zusätzlichen Rückgabewert zurückzuliefern, was allerdings ebenso unpraktisch ist. Deshalb bietet Rust die Möglichkeit zum \enquote{Borrowing} mittels \enquote{Referencing}. Das geschieht mittels vorangestelltem Et-Zeichen (\&). So wird anstelle der Variablen (dem eigentlichen Besitzer) lediglich ein Verweis auf diese übergeben.
 
-Soll nun der Wert einer Variablen, für den ein Gültigkeitsbereich nur eine Referenz besitzt, verändert werden, bietet Rust das \glqq Dereferencing\grqq{} an. Dazu wird der Variablen ein Sternchen (*) vorangestellt. Der beispielhafte Quellcode in \ref{lst:ownership} soll diese Konzepte veranschaulichen. Dabei existieren zwei Methoden von denen beim Aufrufen der ersten ein \glqq Move\grqq{} auftritt, die zweite Methode arbeitet mit einer Referenz. Sollte nach dem Ausführen des Codes ein lesender Zugriff auf die Variable \rust{txt} erfolgen, gäbe es einen Fehler. Im Fall von \rust{num} erhält man den Wert 20.
+Soll nun der Wert einer Variablen, für den ein Gültigkeitsbereich nur über eine Referenz verfügt, verändert werden, bietet Rust das \enquote{Dereferencing} an. Dazu wird der Variablen ein Sternchen (*) vorangestellt. Der beispielhafte Quellcode in \ref{lst:ownership} soll diese Konzepte veranschaulichen. Dabei existieren zwei Methoden von denen beim Aufrufen der ersten ein Move auftritt, die zweite Methode arbeitet mit einer Referenz. Sollte nach dem Ausführen des Codes ein lesender Zugriff auf die Variable \rust{txt} erfolgen, gäbe es einen Fehler. Im Fall von \rust{num} erhält man den Wert 20.
 
 \begin{listing}[th]
 \begin{minted}{rust}
@@ -128,23 +134,25 @@ inc_val(&num); // inc_val receives a reference to the value of num
 
 \subsection{Collections}
 
-Um mehrere Objekte eines Typens zu speichern wurde in der Arbeit und der später dargestellten Implementierung maßgeblich Datentypen genutzt, die in der Standardbibliothek von Rust enthalten sind. Deshalb wird die Rede von Maps und Vektoren sein:
+Um mehrere Objekte eines Typens zu speichern wurden in der Arbeit und der später dargestellten Implementierung maßgeblich Datentypen genutzt, die in der Standardbibliothek von Rust enthalten sind. Deshalb wird die Rede von Maps und Vektoren sein:
 
-Vektoren dienen dem Speichern einzelner Werte desselben Typs T. So entsprechen sie der Form \rust{Vec<T>}. Sie liegen auf dem Heap und das entsprechende T muss deshalb zur Compilezeit implizit oder explizit festgelegt sein. Die Länge eines Vektors ist variabel und kann im Verlauf der Programmausführung durch typische Methoden wie \rust{pop} und \rust{push} manipuliert werden. Die Initialisierung eines Vektors kann als leere Menge erfolgen, oder auch mittels Makro \rust{vec![]} und einer kommaseparierten Liste von Elementen. Darüber hinaus ist es möglich einen Vektor zu initialisieren, der aus einer Anzahl von gleichen Werten besteht: \rust{vec![0; 10]} erzeugt einen Vektor, der zehn Einträge besitzt, die alle null sind.
+Vektoren dienen dem Speichern einzelner Werte desselben Typs T. So entsprechen sie der Form \rust{Vec<T>}. Sie liegen auf dem Heap und das entsprechende T muss deshalb zur Compilezeit implizit oder explizit festgelegt sein. Die Länge eines Vektors ist variabel und kann im Verlauf der Programmausführung durch typische Methoden wie \rust{pop} und \rust{push} manipuliert werden. Die Initialisierung eines Vektors kann als leere Menge erfolgen, oder auch mittels Makro \rust{vec![]} und einer kommaseparierten Liste von Elementen. Darüber hinaus ist es möglich einen Vektor zu initialisieren, der aus einer Anzahl von gleichen Werten besteht: \rust{vec![0; 10]} erzeugt einen Vektor, der zehn Einträge besitzt, die alle eine Null sind.
 
-Wenn in der Arbeit von einer Map die Rede ist, bezieht sich das konkret auf den Typ \rust{HashMap<K, V>}. Die Funktionsweise ist analog zu der in anderen bekannten Programmiersprachen: Ein Wert vom beliebigen Typ V wird über einen Wert vom beliebigen Typ K identifiziert. Bei ihrer Verwendung ist in Rust zu beachten, dass auch hier das Konzept der Ownership gilt. Wenn also nicht bewusst Referenzen übergeben werden, werden alle Werte, bzw. ihr Besitz, beim Einfügen in die Map gemoved. Das Lesen von Elementen in einer Map geschieht mittels Schlüssel, wobei das Ergebnis im Fall von Rust \rust{Option<&V>} ist: Wenn der Schlüssel in der Map existiert, antwortet die entsprechende Methode mit einem Verweis auf den Wert, gewrappt in \rust{Some()}, ansonsten ist das Ergebnis vom Typ \rust{None}.
+Wenn in der Arbeit von einer Map die Rede ist, bezieht sich das konkret auf den Typ \rust{HashMap<K, V>}. Die Funktionsweise ist analog zu der in anderen bekannten Programmiersprachen: Ein Wert vom beliebigen Typ V wird über einen Wert vom beliebigen Typ K identifiziert. Bei ihrer Verwendung ist in Rust zu beachten, dass auch hier das Konzept der Ownership gilt. Wenn also nicht bewusst Referenzen übergeben werden, werden alle Werte, bzw. ihr Besitz, beim Einfügen in die Map gemoved. 
+
+Das Lesen von Elementen in einer Map geschieht mittels Schlüssel, wobei das Ergebnis im Fall von Rust \rust{Option<&V>} ist: Wenn der Schlüssel in der Map existiert, antwortet die entsprechende Methode mit einem Verweis auf den Wert, gewrappt in \rust{Some()}, ansonsten ist das Ergebnis vom Typ \rust{None}.
 
 \subsection{Tests}
 
-Während das Testen selbst kein expliziter Bestandteil der schriftlichen Ausarbeitung sein wird, war das Schreiben von Tests bei der Entwicklung unerlässlich. Deshalb soll einmal in kurzen Zügen erläutert werden, auf welchen Funktionalitäten von Rust die geschriebenen Tests basieren.
+Während das Testen selbst kein expliziter Bestandteil der schriftlichen Ausarbeitung sein wird, war das Schreiben von Tests bei der Entwicklung unerlässlich. Deshalb soll einmal in kurzen Zügen erläutert werden, auf welchen Funktionalitäten von Rust die geschriebenen Tests basieren:
 
-Testen ist in Rust ein fester Bestandteil der Standardbibliothek und einfache Tests sind ohne die Verwendung zusätzlicher Bibliotheken oder Frameworks nötig. Der Übersicht halber bietet es sich für Unittests einer Datei an, ein eigenes Modul zu nutzen. Die Annotation \#\rust{[cfg(test)]} teilt Rust mit, wo die jeweiligen Tests zu finden sind. Außerdem kann der Compiler die Unittests dadurch für das spätere Bauen und Deployen (bzw. im Fall der Arbeit Kompilierung nach \ac{WASM}) der Anwendung vernachlässigen, da diese dort nicht mehr gebraucht werden.
+Testen ist in Rust ein fester Bestandteil der Standardbibliothek und einfache Tests sind ohne die Verwendung zusätzlicher Bibliotheken oder Frameworks möglich. Der Übersicht halber bietet es sich für Unittests einer Datei an, ein eigenes Modul zu nutzen. Die Annotation \#\rust{[cfg(test)]} teilt Rust mit, das die Tests in dem jeweiligen Modul zu finden sind. Außerdem kann der Compiler die Unittests durch diese Trennung für das spätere Bauen und Deployen der Anwendung vernachlässigen (bzw. im Fall der Arbeit Kompilierung nach \ac{WASM}), da diese dort nicht mehr gebraucht werden.
 
-Innerhalb des Test-Moduls können beliebig Tests definiert werden, wobei sich ihr Aufbau und Definition nicht grundlegend von anderen Sprachen unterscheidet: Die Testmethoden besitzen in der Regel keinen Rückgabewert und werden, sofern es sich um einen auszuführenden Test handelt, mit einer Annotation (\#\rust{[test]}) versehen. Mittels verschiedenen Methoden der Standardbibliothek lassen sich dann diverse Assertions (bspw. \rust{assert_eq!()}) durchführen, wobei deren Scope nicht auf Testmethoden beschränkt ist.
+Innerhalb des Test-Moduls können beliebig Tests definiert werden, wobei sich ihr Aufbau und ihre Definition nicht grundlegend von anderen Sprachen unterscheidet: Die Testmethoden besitzen in der Regel keinen Rückgabewert und werden, sofern es sich um einen auszuführenden Test handelt, mit einer Annotation (\#\rust{[test]}) versehen. Mittels verschiedenen Methoden der Standardbibliothek lassen sich dann diverse Assertions (bspw. \rust{assert_eq!()}) durchführen, wobei deren Einsatz nicht auf Testmethoden beschränkt ist.
 
 \section{Intel 8080}\label{chap:basics:intel8080}
 
-Das Folgende Kapitel ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen sind dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} entnommen.
+Das folgende Kapitel bietet eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 \ac{CPU}. Die Informationen sind dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} entnommen.
 Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis des Emulators sind.
 
 \subsubsection{RAM und Stack}
@@ -152,15 +160,14 @@ Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werd
 Im \ac{RAM} liegt sowohl der Programmcode, als auch der Stack.
 Der \ac{RAM} des 8080 wird über 16-Bit Addressen angesprochen, hat also maximal 65536 (0x10000) verfügbare Addressen.
 
-Während der Ausführung eines Programmes zeigt der Program Counter (PC) auf die zunächst auszuführende Instruktion im \ac{RAM} und der Stack Pointer (SP) auf die Spitze des Stacks. Der Stack des 8080 wächst allerdings nach unten (Addressen sinken bei größerem Stack).
-Es ist nicht festgelegt, wo der Stack anfängt, der Programmierer muss den SP per Programm setzen. Der PC ist initial 0, außer der Entwickler setzt den Startpunkt manuell.
+Während der Ausführung eines Programmes zeigt der \ac{PC} auf die zunächst auszuführende Instruktion im \ac{RAM} und der \ac{SP} auf die Spitze des Stacks. Der Stack des 8080 wächst nach unten (Addressen sinken bei größerem Stack).
+Es ist nicht festgelegt, wo der Stack anfängt, der Programmierer muss den \ac{SP} programmatisch setzen. Der \ac{PC} ist initial 0, außer der Entwickler setzt den Startpunkt manuell.
 
-Beim Stack handelt es sich um eine Last In-First Out (LIFO) Datenstruktur im \ac{RAM}, die 2 zugreifende Operationen unterstützt: Pop und Push. Pop entfernt das oberste Element und lädt es in das angegebene Register, Push legt ein angegebenes Element auf den Stack. Die Operationen in-/dekrementieren automatisch den SP entsprechend.
+Beim Stack handelt es sich um eine, als \ac{LIFO} realisierte, Datenstruktur im \ac{RAM}, die 2 zugreifende Operationen unterstützt: Pop und Push. Pop entfernt das oberste Element und lädt es in das angegebene Register, Push legt ein angegebenes Element auf den Stack. Die Operationen in-/dekrementieren automatisch den \ac{SP} entsprechend.
 
 \subsection{Register}
 
-Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf diese kann aufgrund der Nähe zum Prozessor schnell zugegriffen werden. Der 8080 hat 8 solcher Register.
-6 dieser Register können über Assembly angesteuert werden. Jedes Register speichert einen 8-Bit Wert, zudem können die Register paarweise angesprochen werden (als ein 16-Bit Wert).
+Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf sie kann aufgrund der Nähe zum Prozessor schnell zugegriffen werden. Der 8080 verfügt über acht solcher Register. Sechs dieser Register können über Assembly angesteuert werden. Jedes Register speichert einen 8-Bit Wert, zudem können die Register paarweise angesprochen werden (jeweils als ein 16-Bit Wert).
 
 \begin{table}[h]
     \centering
@@ -175,12 +182,11 @@ Register sind kleine Speichereinheiten auf dem Prozessorchip. Auf diese kann auf
     \end{tabular}
 \end{table}
 
-Außerdem gibt es ein weiteres Register, den Akkumulator, welches für arithmetische Operationen verwendet wird.
-Die Abkürzung PSW (Processor Status Word), die im Bezug auf bestimmte Instruktionen verwendet wird, bezieht sich auf den Akkumulator kombiniert mit den Flags (siehe unten).
+Außerdem gibt es ein weiteres Register, den Akkumulator, welches für arithmetische Operationen verwendet wird. Im Bezug auf bestimmte Instruktionen wird das \ac{PSW} verwendet, was sich auf den Akkumulator kombiniert mit den Flags bezieht (siehe unten).
 
 \subsection{Flags}\label{sec:flags}
 
-Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), dafür gibt sogenannte Flags. Diese werden in Hardware als 5 Flip-Flops\footnote{flüchtiger 1-Bit Datenspeicher} realisiert, im Endeffekt handelt es sich einfach um Booleans. Es gibt die folgenden Flags:
+Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speichern (bspw. ob die letzte Operation 0 ergeben hat), wofür es sogenannte Flags gibt. Diese sind in Hardware als 5 Flip-Flops\footnote{flüchtiger 1-Bit Datenspeicher} realisiert, im Endeffekt handelt es sich um Booleans. Es gibt die folgenden Flags:
 
 \begin{description}
     \item[Zero] Letzte Operation hat 0 ergeben
@@ -192,8 +198,7 @@ Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speic
 
 \subsection{Opcodes}\label{sec:opcodes}
 
-Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Diese besteht aus sogenannten Opcodes (Instruktionen). Dabei handelt es sich um jeweils 1 bis 3 Bytes, wobei das erste zur Identifikation der Instruktion gilt und die anderen Bytes ggf. Parameter enthalten.
-
+Wie jede \ac{CPU} ist der Intel 8080 in der Lage Maschinensprache auszuführen. Diese besteht aus sogenannten Opcodes (Instruktionen). Dabei handelt es sich um jeweils 1 bis 3 Bytes, wobei das erste der Identifikation der Instruktion dient und die anderen Bytes ggf. Parameter enthalten.
 
 \subsection{Assembly}
 
@@ -237,19 +242,19 @@ Zahlenliterale werden durch Suffixe den entsprechenden Zahlensystemen zugewiesen
 
 \subsubsection{Verzweigungen}
 
-Bei Assembly gibt es grundlegend 2 Verzweigungstypen: Jumps und Calls. Bei Jumps handelt es sich um direkte Sprünge zu einer Addresse im \ac{RAM}. Die äquivalente in Programmiersprachen wie C ist der \rust{goto} Befehl.
+Bei Assembly gibt es grundlegend 2 Verzweigungstypen: Jumps und Calls. Bei Jumps handelt es sich um direkte Sprünge zu einer Addresse im \ac{RAM}. Das Äquivalent in Programmiersprachen wie C ist der \rust{goto} Befehl.
 
-Calls hingegen entsprechen grob dem Funktionsaufruf aus higher-level Sprachen. Beim Aufruf einer Call-Instruktion wird die momentane Position im Code (der PC) auf dem Stack abgelegt, dies ist die sogenannte Return-Addresse, und anschließend ein Sprung zur angegebenen Addresse (zum Funktions-Code) ausgeführt. Die Return-Instruktion stellt das Ende einer Funktion dar, sie setzt den PC auf das oberste Element des Stacks, bei korrekter Verwendung ist dies die Return-Addresse.
+Calls hingegen entsprechen grob dem Funktionsaufruf aus höheren Programmiersprachen. Beim Aufruf einer Call-Instruktion wird die momentane Position im Code (der \ac{PC}) auf dem Stack abgelegt, dies ist die sogenannte Return-Addresse. Anschließend wird ein Sprung zur angegebenen Adresse (zum Funktions-Code) ausgeführt. Die Return-Instruktion stellt das Ende einer Funktion dar, sie setzt den \ac{PC} auf das oberste Element des Stacks, bei korrekter Verwendung ist dies die Return-Addresse.
 
 \begin{table}[h]
     \centering
     \caption{Beispielhafte Befehle für Verzweigungen}
     \label{tab:jmp}
     \begin{tabular}{l | l}
-        \asm{JMP 0FFH} & Setze PC auf 0FFH\\
-        \asm{JZ  0FFH} & Setze PC auf 0FFH falls Zero-Flag gesetzt ist \\
-        \asm{CALL 0FFH} & Speichere PC auf dem Stack und setze ihn auf FFH \\
-        \asm{RET} & Setze PC auf oberstes Stack Element (und entferne es) \\
+        \asm{JMP 0FFH} & Setze \ac{PC} auf 0FFH\\
+        \asm{JZ  0FFH} & Setze \ac{PC} auf 0FFH falls Zero-Flag gesetzt ist \\
+        \asm{CALL 0FFH} & Speichere \ac{PC} auf dem Stack und setze ihn auf FFH \\
+        \asm{RET} & Setze \ac{PC} auf oberstes Stack Element (und entferne es) \\
     \end{tabular}
 \end{table}
 
@@ -271,47 +276,48 @@ Der Intel 8080 implementiert eine 8-Bit Arithmetik. Dafür werden die Bytes als 
 
 \subsubsection{Labels}\label{chap:labels}
 
-Einen integralen Bestandteil der Programmierung mit Assembly machen \glqq Label\grqq{} aus. Es handelt sich um Sprungmarken, mittels welcher die Reihenfolge der Ausführung der Statements beeinflusst werden kann. Außerdem enthalten Labels bestimmte Werte, welche für arithmetische Operationen verwendet werden können.
+Einen integralen Bestandteil der Programmierung mit Assembly machen sogenannte \enquote{Labels} aus. Es handelt sich um Sprungmarken, mittels welcher die Reihenfolge der Ausführung der Instruktionen beeinflusst werden kann. Außerdem enthalten Labels bestimmte Werte, welche für arithmetische Operationen verwendet werden können.
 
-Die Deklaration eines Labels folgt diesem Aufbau: \asm{label: Opcode}, wobei das Label selbst optional ist. Zusätzlich kann ein Label allein in einer einzelnen Zeile stehen, in diesem Fall bezieht es sich auf die nächste vom Assembler angetroffene Instruktion. Dadurch ergibt sich auch die Möglichkeit mehrere Label auf dasselbe Byte zu beziehen, was legal ist. In all diesen Fällen referenziert ein Label den Index des Bytes im Bytecode, vor welchem es deklariert wurde. Die alleinige Deklaration eines Labels hat noch keinen Einfluss auf das vorliegende Programm.
+Die Deklaration eines Labels folgt dem Aufbau \asm{label: Opcode}, wobei nicht für jeden Instruktion ein Label benötigt wird. Zusätzlich kann ein Label allein in einer einzelnen Zeile stehen, in diesem Fall bezieht es sich auf die nächste vom Assembler angetroffene Instruktion. Dadurch ergibt sich auch die Möglichkeit mehrere Label auf denselben Befehlt zu beziehen, was legal ist. In all diesen Fällen referenziert ein Label den Index des Bytes im Bytecode, vor welchem es deklariert wurde. Die alleinige Deklaration eines Labels hat noch keinen Einfluss auf das vorliegende Programm.
 
-Der Name eines Labels muss mit einem Buchstaben des Alphabets, einem \glqq @\grqq{} oder \glqq ?\grqq{} beginnen, besteht aus einem bis fünf Zeichen und muss mit einem  \glqq :\grqq{} enden. Nicht erlaubt ist die Verwendung reservierter Namen (beispielsweise Namen der Register) oder mehrfache Verwendung desselben Namens. Sofern der Name eines Labels länger als fünf Zeichen ist, wird er auf die ersten fünf gekürzt.
+Der Name eines Labels muss mit einem Buchstaben des Alphabets, einem \enquote{@} oder \enquote{?} beginnen, besteht aus einem bis fünf Zeichen und muss mit einem  \enquote{:} enden. Nicht erlaubt ist die Verwendung reservierter Namen (beispielsweise Namen der Register) oder mehrfache Verwendung desselben Namens. Sofern der Name eines Labels länger als fünf Zeichen ist, wird er auf die ersten fünf gekürzt.
 
 \subsubsection{Pseudo-Instruktionen}\label{chap:pseudo-instructions}
 
 Neben den eigentlichen Instruktionen bietet der Intel 8080 dem Entwickler diverse Befehle, die keinen Bytecode erzeugen, weshalb es sich um sogenannte \glqq Pseudo-Instruktionen\grqq{} handelt. Sie spielen bei der Entwicklung auf Assembly-Level eine zentrale Rolle, insofern dass sie es erlauben Konzepte wie If-Verzweigungen oder Variablen umzusetzen.
 
 Eine Pseudo-Instruktion folgt einem ähnlichen Aufbau wie herkömmliche Befehle, manche legen allerdings fest, ob das vorangestellte Namensfeld eines Befehls vorhanden sein muss, beziehungsweise darf. Bis auf einige Ausnahmen können auch hier Labels, Sprungmarken die das nachfolgende Byte referenzieren, definiert werden. Dem Entwickler stehen insgesamt fünf Pseudo-Instruktionen zur Verfügung, deren Aufbau und Funktion nun folgt:
-\linebreak
 
-\textit{Origin} erlaubt es die Adresse, in der das nächste Byte assembled wird, festzulegen. Die Syntax dafür lautet \asm{ORG exp}, wobei es sich beim zweiten Teil um eine 16-Bit-Adresse, beziehungsweise deren Repräsentation als mathematischer Ausdruck handelt. Nur Instruktionen, die auf diesen Befehl folgen, sind von ihm betroffen.
+\begin{description}
+\item[Origin] erlaubt es die Adresse, in der das nächste Byte assembled wird, festzulegen. Die Syntax dafür lautet \asm{ORG exp}, wobei es sich beim zweiten Teil um eine 16-Bit-Adresse, beziehungsweise deren Repräsentation als mathematischer Ausdruck handelt. Nur Instruktionen, die auf diesen Befehl folgen, sind von ihm betroffen.
 
-\textit{Equate} erlaubt die Definition einer Konstanten mittels \asm{name EQU exp}. Jedes Vorkommnis von \glqq name\grqq{} nach dessen Definition wird vom Assembler mit dem entsprechenden Ausdruck ersetzt. Eine so definierte Variable darf nicht erneut definiert werden.
+\item[Equate] erlaubt die Definition einer Konstanten mittels \asm{name EQU exp}. Jedes Vorkommnis von \asm{name} nach dessen Definition wird vom Assembler mit dem entsprechenden Ausdruck ersetzt. Eine so definierte Variable darf nicht erneut definiert werden.
 
-\textit{Set} funktioniert identisch zu Equate (\asm{name SET exp}), erlaubt allerdings das wiederholte Definieren von Variablen.
+\item[Set] funktioniert identisch zu Equate (\asm{name SET exp}), erlaubt allerdings das wiederholte Definieren von Variablen.
 
-\textit{End Of Assembly} definiert das (physikalische) Ende des Programms mittels \asm{END}. Dieser Befehl muss vorkommen, allerdings nicht mehr als einmal.
+\item[End Of Assembly] definiert das (physikalische) Ende des Programms mittels \asm{END}. Dieser Befehl muss vorkommen, allerdings nicht mehr als einmal.
 
-\textit{Conditional Assembly} dient der Programmierung mit Bedingungen und funktioniert identisch zu den bekannten If-Statements. Die Definition beginnt mit \asm{IF exp} beginnt und endet mit \asm{ENDIF}. Der Code, der sich zwischen diesen beiden Zeilen befindet, wird aufgerufen sofern der mathematische Ausdruck, der auf das \asm{IF} folgt, als wahr (ungleich 0) interpretiert wird.
+\item[Conditional Assembly] dient der Programmierung mit Bedingungen und funktioniert identisch zu den bekannten If-Statements. Die Definition beginnt mit \asm{IF exp} beginnt und endet mit \asm{ENDIF}. Der Code, der sich zwischen diesen beiden Zeilen befindet, wird aufgerufen sofern der mathematische Ausdruck, der auf das \asm{IF} folgt, als wahr (ungleich 0) interpretiert wird.
 
-\textit{Macro Definition} ist die umfangreichste Pseudo-Instruktion die der Intel 8080 bietet. Mittels \asm{name MACRO list} und \asm{ENDM} lassen sich Methoden ohne Rückgabewert realisieren. Ein Makro besteht aus einem Namen, einer Menge von Befehlen und optional einer Menge von Ausdrücken, die als Parameter dienen (\asm{list}). Sofern im Assembler nun der definierte Name als Instruktion angetroffen wird, wird an dieser Stelle der Inhalt des Makros' (gegebenenfalls unter Beachtung der Parameter), eingesetzt und in Bytecode übersetzt.
+\item[Macro Definition] ist die umfangreichste Pseudo-Instruktion die der Intel 8080 bietet. Mittels \asm{name MACRO list} und \asm{ENDM} lassen sich Methoden ohne Rückgabewert realisieren. Ein Makro besteht aus einem Namen, einer Menge von Befehlen und optional einer Menge von Ausdrücken, die als Parameter dienen (\asm{list}). Sofern im Assembler nun der definierte Name als Instruktion angetroffen wird, wird an dieser Stelle der Inhalt des Makros' (gegebenenfalls unter Beachtung der Parameter), eingesetzt und in Bytecode übersetzt.
+\end{description}
 
 \subsection{Interrupts}
 
-Durch sogenannte Interrupts kann die normale Ausführung der CPU unterbrochen werden. Interrupts sind externe Signale (bspw. von Peripheriegeräten), bei denen es sich um eine einzelne Instruktion handelt. Diese Instruktion wird ausgeführt, anschließend wird die normale Ausführung fortgesetzt. Meistens handelt es sich bei dieser Instruktion um eine \asm{RST}-Instruktion, eine Gruppe von Instruktionen, die \asm{CALL}s auf fixe Addressen realisieren. Dadurch kann der Entwickler den entsprechenden Code um die Interrupts zu bearbeiten an diesen Addressen ablegen, sodass er somit ausgeführt werden kann.
+Durch sogenannte Interrupts kann die normale Ausführung der \ac{CPU} unterbrochen werden. Interrupts sind externe Signale (bspw. von Peripheriegeräten), bei denen es sich um einzelne Instruktionen handelt. Die jeweilige Instruktion wird ausgeführt und anschließend die normale Ausführung fortgesetzt. Meistens handelt es sich bei dieser Instruktion um eine \asm{RST}-Instruktion, eine Gruppe von Instruktionen, die \asm{CALL}s auf fixe Addressen realisieren. Dadurch kann der Entwickler den entsprechenden Code, um die Interrupts zu bearbeiten, an diesen Addressen ablegen.
 
-Der Entwickler kann entscheiden ob Interrupts möglich sind, mithilfe der \asm{EI}-Anweisung (Enable Interrupts) bzw. \asm{DI}-Anweisung (Disable Interrupts). Diese setzen eine interne Flag, die bestimmt ob Interrupts zugelassen sind. Interrupts während der Wert des Flags \rust{false} ist werden ignoriert. Bei Programmstart ist dies der Fall.
+Der Entwickler kann entscheiden ob Interrupts möglich sind, das geschieht mithilfe der \asm{EI}-Anweisung (Enable Interrupts) bzw. \asm{DI}-Anweisung (Disable Interrupts). Diese setzen ein internes Flag, das bestimmt ob Interrupts zugelassen sind. Interrupts während der Wert des Flags \rust{false} ist werden ignoriert. Bei Programmstart ist das der Fall.
 
 \subsection{Peripherie}
 
 Über sogenannte Ports regelt der Intel 8080 die Datenübergabe zwischen dem Chip und den angeschlossenen Geräten. 
-Es gibt 256 verfügbare Ports, über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN} und \asm{OUT} Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} liest dann den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
+Es gibt 256 verfügbare Ports, über die jeweils ein Byte entweder eingelesen oder ausgegeben werden kann. Über die \asm{IN}- und \asm{OUT}-Instruktionen kann dies vom Programmierer gesteuert werden. Ihnen wird als Parameter der gewünschte Port übergeben. \asm{IN} schreibt den Wert des Ports in den Akkumulator, \asm{OUT} schreibt den Wert des Akkumulators in den Port.
 
-So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Interrupt-Routine die aktuellen Pixelwerte mitgeteilt werden, wenn das Display ein Interrupt-Signal sendet.
+So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Interrupt-Routine die aktuellen Pixelwerte mitgeteilt werden, sobald das Display ein Interrupt-Signal sendet.
 
 \section{Angular}
 
-Angular ist ein quelloffenes TypeScript Framework zur Entwicklung von \acp{SPA} im Web. Eine \ac{SPA} ist eine Webanwendung, die nur aus einer einzigen Webseite besteht und mithilfe von JavaScript Code Navigation ermöglicht und interaktive Bedienelemente anbietet. Nachfolgend werden einige Aspekte von Angular erläutert, die für die Entwicklung der Weboberfläche des Emulators von Bedeutung sind.
+Angular ist ein quelloffenes TypeScript Framework zur Entwicklung von \acp{SPA} im Web. Eine \ac{SPA} ist eine Webanwendung, die nur aus einer einzigen Webseite besteht und mithilfe von JavaScript Code Navigation ermöglicht, sowie interaktive Bedienelemente anbietet. Nachfolgend werden einige Aspekte von Angular erläutert, die für die Entwicklung der Weboberfläche des Emulators von Bedeutung sind.
 
 \subsection{Components}
 
@@ -367,7 +373,7 @@ Viele Komponenten einer Anwendung greifen auf gemeinsame Daten und Funktionen zu
 
 In diesem Codebeispiel sieht man wie ein Service aufgebaut ist. Er besteht lediglich aus einer TypeScript Klasse, die mit der \ts{@Injectable}-Annotation versehen ist. Die Eigenschaft \ts{providedIn: 'root'} gibt hier an, dass der Service als Singleton zur Verfügung gestellt wird und sich schließlich alle Komponenten, die den Service nutzen, die selbe Instanz teilen.
 
-Um den Service zu nutzen muss eine Komponente diesen einfach nur in dessen Konstruktor anfordern:
+Um den Service zu nutzen muss eine Komponente diesen einfach nur in ihrem Konstruktor anfordern:
 
 \begin{minted}{typescript}
     @Component({

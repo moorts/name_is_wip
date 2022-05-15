@@ -1,5 +1,7 @@
 \chapter{Analyse}
 
+Die Analyse dient der Konkretisierung des Ziels dieser Arbeit. Außerdem werden einige Projekte erwähnt, anhand welcher der \ac{WIP} von der bisherigen Entwicklung abgegrenzt wird.
+
 \section{Zielstellung}\label{goals}
 
 Das Ziel ist es einen Emulator zu entwickeln, welcher die vollständige Intel 8080 Spezifikation\cite{datasheet} unterstützt. Dabei sind die zentralen Aspekte wie folgt:
@@ -11,7 +13,7 @@ Das Ziel ist es einen Emulator zu entwickeln, welcher die vollständige Intel 80
 \end{itemize}
 
 Außerdem soll ein entsprechendes Web-Frontend entwickelt werden, um den Emulator zu bedienen.
-Dieses soll einen Editor beinhalten, um Assembly Programme zu schreiben, die Ausführung dieser Programme ermöglichen, den Zustand des Emulators während der Ausführung darstellen und Auswahl zwischen verschiedenen Peripherie-Geräten ermöglichen (Pixel-Display, Eingabefeld, o.ä.). 
+Dieses soll einen Editor beinhalten, um Assembly-Programme zu schreiben, die Ausführung dieser Programme ermöglichen, den Zustand des Emulators während der Ausführung darstellen und Auswahl zwischen verschiedenen Peripherie-Geräten ermöglichen (Pixel-Display, Eingabefeld, o.ä.). 
 
 Es soll sowohl möglich sein Schritt für Schritt durch ein Programm zu gehen, als auch das Programm automatisch laufen zu lassen.
 
@@ -39,9 +41,7 @@ Ein maßgeblicher Unterschied zur bisherigen Entwicklung in diesem Feld ist die 
 
 \section{Beitrag}
 
-Unser Beitrag ist \Emu, ein in Rust geschriebener Intel 8080 Emulator mit Web-Frontend. \Emu{} erfüllt die oben vorgestellten Ziele vollständig.
-
-Dadurch, dass unser Emulator nach Web-Assembly kompiliert wird, läuft der Emulator naiv im Browser des Clienten. Durch eine explizit definierte Schnitstelle, kann der Emulator mittels JavaScript-Code bedient werden. Außerdem findet eine Übersetzung von Assembly- zu Bytecode mittels einem eigens definierten Assembler statt, der eine vollständige Unterstützung aller Opcodes und Pseudo-Instruktionen implementiert.
+Der Beitrag und Gegenstand dieser Arbeit ist \ac{WIP}, ein in Rust geschriebener Intel 8080 Emulator mit Web-Frontend. Dadurch, dass der Emulator nach Web-Assembly kompiliert wird, läuft der Emulator nativ im Browser des Clienten. Durch eine explizit definierte Schnitstelle, kann der Emulator mittels JavaScript-Code bedient werden. Außerdem findet eine Übersetzung von Assembly- zu Bytecode mittels einem eigens definierten Assembler statt, der eine vollständige Unterstützung aller Opcodes und Pseudo-Instruktionen implementiert.
 
 Der Editor unterstützt Syntax-Highlighting sowie automatische Vervollständigung von Code und verfügt über Knöpfe um Kompilation und schrittweise, bzw. automatische, Ausführung des Programmes zu ermöglichen.
 Es gibt Anzeigen für den Zustand der CPU (Register, Flags, etc.), für den Arbeitsspeicher und für die Peripherie-Geräte.\\
