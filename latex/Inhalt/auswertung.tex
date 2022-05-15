@@ -4,6 +4,10 @@
 
 Zum besseren Verständnis der nachfolgenden Bewertung der Ergebnisse werden noch einmal die Herausforderungen betrachtet. Dabei geht es um Schwierigkeiten und Probleme die während der Entwicklung aufgetreten sind. Sie sind maßgeblich für die Evaluierung des gewählten Vorgehens und sollen eventuelle Hindernisse für zukünftige Arbeiten auf diesem Gebiet aufzeigen.
 
+\subsection{Emulator}
+
+Der Großteil der Entwicklung des Emulators bildet die Implementierung der einzelnen Instruktionen. Diese sind alle relativ simpel und daher einfach umzusetzen. Jedoch ist es leicht möglich, dass sich keine Fehler einschleichen, die von den Testfällen verpasst werden. Solche Fehler fallen ggf. erst zu einem deutlich späteren Zeitpunkt auf und können dann oft schwer auf konkrete Fehlerquellen zurückgeführt werden. Wie solche Fehler in unserem Emulator bemerkt und gefunden wurden wird in \cref{sec:errors} im Detail ausgeführt.
+
 \subsection{Assembler}
 
 Beim Assembler haben sich zwei Faktoren besonders bemerkbar gemacht. Der erste ist, dass es sich um eine \textbf{Schnittstelle zum Benutzer} handelt. Sie ermöglicht es beinahe beliebigen Input in Form einer Texteingabe zu übermitteln. Typischerweise bergen Nutzereingaben vor allem in sicherheitskritischen Applikationen, bei denen Anwender möglicherweise unbefugt Daten abfangen oder manipulieren, ein erhöhtes Risiko. Weil der Emulator keine solcher Daten beinhaltet bleibt dieser Aspekt zwar aus, nichtsdestotrotz muss eine korrekte Übersetzung des vom Intel 8080 beschriebenen Assemblercodes in Maschinencode erfolgen.
@@ -16,7 +20,7 @@ Neben dem schwierigen Umgang mit Nutzereingaben war die \textbf{Verarbeitung von
 
 
 
-\subsection{Fehlersuche}
+\subsection{Fehlersuche}\label{sec:errors}
 
 
 
