@@ -110,6 +110,7 @@ Damit der Vektor nun an der richtigen Stelle fortgeführt wird, werden die Adres
 Aufgrund dieser Erweiterung werden die generierten Bytes im Quellcode \ref{lst:assemble} in einer separaten Variable gespeichert, da der Index des aktuellen Bytes davon abhängt und entsprechend mittels
 
 \qquad \rust{current_byte_index += bytes.len();}
+
 aktuell gehalten wird. Zuletzt sei erwähnt, dass beim Auslesen der Origins beachtet wird, dass keine Origins in nicht-erfüllten If-Blöcken evaluiert werden.
 
 \subsection{Vorverarbeitung}\label{chap:preprocessor}
@@ -121,7 +122,7 @@ Unter Vorverarbeitung versteht sich im Bezug auf diese Arbeit und den Assembler 
 	\item Ersetzen von Makros
 	\item Ersetzen von Variablen
 	\item Bestimmung der Labels
-	\item Ersetzen von Referenzen auf den Programmzähler
+	\item Ersetzen von Referenzen auf den \ac{PC}
 	\item Ersetzen von Referenzen mittels Label
 	\item Entfernen von evaluierten Pseudo-Instruktionen
 \end{enumerate}
@@ -132,13 +133,15 @@ Neben der Vorverarbeitung bietet der \glqq Präprozessor\grqq{} eine Methode zum
 
 Generell gilt, dass die meisten dieser Methoden dem Schema
 
-\rust{fn method(code: &Vec<String>) ->}
+\qquad\rust{fn method(code: &Vec<String>) ->}
 
-\rust{	Result<Vec<String>, &'static str>} folgen. Das bedeutet, dass sie auf der Referenz eines Vektors aus Strings operieren und einen neuen Vektor aus Strings zurückgeben. Diesem Vektor werden, je nach Auswertung, entsprechende Zeilen angehängt. Der Rückgabewert wird im folgenden auch als \glqq Ergebnisvektor\grqq{} einer Methode bezeichnet und beinhaltet eine veränderte Form des ursprünglichen Programmcodes.
+\qquad\quad\rust{Result<Vec<String>, &'static str>} 
+
+folgen. Das bedeutet, dass sie auf der Referenz eines Vektors aus Strings operieren und einen neuen Vektor aus Strings zurückgeben. Diesem Vektor werden, je nach Auswertung, entsprechende Zeilen angehängt. Der Rückgabewert wird im folgenden auch als \glqq Ergebnisvektor\grqq{} einer Methode bezeichnet und beinhaltet eine veränderte Form des ursprünglichen Programmcodes.
 
 \subsubsection{Bestimmung des Programmendes}
 
-Weil dieser Schritt eindeutig und essentiell bezüglich der Korrektheit eines Assembler-Programms ist, ist es der erste Schritt in der Vorverarbeitung. Sinn dieses Schrittes ist es festzustellen, ob ein Programm ordnungsgemäß mit dem \asm{END}-Befehl abgeschlossen wurde. Sollte dies nicht der Fall sein ist jeder folgende Schritt überflüssig und das Übersetzen kann mit einer Fehlermeldung abgebrochen werden.
+Weil dieser Schritt eindeutig und essentiell bezüglich der Korrektheit eines Assembler-Programms ist, ist es der erste Schritt in der Vorverarbeitung. Sinn dieses Schrittes ist es festzustellen, ob ein Programm ordnungsgemäß mit dem \asm{END}-Befehl abgeschlossen wurde. Sollte dies nicht der Fall sein, ist jeder folgende Schritt überflüssig und das Übersetzen kann mit einer Fehlermeldung abgebrochen werden.
 
 Zur Bestimmung genügt es über alle Zeilen des Codes zu iterieren und festzustellen, ob eine einzelne Zeile \asm{END} lautet. Dabei ist wichtig, dass tatsächlich alle Codezeilen untersucht werden und nicht nach dem ersten \asm{END} ein \rust{true} geliefert wird. Deshalb bringt es auch keine nennenswerten Performanceersparnisse, sollte die Iteration am Ende des Codes beginnen. 
 
@@ -157,7 +160,7 @@ for line in code {
         continue;
     }
     if has_end {
-    return false;
+        return false;
     }
 }
 has_end
@@ -191,7 +194,7 @@ if line.contains(" SET ") {
 \caption{Bestimmen und Ersetzen von mittels \asm{SET} deklarierter Variablen}
 \end{listing}
 
-Die genaue Funktionsweise der Methode \rust{replace_names} aus Zeile zwei ist im Quellcode in \ref{lst:param-replace} näher beschrieben. Letztlich beläuft sie sich darauf, die Vorkommen der Schlüssel der angegebenen Map in einem String mit den entsprechenden Werten zu ersetzen.
+Die genaue Funktionsweise der Methode \rust{replace_names} aus Zeile 2 ist im Quellcode in \ref{lst:param-replace} näher beschrieben. Letztlich beläuft sie sich darauf, die Vorkommnisse der Schlüssel der angegebenen Map in einem String mit den entsprechenden Werten zu ersetzen.
 
 Neben dem Ersetzen von Variablen gilt es die zugehörigen Werte auszulesen, was mit einer simplen Überprüfung nach den entsprechenden Pseudo-Befehlen geschieht. Sofern ein solcher vorhanden ist, wird die Zeile aufgeteilt und in eine Map vom Typ \rust{HashMap<(String, u16)>} aufgenommen. Das geschieht unter der Bedingung, dass der Name dem vom Intel 8080 vorgegebenen Format entspricht, wofür getestet wird, dass er keinem reservierten Namen (Opcodes, Pseudo-Instruktionen etc.) entspricht und einem vorschriftsgemäßen Aufbau folgt. Diese Überprüfung ist einerseits das Nicht-Vorhandensein in einem Array aus reservierten Namen, andererseits das Entsprechen eines Regex.
 
@@ -205,9 +208,11 @@ Zum jetzigen Zeitpunkt besteht der Quellcode bereits nur noch aus Opcodes, Label
 
 Im nächsten Schritt sollen die im Kapitel \ref{chap:labels} vorgestellten Labels ausgelesen werden. Hier geht es nur um die Bestimmung deklarierter Label, ein Ersetzen der Referenzen durch die deklarierten Werte erfolgt an anderer Stelle. Weil Labels sich nicht auf einen Zeilenindex, sondern Byteindizes beziehen, müssen auch an dieser Stelle Origins beachtet werden, genauso wie der Inhalt der eigentlichen Zeile. Allerdings hat die Vorverarbeitung keinen Zugriff auf die Methode \rust{to_machine_code} des Assemblers zur Überführung einer Zeile in ihren Bytecode. 
 
-Deshalb wurde eine Hilfsmethode
+Deshalb wurde die Hilfsmethode
 
-\rust{get_byte_amount_of_line(opcode: &String) -> u16} eingeführt, die einen gegebenen Opcode in seine entsprechende Anzahl an Bytes im Speicher überführt. Wegen ihrer trivialen Funktionsweise (Prüfung ob sich der gegebene Opcode in einem bestimmten Vektor befindet) sei hier lediglich auf die Existenz und Verwendung der Methode hingewiesen. 
+\qquad\rust{get_byte_amount_of_line(opcode: &String) -> u16} 
+
+eingeführt, die einen gegebenen Opcode in seine entsprechende Anzahl an Bytes im Speicher überführt. Wegen ihrer trivialen Funktionsweise (Prüfung ob sich der gegebene Opcode in einem bestimmten Vektor befindet) sei hier lediglich auf die Existenz und Verwendung der Methode hingewiesen. 
 
 Ähnlich der vorhergehenden Schritte wird zeilenweise über den Code iteriert. In einer Variable \rust{mem_address} wird der aktuelle Byteindex gespeichert und aktualisiert, sofern eine Zeile ein \asm{ORG}-Statement oder einen Opcode beinhaltet. In der resultierenden \rust{HashMap<String, u16>} verweist dann ein gefundenes Label auf den Wert der zum Zeitpunkt ihres Funds in der \rust{mem_address} steht.
 
@@ -219,13 +224,13 @@ Das Identifizieren von Labels erfolgt mittels folgendem Regex, was die in den Gr
 
 Es sei zu beachten, dass dieser Ausdruck \textit{alle} Namen matcht, auch die mit einer Länge von mehr als fünf Zeichen. Deshalb muss jeder so gefundene Name, bevor er weiterverarbeitet wird, entsprechend gekürzt werden. Sofern die Bezeichnung des Labels valide ist und überschüssige Zeichen gekürzt wurden wird das Label einem Vektor für \glqq temporäre\grqq{} Label hinzugefügt.
 
-Weil eine beliebige Menge Label auf dasselbe Byte verweisen kann wird prinzipiell davon ausgegangen, dass ein Label nicht unmittelbar vor einem Opcode steht. Stattdessen werden sie in diesem separaten, \glqq temporären\grqq{} Vektor gesammelt und in dem Fall, dass ein Opcode angetroffen wird, alle in diesem Vektor gesammelten Label dem eigentlichen Ergebnis beigefügt. Der Vektor hat einen weiteren Vorteil: In dem Fall, dass ein Label auf nichts verweist (man stelle sich vor die letzte Zeile eines Programms lautet \asm{instr:}) ist der Vektor zum Schleifenende hin nicht leer. Das kann überprüft werden und gegebenenfalls ein entsprechender Fehler zurückgeliefert werden.
+Weil eine beliebige Menge Label auf dasselbe Byte verweisen kann wird prinzipiell davon ausgegangen, dass ein Label nicht unmittelbar vor einem Opcode steht. Stattdessen werden sie in diesem separaten, \glqq temporären\grqq{} Vektor gesammelt. In dem Fall, dass ein Opcode angetroffen wird, werden alle in diesem Vektor gesammelten Label dem eigentlichen Ergebnis beigefügt. Der Vektor hat einen weiteren Vorteil: In dem Fall, dass ein Label auf nichts verweist (man stelle sich vor die letzte Zeile eines Programms lautet \asm{instr:}) ist der Vektor zum Schleifenende hin nicht leer. Das kann überprüft werden und gegebenenfalls ein entsprechender Fehler zurückgeliefert werden.
 
 \subsubsection{Weitere Behandlung}
 
-Zum jetzigen Zeitpunkt benötigt der Präprozessor einen letzten Durchlauf über den Code. In diesem letzten Schritt werden Referenzen auf den Programmzähler (ausgedrückt als \glqq \$\grqq) und Verwendungen von Labels ersetzt, die Deklarationen letzterer entfernt, übrige Pseudo-Instruktionen (\asm{EQU, SET}) übergangen und If-Blöcke entsprechend evaluiert.
+Zum jetzigen Zeitpunkt benötigt der Präprozessor einen letzten Durchlauf über den Code. In diesem finalen Schritt werden Referenzen auf den Programmzähler (ausgedrückt als \enquote{\$}) und Verwendungen von Labels ersetzt, die Deklarationen letzterer entfernt, übrige Pseudo-Instruktionen (\asm{EQU, SET}) übergangen und If-Blöcke entsprechend evaluiert.
 
-All diese Aufgaben belaufen sich auf simples Überprüfen von Strings auf gewisse Inhalte (bspw. \rust{line.contains("\$")}) oder die Verwendung an anderer Stelle vorgestellter Konzepte und Methoden. So werden Referenzen auf Label mittels dem Quellcode in \ref{lst:var-replacement} ersetzt. Der Wert für den Programmzähler wird, entsprechend dem Vorgehen bei der Bestimmung der Labels mitgeführt und an den jeweiligen Stellen eingefügt. Die Evaluierung von bedingten Anweisungen erfordert ebenfalls keine neue Logik, sondern geschieht nach dem in \ref{chap:var-replacement} erläuterten Konzept (auch hier gibt es Optimierungspotential, das aus zeitlichen Gründen noch nicht erschöpft wurde).
+All diese Aufgaben belaufen sich auf simples Überprüfen von Strings auf gewisse Inhalte (bspw. \rust{line.contains(" \$ ")}) oder die Verwendung an anderer Stelle vorgestellter Konzepte und Methoden. So werden Referenzen auf Label mittels dem Quellcode in \ref{lst:var-replacement} ersetzt. Der Wert für den Programmzähler wird, entsprechend dem Vorgehen bei der Bestimmung der Labels mitgeführt und an den jeweiligen Stellen eingefügt. Die Evaluierung von bedingten Anweisungen erfordert ebenfalls keine neue Logik, sondern geschieht nach dem in \ref{chap:var-replacement} erläuterten Konzept (auch hier gibt es Optimierungspotential, das aus zeitlichen Gründen noch nicht erschöpft wurde).
 
 Nach diesem letzten Durchlauf wurden alle Pseudo-Befehle aus dem ursprünglichen Code entfernt. Das Ergebnis ist ein Vektor von Strings, die entweder leer sind, oder einen Opcode beinhalten. Somit sind alle Zeilen eindeutig in ihre entsprechende Repräsentation aus Bytes übersetzbar, was der eigentliche Assembler übernimmt.
 
