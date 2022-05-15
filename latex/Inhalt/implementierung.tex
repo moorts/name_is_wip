@@ -208,9 +208,13 @@ Deshalb wurde eine Hilfsmethode
 
 Ähnlich der vorhergehenden Schritte wird zeilenweise über den Code iteriert. In einer Variable \rust{mem_address} wird der aktuelle Byteindex gespeichert und aktualisiert, sofern eine Zeile ein \asm{ORG}-Statement oder einen Opcode beinhaltet. In der resultierenden \rust{HashMap<String, u16>} verweist dann ein gefundenes Label auf den Wert der zum Zeitpunkt ihres Funds in der \rust{mem_address} steht.
 
-Das Identifizieren von Labels erfolgt mittels folgendem Regex:
+Das Identifizieren von Labels erfolgt mittels folgendem Regex, was die in den Grundlagen vorgestellte Spezifikation abbildet:
 
-\textasciicircum\regex{( *[a-zA-Z@?][a-zA-Z@?0-9]*:)}, was die in den Grundlagen vorgestellte Spezifikation abbildet. Es sei zu beachten, dass dieser Ausdruck alle Namen matcht, auch die mit einer Länge von mehr als fünf Zeichen. Deshalb muss jeder so gefundene Name, bevor er weiterverarbeitet wird, entsprechend gekürzt werden. Sofern die Bezeichnung des Labels valide ist und überschüssige Zeichen gekürzt wurden wird das Label einem Vektor für \glqq temporäre\grqq{} Label hinzugefügt.
+\begin{center}
+\texttt{\textasciicircum( *[a-zA-Z@?][a-zA-Z@?0-9]*:)}
+\end{center}
+
+Es sei zu beachten, dass dieser Ausdruck \textit{alle} Namen matcht, auch die mit einer Länge von mehr als fünf Zeichen. Deshalb muss jeder so gefundene Name, bevor er weiterverarbeitet wird, entsprechend gekürzt werden. Sofern die Bezeichnung des Labels valide ist und überschüssige Zeichen gekürzt wurden wird das Label einem Vektor für \glqq temporäre\grqq{} Label hinzugefügt.
 
 Weil eine beliebige Menge Label auf dasselbe Byte verweisen kann wird prinzipiell davon ausgegangen, dass ein Label nicht unmittelbar vor einem Opcode steht. Stattdessen werden sie in diesem separaten, \glqq temporären\grqq{} Vektor gesammelt und in dem Fall, dass ein Opcode angetroffen wird, alle in diesem Vektor gesammelten Label dem eigentlichen Ergebnis beigefügt. Der Vektor hat einen weiteren Vorteil: In dem Fall, dass ein Label auf nichts verweist (man stelle sich vor die letzte Zeile eines Programms lautet \asm{instr:}) ist der Vektor zum Schleifenende hin nicht leer. Das kann überprüft werden und gegebenenfalls ein entsprechender Fehler zurückgeliefert werden.
 
