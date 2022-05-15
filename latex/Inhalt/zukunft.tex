@@ -1,12 +1,12 @@
 \chapter{Ausblick}
 
-Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu. Dabei geht es sowohl um mögliche Erweiterungen der bestehenden Spezifikation, als auch Anpassungen die entsprechend dieser vorgenommen werden sollten, bzw. gemusst hätten, aber primär aus zeitlichen Gründen nicht mehr umzusetzen waren.
+Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu. Dabei geht es sowohl um mögliche Erweiterungen der bestehenden Spezifikation, als auch Anpassungen, die entsprechend dieser vorgenommen werden sollten, bzw. gemusst hätten, aber primär aus zeitlichen Gründen nicht mehr umzusetzen waren.
 
 \section{Dynamic Recompilation}
 
 Bei Dynamic Recompilation handelt es sich um eine Optimierungsstrategie, bei der Maschinencode des emulierten Systems auf Maschinencode des ausführenden Systems übersetzt wird. In unserem Fall würde dabei Intel 8080 Maschinencode zu WebAssembly kompiliert werden. Diese Rekompilation findet zur Laufzeit statt.
 
-Das Ziel ist, Blöcke aus Intel8080 Assembly zu Blöcken aus nativem Assembly (in unserem Fall wäre das WebAssembly Bytecode) zu kompilieren und diese Blöcke in einem Cache zu speichern. Dies sähe ungefähr so aus\footnote{Dieses Beispiel ist orientiert an folgendem Blogpost: \url{https://wiki.pcsx2.net/PCSX2_Documentation/Introduction_to_Dynamic_Recompilation}}:
+Das Ziel ist, Blöcke aus Intel 8080 Assembly zu Blöcken aus nativem Assembly (in unserem Fall wäre das WebAssembly Bytecode) zu kompilieren und diese Blöcke in einem Cache zu speichern. Dies sähe ungefähr so aus\footnote{Dieses Beispiel ist orientiert an folgendem Blogpost: \url{https://wiki.pcsx2.net/PCSX2_Documentation/Introduction_to_Dynamic_Recompilation}}:
 
 
 \begin{minted}{rust}
@@ -59,12 +59,12 @@ Der Emitter schreibt diese nativen Instruktionen an die gespeicherte Addresse, w
 
 \subsection{Cache}
 
-Beim bereits erwähnten Cache handelt es sich lediglich um eine Speicherregion, die mit dem PC indiziert werden kann und entweder \rust{None} zurückgibt, wenn der entsprechende Maschinencode noch nicht generiert wurde, oder die entsprechend nächste Instruktion zurückgibt.
+Beim bereits erwähnten Cache handelt es sich lediglich um eine Speicherregion, die mit dem \ac{PC} indiziert werden kann und entweder \rust{None} zurückgibt, wenn der entsprechende Maschinencode noch nicht generiert wurde, oder die nächste Instruktion zurückgibt.
 
 
 \section{Intel Hex}
 
-Momentan gibt der Assembler einen Vektor aus Bytes zurück, welcher in den RAM des Emulators geladen wird um ein Programm zu laden. Ein alternatives Format für die Assembler-Ausgabe wäre das Intel Hex-Format, ein Dateiformat um Binärdaten im ASCII-Format zu speichern. In Intel Hex repräsentiert jede Zeile einen Datensatz, der eine konsekutive Bytefolge enthält. Ein solcher Datensatz enthält 6 Felder:
+Momentan gibt der Assembler einen Vektor aus Bytes zurück, welcher in den RAM des Emulators geladen wird, um ein Programm zu laden. Ein alternatives Format für die Assembler-Ausgabe wäre das Intel Hex-Format, ein Dateiformat um Binärdaten im ASCII-Format zu speichern. In Intel Hex repräsentiert jede Zeile einen Datensatz, der eine konsekutive Bytefolge enthält. Ein solcher Datensatz enthält 6 Felder:
 
 \begin{enumerate}
 \item Satzbeginn: ein ASCII Doppelpunkt am Anfang der Zeile
@@ -79,9 +79,9 @@ Dieses Format zu verwenden hat den Vorteil, leere Regionen zwischen Assembly Ins
 
 \section{Optimierung und Restrukturierung des Assemblers}
 
-Die Entwicklung des Assemblers folgte einem iterativ, inkrementellen Ansatz. Dabei wurden schrittweise neue Funktionen hinzugefügt, wobei mit den einfachen Opcodes angefangen, dann zu Labels und später den Pseudo-Instruktionen übergegangen wurde. Was für die Entwicklung unproblematisch war machte sich jedoch vor allem zum Ende der Implementierung und bei der Dokumentation der Arbeit bemerkbar:
+Die Entwicklung des Assemblers folgte einem iterativ, inkrementellen Ansatz. Dabei wurden schrittweise neue Funktionen hinzugefügt, wobei mit den einfachen Opcodes angefangen, dann zu Labels und später den Pseudo-Instruktionen übergegangen wurde. Was für die Entwicklung unproblematisch war, machte sich jedoch vor allem zum Ende der Implementierung und bei der Dokumentation der Arbeit bemerkbar:
 
-Die Struktur des Assemblers ist suboptimal. Zwar sind viele Funktionen in einzelnen Methoden gekapselt, allerdings gibt es potentielle Fehler in deren aktueller Anordnung. So ist es zum Zeitpunkt der Beendigung der Arbeit beispielsweise nicht möglich ein Label als Bedingung für einen If-Block zu verwenden. Zwar könnte der Code assembled werden, allerdings schlägt das Mapping von Zeilen fehl, weil für diese Makros nicht ersetzt werden, was aber notwendig für die Bestimmung von Labels ist.
+Die Struktur des Assemblers ist suboptimal. Zwar sind viele Funktionen in einzelnen Methoden gekapselt, allerdings gibt es potentielle Fehler in deren aktueller Anordnung. So ist es zum Zeitpunkt der Beendigung der Arbeit beispielsweise nicht möglich, ein Label als Bedingung für einen If-Block zu verwenden. Zwar könnte der Code assembled werden, allerdings schlägt das Mapping von Zeilen fehl, weil für diese Makros nicht ersetzt werden, was aber notwendig für die Bestimmung von Labels ist.
 
 In diesem Fall wurde sich dazu entschlossen den Fehler in Kauf zu nehmen. Begründet wird dies vor allem mit dem Verhältnis von Zeitaufwand und möglichem Gewinn: Zwar handelt es sich um einen kritischen Fehler, allerdings ist die Verwendung von Labels in konditionalen Anweisungen wenig sinnvoll. Schließlich ist nur das Label, das noch vor dem ersten Opcode steht, sofern es überhaupt existiert, null. In allen anderen Fällen sind Label ungleich null und damit konstante Werte, die die If-Bedingung erfüllen. Es erscheint, obwohl erlaubt, nur wenig sinnvoll Labels an einer solchen Stelle zu positionieren, weshalb der Fehler toleriert wird.
 
