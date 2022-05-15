@@ -1,4 +1,4 @@
-# Some emulator
+# WIP: WebAssembly Intel 8080 processor
 
 ![build](https://img.shields.io/github/workflow/status/moorts/name_is_wip/Rust/main)
 ![GitHub](https://img.shields.io/github/license/moorts/name_is_wip)
@@ -24,7 +24,7 @@ Rust Web-Assembly:
 
 Entwicklung eines Intel 8080 Emulators in Rust, kompiliert nach Web-Assembly. Dazu ein Web-Frontend durch das der Emulator verwendet werden kann. Das UI soll leicht verständlich sein, sodass die Anwendung als Grundlage fuer Assembly-Kurse verwendet werden kann. Der Emulator läuft als WASM binary im Browser des Benutzers und wird durch die WASM-Endpunkte gesteuert.
 
-## ToC
+## Planned ToC of the [report](./latex/)
 
 * Analysis
   * Problemstellung
