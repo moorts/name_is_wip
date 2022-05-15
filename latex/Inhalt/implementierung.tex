@@ -4,7 +4,7 @@
 
 \subsection{Registerarray}
 
-Im folgenden werden drei Aspekte der Implementierungen des Registerarrays gezeigt: Die Repräsentation der Register, der Zugriff auf die Register und der Zugriff auf die Flaggen.
+Im folgenden werden drei Aspekte der Implementierungen des Registerarrays gezeigt: Die Repräsentation und der Zugriff auf die Register, sowie der Zugriff auf die Flags.
 
 \subsubsection{Datentyp}
 
@@ -23,27 +23,27 @@ Ein Union wird ähnlich wie ein Struct deklariert, jedoch teilen alle Felder den
 
 \subsubsection{Registerzugriff}
 
-Der Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer Teil der zu implementierenden Instruktionen sie benötigt. Um dies möglichst einfach zu machen, wurde Indizierung für den Registerarray implementiert. Über String-Indizierung --- \rust{reg["bc"] // Registerpaar BC} --- ist Zugriff auf Registerpaare geregelt, über Character-Indizierung --- \rust{reg['b'] // Register B} --- der normale Zugriff.
+Der Registerzugriff ist eine sehr häufig verwendete Operation, da ein großer Teil der zu implementierenden Instruktionen sie benötigt. Um dies möglichst einfach zu machen, wurde Indizierung für den Registerarray implementiert. Über String-Indizierung --- \rust{reg["bc"] // Registerpaar BC} --- ist der Zugriff auf Registerpaare geregelt, über Character-Indizierung --- \rust{reg['b'] // Register B} --- der normale Zugriff.
 
-\subsubsection{Flaggenzugriff}
+\subsubsection{Zugriff auf Flags}
 
-Die Flags sind bekannterweise Teil des PSW-Registerpaars, sprich sie sind als einzelnes Byte gespeichert. Um die Werte der einzelnen Flaggen zu erhalten, werden Bitmasken verwendet. Um bspw. herauszufinden, ob das Bit mit dem höchsten Stellenwert gesetzt ist, muss der Ausdruck \rust{byte & 0x80 != 0} berechnet werden. Wenn dieser \rust{true} ist, ist das Bit gesetzt\footnote{\rust{0x80 == 0b10000000}}.
+Die Flags sind bekannterweise Teil des \ac{PSW}-Registerpaars, sprich sie sind als ein einzelnes Byte gespeichert. Um die Werte der einzelnen Flags zu erhalten, werden Bitmasken verwendet. Um bspw. herauszufinden, ob das Bit mit dem höchsten Stellenwert gesetzt ist, muss der Ausdruck \rust{byte & 0x80 != 0} berechnet werden. Wenn dieser \rust{true} ist, ist das Bit gesetzt\footnote{\rust{0x80 == 0b10000000}}.
 
 \subsection{Ein-/Ausgabegeräte}
 
 Wie in \cref{chap:design} zu sehen ist, beinhaltet die zentrale Struktur zwei Arrays aus 256 Elementen, um Ein- und Ausgabegeräte zu realisieren. Der Übersichtlichkeit halber wurde der Datentyp dieser Arrays vereinfacht. Bei der Umsetzung als Array ist es problematisch, dass initial keine Geräte registriert sind, der Array also leer wäre. Da es in Rust kein \rust{null} gibt, muss der Array mit dem \rust{Option}-Typ befüllt werden:
 
-\rust{[Option<InputDevice>; 256]}
+\qquad\rust{[Option<InputDevice>; 256]}
 
 Diese Implementierung ist jedoch noch immer ungenügend, weil verschiedene Geräte registriert werden können. In klassischen objektorientierten Sprachen wären deshalb Input- bzw. OutputDevice als Interfaces realisiert, analog dazu gibt es in Rust Traits (siehe \cref{chap:prereqs}). Da die Größe von Trait-Objekten nicht zur Compilezeit bestimmt werden kann, kann ein solches Objekt nicht auf dem Stack gelagert werden, was für die Initialisierung der eigentlichen Arrays aber  erforderlich ist. Deshalb muss ein Pointer verwendet werden. Rust verwendet sogenannte \glqq Smartpointer\grqq{} um die klassischen Probleme bei Verwendung von Pointern zu vermeiden. Meistens wird der Typ \rust{Box} genutzt, der es allerdings verhindert Daten mehrfach zu referenzieren. Diese Möglichkeit ist jedoch notwendig, da sowohl von außen, als auch von innen mit den Geräten kommuniziert werden muss. Durch Kombination von \rust{Rc}, einem referenzzählendem Pointer, mit \rust{RefCell}, einer schreibbaren Speicherregion, kann das gewünschte Verhalten erreicht werden. Die Syntax um einen derartigen Array zu deklarieren ist wie folgt:
 
-\rust{[Option<Rc<RefCell<dyn InputDevice>>>; 256]}
+\qquad\rust{[Option<Rc<RefCell<dyn InputDevice>>>; 256]}
 
-Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit mit einer mutable Referenz auf ein solches InputDevice gearbeitet werden. Außerdem dürfen beliebig viele non-mutable Referenzen existieren, sofern im aktuellen Scope keine mutable Referenz auf das Gerät existiert.
+Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit mit einer mutable (\textit{veränderbaren}) Referenz auf ein solches InputDevice gearbeitet werden. Außerdem dürfen beliebig viele non-mutable Referenzen existieren, sofern im aktuellen Scope keine mutable Referenz auf das Gerät existiert.
 
 \section{Assembler}
 
-Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \glqq preprocessor\grqq{} zur Vorverarbeitung und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels Code-Beispielen illustriert wird. Generell gilt, dass der führende und schließende Whitespace einer Zeile des Programmcodes vor deren Behandlung durch die Methode \rust{.trim()} entfernt und die Zeile gegebenenfalls übergangen wird, sofern eine Leerzeile entsteht. Der Übersichtlichkeit halber ist dieser Teil des Codes an vielen Stellen ausgelassen.
+Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \enquote{preprocessor} zur Vorverarbeitung und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels Code-Beispielen illustriert wird. Generell gilt, dass der führende und schließende Whitespace einer Zeile des Programmcodes vor deren Behandlung durch die Methode \rust{.trim()} entfernt und die Zeile gegebenenfalls übergangen wird, sofern eine Leerzeile entsteht. Der Übersichtlichkeit halber ist dieser Teil des Codes an vielen Stellen ausgelassen.
 
 \subsection{Assembler.rs}
 
@@ -55,7 +55,7 @@ Der in der Klasse \rust{assembler.rs} definierte Struct
 \end{minted}
 bildet die Schnittstelle für den eigentlichen Emulator und das \ac{WASM}-Interface. Der Emulator benötigt den zu Bytecode übersetzten Input des Nutzers und liefert dem Assembler dafür bei der Initialisierung ein String-Slice, das diesen Input repräsentiert. Basierend darauf erzeugt der Assembler das Objekt \rust{code}, wobei je Zeile ein neuer String erzeugt wird. 
 
-Bereits zu diesem Zeitpunkt können Kommentare, also alles in einer Zeile nach einem \glqq ;\grqq, entfernt werden. Dabei ist zu beachten, dass nur der Text der Kommentare und das Semikolon entfernt werden darf, die dadurch entstehenden Leerzeilen müssen erhalten bleiben (siehe \ref{chap:preprocessor}). Obiges Struct implementiert neben der Methode \rust{assemble()} zur Generierung des Bytecodes eine Methode, die diese Bytes auf den Index der jeweiligen Zeile mappt. Das nutzt die Web-Schnittstelle um bei schrittweiser Ausführung die aktuelle Zeile ersichtlich zu machen.
+Bereits zu diesem Zeitpunkt können Kommentare, also alles in einer Zeile nach einem \glqq ;\grqq, entfernt werden. Dabei ist zu beachten, dass nur der Text der Kommentare und das Semikolon selbst entfernt werden darf, die dadurch entstehenden Leerzeilen müssen erhalten bleiben (siehe \ref{chap:preprocessor}). Obiges Struct implementiert neben der Methode \rust{assemble()} zur Generierung des Bytecodes eine Methode, die diese Bytes auf den Index der jeweiligen Zeile mappt. Das nutzt die Web-Schnittstelle um bei schrittweiser Ausführung die aktuelle Zeile ersichtlich zu machen.
 
 Der Assembler selbst beschränkt sich nach außen hin auf diese beiden Methoden, wobei zunächst \rust{assemble} zu betrachten ist, auf das Mapping wird in \ref{chap:preprocessor} genauer eingegangen.
 
@@ -81,11 +81,11 @@ pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
 
 Diese Implementierung erzeugt aus dem, dem Assembler bei Initialisierung übergebenen Code, einen Vektor von positiven 8-Bit-Werten. Da es sich beim ursprünglichen Code um Nutzereingaben handelt, besteht die Gefahr, dass Syntaxfehler eine Übersetzung fehlschlagen lassen. Deshalb ist die Rückgabe vom Typ \rust{Result}, womit bei einem Fehlschlag eine entsprechende Fehlermeldung zurückgegeben werden kann, anstatt dass das Programm abstürzt.
 
-Die grundlegende Funktionsweise ist das Iterieren über alle Zeilen des vom Präprozessor behandelten Codes und ein Übersetzen der jeweiligen Zeile in Bytecode mittels \rust{to_machine_code()}. Diese Methode beinhaltet ein umfangreiches \rust{match}-Statement, das abhängig vom Opcode die entsprechenden Bytes zurückliefert. Der \enquote{?}-Operator entpackt den Rückgabewert der Methode (ein \rust{Result}) unmittelbar und propagiert ggf. den Fehler.
+Grundlegend wird über alle Zeilen, des vom Präprozessor behandelten Codes (siehe Kapitel \ref{chap:preprocessor}), iteriert und es findet ein Übersetzen der jeweiligen Zeile in Bytecode mittels \rust{to_machine_code()} statt. Diese Methode beinhaltet ein umfangreiches \rust{match}-Statement, das abhängig vom Opcode die entsprechenden Bytes zurückliefert. Der \enquote{?}-Operator entpackt den Rückgabewert der Methode (ein \rust{Result}) unmittelbar und propagiert ggf. den Fehler.
 
 Zeilen, in denen eine nutzerdefinierte Speicheradresse (vergleiche Origins, \ref{chap:pseudo-instructions}) deklariert ist, werden durch die Vorverarbeitung mittels Präprozessor (Zeile 2) nicht entfernt, weshalb diese Zeilen noch einmal gesondert übergangen werden müssen. Die Deklarationen der Origins müssen erhalten werden, da der Assembler die vom Nutzer deklarierten Speicheradressen selber ausliest, dafür allerdings den vorverarbeiteten Code nutzt.
 
-Während der Entwicklung ist aufgefallen, dass es inhaltlich sinnvoll wäre, wenn der Assembler, der die Origins ohnehin ausliest, diese auch direkt auswertet. Deshalb wurde das if-Statement im Quellcode \ref{lst:assemble} um folgende Schleifen erweitert:
+Während der Entwicklung ist aufgefallen, dass es inhaltlich sinnvoll wäre, wenn der Assembler, der die Origins ohnehin ausliest, diese auch direkt auswertet. Deshalb wurde das if-Statement im Quellcode \ref{lst:assemble} um die Schleife, die im Listing \ref{lst:ass:origins} zu sehen ist, erweitert.
 
 \begin{listing}[th]
 \begin{minted}{rust}
@@ -100,6 +100,7 @@ while byte_code.len() < current_address.into() {
 }
 \end{minted}
 \caption{Beachtung von Origins im Assembler}
+\label{lst:ass:origins}
 \end{listing}
 
 Zunächst werden alle Origins bestimmt, welche sich als Kombination aus Byte-Index und Speicheradresse verstehen lassen. Das bedeutet der Assembler erstellt in der ersten Zeile einen Vektor vom Typ \rust{Vec<(u16, u16)>}, bei dem der erste Wert der Index eines Bytes des Bytecodes ist, der zweite Wert ist die vom Nutzer definierte Speicheradresse, in die geschrieben werden soll, sobald das entsprechende Byte vom Emulator erreicht wurde. Um Bezug auf diese Angaben zu nehmen muss je Zeile überprüft werden, ob das aktuelle Byte (\rust{current_byte_index}) ein Byte ist, für das es eine explizite Speicheradresse gibt. Sofern dies der Fall ist wird die aktuelle Adresse auf den Wert der neuen Speicheradresse gesetzt. 
@@ -108,8 +109,8 @@ Damit der Vektor nun an der richtigen Stelle fortgeführt wird, werden die Adres
 
 Aufgrund dieser Erweiterung werden die generierten Bytes im Quellcode \ref{lst:assemble} in einer separaten Variable gespeichert, da der Index des aktuellen Bytes davon abhängt und entsprechend mittels
 
-\rust{current_byte_index += bytes.len();}
-aktuell gehalten wird.
+\qquad \rust{current_byte_index += bytes.len();}
+aktuell gehalten wird. Zuletzt sei erwähnt, dass beim Auslesen der Origins beachtet wird, dass keine Origins in nicht-erfüllten If-Blöcken evaluiert werden.
 
 \subsection{Vorverarbeitung}\label{chap:preprocessor}
 
