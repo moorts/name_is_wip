@@ -16,20 +16,33 @@ Grundsätzlich ist das auch möglich, aber es kommt zu möglichen Problemen, wen
 
 Neben dem schwierigen Umgang mit Nutzereingaben war die \textbf{Verarbeitung von Pseudo-Instruktionen} eine weitere Herausforderung bezüglich der Umsetzung. Nicht nur sind vor allem diese Grund für die Möglichkeit zur Verwendung von benutzerdefinierten Namen, auch die Reihenfolge der Abarbeitung ist entscheidend. Dabei stachen vor allem Makros heraus, was sich in deren großem Anteil an Kapitel \ref{chap:preprocessor} widerspiegelt. Aufwendig waren hier vor allem die Beachtung verschiedenen Gültigkeitsbereiche und das korrekte Bestimmen von Variablen zu bestimmten Zeitpunkten. Letzteres erschwerte die Modularisierung der Vorverarbeitung maßgeblich, weil mehrere Funktionalitäten, die zwar inhaltlich getrennt werden können, nicht losgelöst voneinander durchführbar sind.
 
-\subsection{\ac{WASM}-Interface}
+\subsection{WebAssembly-Interface}
 
+Bei der Implementierung des \ac{WASM}-Interfaces gab es einige Herausforderungen, die aufgrund fehlender Funktionalität der \textit{wasm-bindgen} Bibliothek entstanden. 
+
+\subsubsection*{Fehlende Union Types}
+
+Die Register der \ac{CPU} wurden im Rust Code mithilfe von Union Types implementiert, die dafür sorgen, dass die 16-Bit Register und die dazugehörigen 8-Bit Register im gleichen Speicherbereich liegen. Diese Union Types können nicht auf die \ac{WASM}-Bindings abgebildet werden
+
+\subsubsection*{Fehlende dynamische Trait Referenzen}
+
+Da der Arbeitsspeicher nur durch einen Trait definiert wird, wird die Referenz auf dieses Objekt in der Emulator Struktur durch eine dynamische Box repräsentiert. Diese Referenz kann ebenfalls nicht auf das \ac{WASM}-Binding abgebildet werden.
+
+\subsubsection*{Lösung}
+
+Beider Probleme konnten durch einen direkten Speicherzugriff im Browser gelöst werden. Mithilfe der \ts{WebAssembly.Memory} Klasse besteht die Möglichkeit, auf den gesamten allokierten Speicher einer \ac{WASM}-Instanz zuzugreifen. Über die \ac{WASM}-Schnittstelle werden nun lediglich Pointer übertragen, die auf die entsprechende Stelle der Register und des \ac{RAM} in diesem Speicher zeigen. Über manuell festgelegte Offsets kann nun der gewünschte Wert direkt aus dem Speicher gelesen werden.
 
 
 \subsection{Fehlersuche}\label{sec:errors}
 
+Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Fehler in der Implementierung von einzelnen Instruktionen zu finden hat sich als besonders schwierig herausgestellt, da diese häufig nur in besonderen Fällen auftreten und sich lediglich dadurch äußern, dass einzelne Flaggen des Prozessors einen falschen Wert haben.
 
-
-\section{Bewertung}
-
+Um dennoch die Fehlerfreiheit zu garantieren, wurden alle Instruktionen mithilfe eines Testprogramms getestet und der Status der \ac{CPU} mit einem anderen, fehlerfreien Emulator verglichen, der das gleiche Programm ausführt.
+Sobald der Zustand des Prozessors nach dem Ausführen einer Instruktion nicht mehr identisch ist, ist eine fehlerhafte Implementierung der jeweiligen Instruktion wahrscheinlich.
 
 \section{Prozessor Tests}\label{sec:tests}
 
-Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Um zu überprüfen, ob dies tatsächlich gelungen ist, müssen Tests durchgeführt werden. Hierfür kommen frei verfügbare \footnote[1]{\url{https://altairclone.com/downloads/cpu_tests/}} CPU Testprogramme zum Einsatz, die die Funktionsweise verschiedener Instruktionen überprüfen und mit Sollzuständen vergleichen.
+ Um zu überprüfen, ob die Implementierung der Spezifikation des Intel 8080  tatsächlich vollständig gelungen ist, müssen Tests durchgeführt werden. Hierfür kommen frei verfügbare \footnote[1]{\url{https://altairclone.com/downloads/cpu_tests/}} CPU Testprogramme zum Einsatz, die die Funktionsweise verschiedener Instruktionen überprüfen und mit Sollzuständen vergleichen.
 
 Die Ausgabe eines solchen Tests sieht wie folgt aus:
 
@@ -57,7 +70,7 @@ stax <b,d>....................
 Tests complete
 \end{minted}
 
-Es werden unterschiedliche Intruktionen, unter anderem alle \ac{ALU} Operationen, mit vielen verschiedenen Eingabewerten getestet. Der Zustand der \ac{CPU} wird nach jeder getesteten Instruktion mit einem laufenden \ac{CRC}-Wert verrechnet. Nach jeder Gruppe von Instruktionen wird diese Prüfsumme mit einem vorgegebenen Richtwert verglichen und wenn dieser übereinstimmt, ist der Test bestanden.
+Es werden unterschiedliche Instruktionen, unter anderem alle \ac{ALU} Operationen, mit vielen verschiedenen Eingabewerten getestet. Der Zustand der \ac{CPU} wird nach jeder getesteten Instruktion mit einem laufenden \ac{CRC}-Wert verrechnet. Nach jeder Gruppe von Instruktionen wird diese Prüfsumme mit einem vorgegebenen Richtwert verglichen und wenn dieser übereinstimmt, ist der Test bestanden.
 
 Da der Emulator alle Tests erfolgreich besteht, ist davon auszugehen, dass die Spezifikation des Prozessors vollständig erfüllt wurde.
 
