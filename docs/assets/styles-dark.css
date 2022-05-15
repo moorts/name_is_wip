@@ -1,0 +1,21 @@
+.as-split-gutter {
+  background-color: #111111 !important;
+}
+
+ram-display td:hover::after {
+  background-color: #666666;
+}
+
+ram-display tr:hover {
+  background-color: #666666;
+}
+
+ram-display .outer {
+  background-color: #555555;
+}
+
+ram-display .registerInput {
+  background-color: #555555;
+  color: white;
+  width: 3rem;
+}

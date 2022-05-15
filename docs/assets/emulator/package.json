@@ -1,0 +1,15 @@
+{
+  "name": "emulator",
+  "collaborators": [
+    "moorts <moritz.gutfleisch@gmx.de>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "emulator_bg.wasm",
+    "emulator.js",
+    "emulator.d.ts"
+  ],
+  "module": "emulator.js",
+  "types": "emulator.d.ts",
+  "sideEffects": false
+}
