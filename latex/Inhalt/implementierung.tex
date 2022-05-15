@@ -498,7 +498,7 @@ Der Algorithmus geht die Tokens nacheinander durch, wobei 3 Tokentypen unterschi
 Im klassischen Algorithmus werden Operatoren abgearbeitet, indem sie auf die Ablage verschoben werden. Dadurch entsteht auf dieser der Ausdruck in Postfixnotation. In unserem Fall jedoch, wenden wir die Operatoren sofort an, da wir auf der Ablage das Ergebnis des Ausdrucks erzeugen wollen. Wie in der Postfixnotation, sind die obersten 2 Elemente der Ablage stets die Parameter der als nächstes auszuführenden Operation. Folglich nehmen wir für jeden Operator der vom Stack entfernt wird diese 2 Elemente von der Ablage, wenden den Operator auf sie an (bspw. Berechnung der Summe) und legen das Ergebnis der Rechnung auf die Ablage. Der dritte Tokentyp ist die Klammer. Eine öffnende Klammer wird auf den Stack gelegt, wodurch erkennbar wird, welche Operatoren innerhalb der Klammer sind. Wenn die dazugehörige schließende Klammer vom Tokenstream gelesen wird, werden solange Operatoren vom Stack angewendet, bis die öffnende Klammer die Stackspitze bildet. Diese wird vom Stack entfernt und der nächste Token kann gelesen werden.
 Wenn alle Tokens abgearbeitet sind und der Stack vollständig geleert ist, verbleibt nur eine Zahl auf der Ablage: das Ergebnis des Ausdrucks.
 
-\begin{algorithm}
+\begin{algorithm}[H]
 \caption{Angepasster Rangierbahnhof-Algorithmus}
 \label{alg:shunt}
 \begin{algorithmic}
@@ -543,3 +543,152 @@ Wenn alle Tokens abgearbeitet sind und der Stack vollständig geleert ist, verbl
 \subsubsection{Komplexität}
 
 Unser Parser, inklusive Tokenizer, hat lineare Zeitkomplexität ($\mathcal{O}(n)$) und muss die Eingabe nur einmal durchlaufen. Die Reduktion auf einen Durchlauf ist durch Implementierung des Tokenizers als Iterator möglich, sonst müssten die Eingabe einmal von Tokenizer und einmal vom Parser durchlaufen werden.
+
+\section{WebAssembly API} \label{sec:wasmapi}
+
+Die Schnittstelle zwischen Frontend und Emulator wird mithilfe einer \ac{WASM} \ac{API} umgesetzt. Hierzu wurde eine Rust-Bibliothek namens \textit{wasm-bindgen} genutzt, die es erlaubt Methoden und Strukturen zwischen JavaScript und Rust zu teilen.
+
+Um in Rust eine Methode oder Struktur zugänglich zu machen, ist es lediglich erforderlich das Attribut \#\rust{[wasm_bindgen]} hinzuzufügen.
+In der Datei \textit{lib.rs} werden damit folgende zustandslose Helfermethoden definiert, die von der Web-Applikation aufgerufen werden können.
+
+\subsubsection*{assemble}
+
+Die Funktion \rust{assemble} nimmt Source-Code entgegen, assembled ihn, und liefert eine Liste von Bytes zurück.
+
+\subsubsection*{get_linemap}
+
+\rust{get_linemap} erstellt ein Mapping von Program Counter auf Quellcodezeile, das von der Webapplikation dazu genutzt wird, um die aktuell ausgeführte Codezeile rot zu hinterlegen.
+
+\subsubsection*{disassemble}
+
+Diese Funktion ruft den Disassembler auf und wandelt eine Liste von Bytes wieder in Assembly-Code um.
+
+\subsubsection*{createEmulator}
+
+\rust{createEmulator} erstellt eine neue Instanz des Emulators, setzt den Speicher auf den übergebenen Wert, und gibt die Instanz zurück.
+
+Neben diesen Helfermethoden wurden auch die Felder der Emulator-Struktur, Program Counter und Stack Pointer, zugänglich gemacht, sowie die Methode für das Ausführen der nächsten Instruktion, \rust{execute_next()}.
+
+Die Schnittstelle sorgt allerdings nicht nur dafür, dass Rust-Code von JavaScript aus ausführbar ist. Auch die JavaScript-Funktion \ts{console.log} wird für den Rust-Code zugänglich gemacht, um so Fehlermeldungen anzuzeigen:
+
+\begin{minted}{rust}
+    #[wasm_bindgen]
+    extern "C" {
+        // JS: console.log(msg)
+        #[wasm_bindgen(js_namespace = console)]
+        fn log(msg: &str);
+    }
+\end{minted}
+
+\section{Frontend}
+
+Die Implementierung der Web-Applikation erfolgt in Form einer Angular-Anwendung. Dazu wurden mehrere Komponenten und ein Service erstellt, die die einzelnen Funktionen der Anwendung abdecken.
+
+\begin{figure}
+    \caption{Architektur der Webanwendung}
+    \centering
+    \includegraphics[width=1.0\textwidth]{Bilder/AngularArchitektur.png}
+    \label{fig:architecture}
+\end{figure}
+
+In Abbildung \ref{fig:architecture} ist die Architektur der Applikation veranschaulicht. Die blauen Objekte stellen Komponenten dar, das grüne Objekt den Service und die orangenen Objekte externe Abhängigkeiten.
+
+\subsection{Komponenten}
+
+\subsubsection{App-Component}
+
+Die App-Component bildet den zentralen Zugangspunkt der meisten Angular-Applikationen. Von hier aus werden die anderen Komponenten der Anwendung eingebunden und miteinander verknüpft.
+Das HTML-Template der App-Component umfasst in diesem Fall das komplette Skelett der Anwendung, welches eine Titelleiste und die Einteilung in eine linke und eine rechte Hälfte definiert.
+In dieses Skelett werden dann die anderen Komponenten eingebunden.
+
+\subsubsection{\ac{RAM}-Display}
+
+Die \ac{RAM}-Display-Component stellt den Arbeitsspeicher des Emulators in Form einer 16x16 Matrix dar. Genutzt wird dafür eine einfache HTML-Tabelle, die mithilfe von Stylesheets entsprechend angepasst wird. Der Zugriff auf den Arbeitsspeicher erfolgt durch direkten Zugriff auf den Speicherbereich der \ac{WASM}-Objekte im Browser über einen Pointer.
+
+Neben der Arbeitsspeicher-Matrix kümmert sich diese Komponente auch um die Anzeige der verschiedenen Register.
+
+\subsubsection{Load-File-Dialog}
+
+Diese Komponente wird nicht von Anfang an auf der Seite eingebunden, sondern wird erst dann in Form eines modalen Dialogs angezeigt, wenn der Nutzer auf den \textit{Load}-Button in der Aktionsleiste drückt. Der Dialog zeigt dann ein simples HTML-Formular an, das mit einem \mintinline{html}{<input type="file"/>} eine Dateiauswahl ermöglicht.
+
+\subsubsection{Code-Editor}
+
+Die Code-Editor-Component ermöglicht der Anwendung die Nutzung der Monaco Editor Bibliothek. Dazu erfolgt eine umfangreiche Konfiguration des Editors, um beispielsweise die Tokens und das Farbschema für das Syntaxhighlighting festzulegen oder um die Autovervollständigung zu ermöglichen.
+
+\subsection{Emulator-Service}
+
+Alle Komponenten greifen über das Dependency-Injection-Framework von Angular auf den sogenannten Emulator-Service zu. Dieser Service verwaltet den Emulator, der mithilfe des in Kapitel \ref{sec:wasmapi} definierten \ac{WASM}-Interfaces erstellt wird.
+
+Der Service bietet den Komponenten verschiedene Funktionen an, wie zum Beispiel, Quellcode zu assemblen, was vom \textit{Assemble}-Button in der Aktionsleiste genutzt wird. Zur Ausführung von Programmen wird im Service außerdem die Hauptschleife des Emulators implementiert.
+
+\begin{minted}{typescript}
+    this._loop = window.setInterval(() => {
+      for (let i = 0; i < this._stepsPerInterval; i++) {
+        this.cpuStep();
+      }
+    }, this._interval);
+\end{minted}
+
+Statt einer \rust{while}-Schleife kommt hier die Funktion \ts{window.setInterval()} des Browsers zum Einsatz. Diese Funktion führt eine gegebene andere Funktion periodisch immer wieder mit einem bestimmten Intervall auf. Dies ermöglicht der Webanwendung trotz der \enquote{Endlossschleife} responsiv zu bleiben. Da das Intervall nicht beliebig klein sein kann, gibt es außerdem die Möglichkeit, in jedem Schleifendurchlauf mehrere Prozessorschritte durchzuführen. So kann der Emulator trotzdem so schnell laufen wie es nötig ist.
+
+Die \ts{cpuStep()}-Methode arbeitet nun verschiedene Schritte ab: Hauptaufgabe der Methode ist das Ausführen von \ts{emulator.execute_next()}, was dafür sorgt, dass der Emulator die nächste Instruktion ausführt und den Program Counter gegebenenfalls erhöht. Nach dem Ausführen des Emulatorschritts wird der Arbeitsspeicher mit dem vorherigen Zustand verglichen, um festzustellen ob es eine Änderung gab. Dies wird für das Einfärben der entsprechenden Stelle in der \ac{RAM}-Matrix genutzt.
+
+Eine weitere Aufgabe der Methode ist die Emulation von sogenannten \textit{\ac{CPM} Syscalls}.
+
+\subsection{CP/M Emulation}
+
+Um den Emulator zu testen, wurden einige frei verfügbare Programme genutzt. Diese wurden allerdings für das \ac{CPM}-Betriebssystem geschrieben, welches ab 1974 unter anderem für den Intel 8080 entwickelt wurde und auf diversen Rechnern für Endanwender zum Einsatz kam.
+
+Ein wesentliches Feature, was diese Programme nutzen, sind die \ac{BDOS} Syscalls, die auf einem \ac{CPM} System das Ausgeben von Text in einem Terminal ermöglichen \cite{cpmSyscalls}.
+
+\begin{minted}{asm}
+    LD DE   ;parameter
+    LD C    ;function
+    CALL 5  ;syscall routine
+\end{minted}
+
+Für den Aufruf eines Syscalls muss die Funktion, die aufgerufen wird, in das Register C geschrieben werden. Mögliche Parameter können im Register DE abgelegt werden. Der Syscall kann nun durch einen Sprung auf Adresse 5 ausgeführt werden.
+
+Relevant für die Programme, die zum Testen genutzt werden, sind lediglich die Syscalls 2 (Zeichen-Ausgabe) und 9 (String-Ausgabe). Die Emulation dieser Syscalls ist vergleichsweise simpel:
+
+\begin{minted}{typescript}
+    if (this._cpmMode) {
+      // Patch memory for BDOS syscalls
+      this._emulatorMemory[5] = 0xC9; // RET
+      this._emulator.pc = 0x100;
+    }
+\end{minted}
+
+Beim Start eines Programms, was im \ac{CPM} Modus ausgeführt wird, wird der Speicher an der Stelle 5 mit einer Return-Instruktion überschrieben. Das sorgt dafür, dass das Programm bei jedem Syscall sofort wieder an die ursprüngliche Stelle zurückspringt. Zusätzlich wird der Program Counter beim Start direkt auf 0x100 gesetzt, da \ac{CPM} davon ausgeht, dass Nutzerprogramme an dieser Stelle beginnen.
+
+Im \ts{cpuStep()} wird nun folgender Code ausgeführt:
+
+\begin{minted}{typescript}
+    if (this.emulator.pc == 0x05) {
+        // Emulate CP/M BDOS syscalls
+        const syscall = registers.c;
+        switch(syscall) {
+            case 2: {
+                // BDOS function 2 (C_WRITE) - Console output
+                const char = registers.e;
+                console.log(String.fromCharCode(char));
+                break;
+            }
+            case 9: {
+                // BDOS function 9 (C_WRITESTR) - Output string
+                let address = largeRegisters.d;
+                let currentChar = "";
+                let fullString = "";
+                while (currentChar != "$") {
+                    fullString += currentChar;
+                    const charCode = emulatorMemory[address++];
+                    currentChar = String.fromCharCode(charCode);
+                }
+                console.log(fullString);
+                break;
+            }
+        }
+    }
+\end{minted}
+
+Sobald der Program Counter den Wert 5 hat, das Programm also an die Syscall Adresse gesprungen ist, wird der entsprechende Syscall emuliert. Beim Syscall 2 wird das Zeichen, was sich in Register E befindet, ausgegeben. Syscall 9 gibt den String, der sich an der Speicheradresse aus Register DE befindet, so lange aus, bis das Zeichen \enquote{\$} auftritt.
