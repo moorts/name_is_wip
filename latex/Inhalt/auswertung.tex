@@ -1,1 +1,66 @@
 \chapter{Auswertung}\label{chap:eval}
+
+\section{Prozessor Tests}\label{sec:tests}
+
+Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Um zu überprüfen, ob dies tatsächlich gelungen ist, müssen Tests durchgeführt werden. Hierfür kommen frei verfügbare \footnote[1]{\url{https://altairclone.com/downloads/cpu_tests/}} CPU Testprogramme zum Einsatz, die die Funktionsweise verschiedener Instruktionen überprüfen und mit Sollzuständen vergleichen.
+
+Die Ausgabe eines solchen Tests sieht wie folgt aus:
+
+\begin{minted}{text}
+8080 instruction exerciser
+
+dad <b,d,h,sp>................
+  PASS! crc is:
+14474ba6
+
+aluop nn......................
+  PASS! crc is:
+9e922f9e
+
+aluop <b,c,d,e,h,l,m,a>.......
+  PASS! crc is:
+cf762c86
+
+[...]
+
+stax <b,d>....................
+  PASS! crc is:
+2b0471e9
+
+Tests complete
+\end{minted}
+
+Es werden unterschiedliche Intruktionen, unter anderem alle \ac{ALU} Operationen, mit vielen verschiedenen Eingabewerten getestet. Der Zustand der \ac{CPU} wird nach jeder getesteten Instruktion mit einem laufenden \ac{CRC}-Wert verrechnet. Nach jeder Gruppe von Instruktionen wird diese Prüfsumme mit einem vorgegebenen Richtwert verglichen und wenn dieser übereinstimmt, ist der Test bestanden.
+
+Da der Emulator alle Tests erfolgreich besteht, ist davon auszugehen, dass die Spezifikation des Prozessors vollständig erfüllt wurde.
+
+\section{Benchmarks}
+
+Eine interessante Kennzahl zur Auswertung des Emulators ist außerdem die mögliche Performance bei der Ausführung von Programmen. Dabei ist einerseits ein Vergleich mit der realen \ac{CPU} von Interesse. Zusätzlich stellt sich die Frage, inwiefern die \ac{WASM}-Schnittstelle und die Ausführung des Codes im Browser einen Einfluss auf die Performance des Emulators hat.
+
+Als Benchmark-Programm kommen hier erneut die Testprogramme aus Kapitel \ref{sec:tests} zum Einsatz. Die Tests brauchen teilweise mehrere Minuten für einen Durchlauf, wodurch sich ein guter Mittelwert für die Rechenzeit ausrechnen lässt, der frei von zufälligen Schwankungen ist.
+
+Die Ergebnisse der Tests werden in der folgenden Tabelle veranschaulicht.
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| } 
+    \hline
+    Testprogramm & Nativ & Browser & Vergleich \\
+    \hline
+    8080EXM.COM & 314.5s & 593.9s & 188\% \\
+    8080PRE.COM & 0.17ms & 1.1ms & 647\% \\
+    CPUTEST.COM & 4.1s & 8.7s & 212\% \\
+    TST8080.COM & 0.14ms & 0.7ms & 500\% \\
+    \hline
+    Taktrate & 75MHz & 40MHz & 53\% \\
+    \hline
+\end{tabular}
+\end{center}
+
+Da die beiden Tests \texttt{8080PRE.COM} und \texttt{TST8080.COM} nur einige Tausend Instruktionen ausführen und demnach nur Bruchteile einer Millisekunde benötigen, sind die Tests hier vergleichsweise ungenau. Bei den anderen beiden Tests, die mehrere Sekunden bis Minuten laufen, ist der Wert allerdings deutlich aussagekräfter. Der Emulator braucht hier im Browser durchschnittlich doppelt so lange einen Test auszuführen wie der direkt auf dem Rechner ausgeführte Emulator.
+
+Mögliche Gründe hierfür könnte einerseits die geringere Effizienz von \ac{WASM} gegenüber nativem Maschinencode sein. Andererseits kann die Implementierung des Loops auf JavaScript-Ebene ein limitierender Faktor sein, da dadurch bei jeder Instruktion von JavaScript auf die \ac{WASM} Schnittstelle zugegriffen werden muss, was möglicherweise einen Overhead mit sich bringt.
+
+Die Taktraten des Emulators sind mit 75MHz, beziehungsweise 40MHz im Browser, deutlich schneller als die 2MHz, die der echte Intel 8080 leistet.
+
+Insgesamt kann man also sagen, dass die Performance des Emulators im Browser zwar nur halb so gut ist wie ein nativer Emulator sein könnte, allerdings trotzdem zufriedenstellend ist. Da die mögliche Taktrate von 40MHz immer noch weit über dem Wert des realen Prozessors liegt, ist eine realitätsnahe Emulation mit echter Geschwindigkeit sehr einfach möglich.
