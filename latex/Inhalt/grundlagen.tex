@@ -142,7 +142,7 @@ Testen ist in Rust ein fester Bestandteil der Standardbibliothek und einfache Te
 
 Innerhalb des Test-Moduls können beliebig Tests definiert werden, wobei sich ihr Aufbau und Definition nicht grundlegend von anderen Sprachen unterscheidet: Die Testmethoden besitzen in der Regel keinen Rückgabewert und werden, sofern es sich um einen auszuführenden Test handelt, mit einer Annotation (\#\rust{[test]}) versehen. Mittels verschiedenen Methoden der Standardbibliothek lassen sich dann diverse Assertions (bspw. \rust{assert_eq!()}) durchführen, wobei deren Scope nicht auf Testmethoden beschränkt ist.
 
-\section{Intel 8080}
+\section{Intel 8080}\label{chap:basics:intel8080}
 
 Das Folgende Kapitel ist eine allgemeine Übersicht über die Architektur und Funktionsweise einer Intel 8080 CPU. Die Informationen sind dem offiziellen Datenblatt\cite{datasheet} und dem offizielen Programmierhandbuch\cite{progManual} entnommen.
 Einige Aspekte --- \zB die Taktung des Intel 8080 --- welche nicht emuliert werden müssen, werden bewusst nicht erwähnt. Die Übersicht soll ausschließlich Details erläutern, die relevant zum Verständnis des Emulators sind.
