@@ -39,7 +39,7 @@ Der Intel 8080 ist lediglich die \ac{CPU} --- \ac{RAM} und I/O-Geräte arbeiten 
 
 \subsection{Ausführung}
 
-Die Methode \rust{Emulator::execute_next()} führt die Instruktion an der entsprechenden Adresse des \ac{PC}s aus. Der Opcode wird über ein enormes \rust{match}-Statement auf die entsprechende Funktion delegiert, mittels welcher die Operation ausgeführt wird. Diese Funktionen sind dafür zuständig, den \ac{PC} entsprechend zu erhöhen. Abhängig vom ausgeführten Opcode muss dieser um eins, zwei oder drei erhöht werden.
+Die Methode \rust{Emulator::execute_next()} führt die Instruktion aus, auf die der \ac{PC} zeigt. Der Opcode wird über ein enormes \rust{match}-Statement auf die entsprechende Funktion delegiert, mittels welcher die Operation ausgeführt wird. Diese Funktionen sind dafür zuständig, den \ac{PC} entsprechend zu erhöhen. Abhängig vom ausgeführten Opcode muss dieser um eins, zwei oder drei erhöht werden.
 
 Der Rückgabetyp der Methode ist \rust{Result<(), &str>}, dadurch können entsprechende Fehlermeldungen nach außen propagiert werden. Dies ist wünschenswert, damit auf dem Frontend entsprechende Fehlermeldungen angezeigt werden können, um dem Benutzer den Entwicklungsprozess zu erleichtern.
 
