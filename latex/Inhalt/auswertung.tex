@@ -37,7 +37,7 @@ Beider Probleme konnten durch einen direkten Speicherzugriff im Browser gelöst 
 
 Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Fehler in der Implementierung von einzelnen Instruktionen zu finden hat sich als besonders schwierig herausgestellt, da diese häufig nur in besonderen Fällen auftreten und sich lediglich dadurch äußern, dass einzelne Flaggen des Prozessors einen falschen Wert haben.
 
-Um dennoch die Fehlerfreiheit zu garantieren, wurden alle Instruktionen mithilfe eines Testprogramms getestet und der Status der \ac{CPU} mit einem anderen, fehlerfreien Emulator verglichen, der das gleiche Programm ausführt.
+Um dennoch die Fehlerfreiheit zu garantieren, wurden alle Instruktionen mithilfe eines Testprogramms getestet und der Status der \ac{CPU} mit einem anderen, fehlerfreien Emulator \footnote[2]{\url{https://github.com/mohanson/i8080}} verglichen, der das gleiche Programm ausführt.
 Sobald der Zustand des Prozessors nach dem Ausführen einer Instruktion nicht mehr identisch ist, ist eine fehlerhafte Implementierung der jeweiligen Instruktion wahrscheinlich.
 
 \section{Prozessor Tests}\label{sec:tests}
