@@ -88,6 +88,10 @@ yarn install
 
 3. From there, deploy the project with:
 ```
-npm run start
+npm run start 
+```
+or
+```
+yarn run start
 ```
 This will start the emulator as an Angular application on your machine. If left unchanged it will be available on 'localhost:4200'.
