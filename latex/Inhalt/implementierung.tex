@@ -64,11 +64,11 @@ In seiner einfachsten Form besitzt \rust{assemble()} den Aufbau aus Listing \ref
 \begin{listing}[ht]
 \begin{minted}{rust}
 pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
-	let ppc = get_preprocessed_code(&self.code)?;
-	let mut byte_code: Vec<u8> = Vec::new();
+    let ppc = get_preprocessed_code(&self.code)?;
+    let mut byte_code: Vec<u8> = Vec::new();
     for line in ppc {
         if !line.contains("ORG ") {
-	        let bytes = to_machine_code(line)?;
+            let bytes = to_machine_code(line)?;
             byte_code.extend(bytes);
         }
     }
@@ -81,7 +81,9 @@ pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
 
 Diese Implementierung erzeugt aus dem, dem Assembler bei Initialisierung übergebenen Code, einen Vektor von positiven 8-Bit-Werten. Da es sich beim ursprünglichen Code um Nutzereingaben handelt, besteht die Gefahr, dass Syntaxfehler eine Übersetzung fehlschlagen lassen. Deshalb ist die Rückgabe vom Typ \rust{Result}, womit bei einem Fehlschlag eine entsprechende Fehlermeldung zurückgegeben werden kann, anstatt dass das Programm abstürzt.
 
-Die grundlegende Funktionsweise ist das Iterieren über alle Zeilen des vom Präprozessor behandelten Codes und ein Übersetzen der jeweiligen Zeile in Bytecode. Zeilen, in denen eine nutzerdefinierte Speicheradresse (vergleiche Origins, \ref{chap:pseudo-instructions}) deklariert ist, werden durch die Vorverarbeitung mittels Präprozessor (Zeile 2) nicht entfernt, weshalb diese Zeilen noch einmal gesondert übergangen werden müssen. Die Deklarationen der Origins müssen erhalten werden, da der Assembler die vom Nutzer deklarierten Speicheradressen selber ausliest, dafür allerdings den vorverarbeiteten Code nutzt.
+Die grundlegende Funktionsweise ist das Iterieren über alle Zeilen des vom Präprozessor behandelten Codes und ein Übersetzen der jeweiligen Zeile in Bytecode mittels \rust{to_machine_code()}. Diese Methode beinhaltet ein umfangreiches \rust{match}-Statement, das abhängig vom Opcode die entsprechenden Bytes zurückliefert. Der \enquote{?}-Operator entpackt den Rückgabewert der Methode (ein \rust{Result}) unmittelbar und propagiert ggf. den Fehler.
+
+Zeilen, in denen eine nutzerdefinierte Speicheradresse (vergleiche Origins, \ref{chap:pseudo-instructions}) deklariert ist, werden durch die Vorverarbeitung mittels Präprozessor (Zeile 2) nicht entfernt, weshalb diese Zeilen noch einmal gesondert übergangen werden müssen. Die Deklarationen der Origins müssen erhalten werden, da der Assembler die vom Nutzer deklarierten Speicheradressen selber ausliest, dafür allerdings den vorverarbeiteten Code nutzt.
 
 Während der Entwicklung ist aufgefallen, dass es inhaltlich sinnvoll wäre, wenn der Assembler, der die Origins ohnehin ausliest, diese auch direkt auswertet. Deshalb wurde das if-Statement im Quellcode \ref{lst:assemble} um folgende Schleifen erweitert:
 
