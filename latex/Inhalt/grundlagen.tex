@@ -157,7 +157,7 @@ Der \ac{RAM} des 8080 wird über 16-Bit Addressen angesprochen, hat also maximal
 Während der Ausführung eines Programmes zeigt der Program Counter (PC) auf die zunächst auszuführende Instruktion im \ac{RAM} und der Stack Pointer (SP) auf die Spitze des Stacks. Der Stack des 8080 wächst allerdings nach unten (Addressen sinken bei größerem Stack).
 Es ist nicht festgelegt, wo der Stack anfängt, der Programmierer muss den SP per Programm setzen. Der PC ist initial 0, außer der Entwickler setzt den Startpunkt manuell.
 
-Beim Stack handelt es sich um eine Datenstruktur im \ac{RAM}, die 2 zugreifende Operationen unterstützt: Pop und Push. Pop entfernt das oberste Element und lädt es in das angegebene Register, Push legt ein angegebenes Element auf den Stack. Die Operationen in-/dekrementieren automatisch den SP entsprechend.
+Beim Stack handelt es sich um eine Last In-First Out (LIFO) Datenstruktur im \ac{RAM}, die 2 zugreifende Operationen unterstützt: Pop und Push. Pop entfernt das oberste Element und lädt es in das angegebene Register, Push legt ein angegebenes Element auf den Stack. Die Operationen in-/dekrementieren automatisch den SP entsprechend.
 
 \subsection{Register}
 
@@ -189,13 +189,17 @@ Die CPU muss Informationen über die Ergebnisse arithmetischer Operationen speic
     \item[Carry] Bei der letzten Operation gab es einen Übertrag
     \item[Sign] Das Ergebnis der letzten Operation war negativ
     \item[Parity] Die Anzahl der Einsen im Ergebnis (Basis 2) war gerade
-    \item[Auxiliary Carry] Übertrag im vierten Bit % TODO: Formulate better
+    \item[Auxiliary Carry] Überlauf im unteren Halbbyte\footnote{Siehe: \url{https://de.wikipedia.org/wiki/Hilfs\%C3\%BCbertragsflag}}
 \end{description}
+
+\subsection{Opcodes}\label{sec:opcodes}
+
+Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Diese besteht aus sogenannten Opcodes (Instruktionen). Dabei handelt es sich um jeweils 1 bis 3 Bytes, wobei das erste zur Identifikation der Instruktion gilt und die anderen Bytes ggf. Parameter enthalten.
 
 
 \subsection{Assembly}
 
-Wie jede CPU ist der Intel 8080 in der Lage Maschinensprache auszuführen. Programme in Maschinensprache sind für Menschen jedoch schlecht lesbar, daher ist die typische Abstraktion über der Maschinensprache eines Prozessors die entsprechende Assembly-Syntax.
+Programme in Maschinensprache sind für Menschen schlecht lesbar, daher ist die typische Abstraktion über der Maschinensprache eines Prozessors die entsprechende Assembly-Syntax.
 Es folgt eine kurze Einführung in Intel 8080 Assembly.
 
 \subsubsection{Notation}
