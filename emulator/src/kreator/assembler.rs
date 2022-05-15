@@ -57,7 +57,15 @@ impl Assembler {
                 while byte_code.len() < current_address.into() {
                     byte_code.push(0);
                 }
-                let bytes = to_machine_code(line)?;
+                let bytes = if line.starts_with("DB ") {
+                    convert_db_statement(&line)
+                } else if line.starts_with("DW ") {
+                    convert_dw_statement(&line)
+                } else if line.starts_with("DS ") {
+                    convert_ds_statement(&line)
+                } else {
+                    to_machine_code(line)?
+                };
                 current_byte_index += bytes.len();
                 byte_code.extend(bytes);
             }
@@ -83,6 +91,12 @@ impl Assembler {
             if line.contains("ORG") {
                 let split = line.split_once(" ").unwrap();
                 origins.push((executed_bytes, evaluate_str(split.1)));
+            } else if line.starts_with("DB ") {
+                executed_bytes = executed_bytes + convert_db_statement(&line).len() as u16;
+            } else if line.starts_with("DW ") {
+                executed_bytes = executed_bytes + convert_dw_statement(&line).len() as u16;
+            } else if line.starts_with("DS ") {
+                executed_bytes = executed_bytes + convert_ds_statement(&line).len() as u16;
             } else {
                 let line = label_regex.replace(&line, "").to_string();
                 executed_bytes = executed_bytes + to_machine_code(line).unwrap().len() as u16;
@@ -459,6 +473,54 @@ fn convert_rst_args(args: Vec<&str>) -> Result<Vec<u8>, &'static str> {
     Err("wrong register!")
 }
 
+fn convert_db_statement(statement: &str) -> Vec<u8> {
+    let (_, operand) = statement.split_once("DB ").unwrap();
+    let mut data_vec: Vec<u8> = Vec::new();
+    if operand.contains(",") {
+        for op in operand.split(",") {
+            let value = eval(op) as u8;
+            data_vec.push(value);
+        }
+    } else if operand.contains("'") {
+        for char in operand.trim().replace("'", "").chars() {
+            data_vec.push(char as u8);
+        }
+    } else {
+        data_vec.push(eval(operand) as u8);
+    }
+    data_vec
+}
+
+fn convert_dw_statement(statement: &str) -> Vec<u8> {
+    let (_, operand) = statement.split_once("DW ").unwrap();
+    let mut data_vec: Vec<u8> = Vec::new();
+    if operand.contains(",") {
+        for op in operand.split(",") {
+            let value = eval(op) as u16;
+            data_vec.push(value as u8);
+            data_vec.push((value >> 8) as u8);
+        }
+    } else if operand.contains("'") {
+        for char in operand.trim().replace("'", "").chars() {
+            data_vec.push(char as u8);
+            data_vec.push((char as u16 >> 8) as u8);
+        }
+    } else {
+        let val = eval(operand) as u16;
+        data_vec.push(val as u8);
+        data_vec.push((val >> 8) as u8);
+    }
+    data_vec
+}
+
+fn convert_ds_statement(statement: &str) -> Vec<u8> {
+    let (_, operand) = statement.split_once("DS ").unwrap();
+    let val = eval(operand) as usize;
+    let result: Vec<u8> = vec![0; val];
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -806,6 +868,66 @@ mod tests {
         let result: Vec<usize> = vec![0, 2, 2, 2];
 
         assert_eq!(Ok(result), assembler.get_line_map());
+    }
+
+    #[test]
+    fn define_bytes() {
+        let assembler = Assembler::new(
+            "HERE: DB 0A3H\n 
+            WORD1: DB 5*2, 2FH-0AH\n
+            ORG 6\n
+            WORD2: DB 5ABCH SHR 8\n 
+            STR: DB 'STRINGSpl'\n 
+            MINUS: DB -03H\n
+            END");
+        let assembled: Vec<u8> = vec![0xA3, 0x0A, 0x25, 0, 0, 0, 0x5A, 0x53, 0x54, 0x52, 0x49, 0x4E, 0x47, 0x53, 0x70, 0x6C, 0xFD];
+
+        assert_eq!(Ok(assembled), assembler.assemble());
+    }
+
+    #[test]
+    fn define_word() {
+        let line = "DW 3B1CH";
+        let expected: Vec<u8> = vec![0x1C, 0x3B];
+
+        assert_eq!(expected, convert_dw_statement(line));
+    }
+
+    #[test]
+    fn define_word_assembled() {
+        let assembler = Assembler::new(
+            "ADD1: DW COMP\n
+            ADD2: DW FILL\n
+            ADD3: DW 3C01H, 3CAEH\n
+            ORG 3B1CH\n
+            COMP: RLC\n
+            ORG 3EB4H\n
+            FILL: RLC\n
+            END"
+        );
+        let mut expected: Vec<u8> = vec![0x1C, 0x3B, 0xB4, 0x3E, 0x01, 0x3C, 0xAE, 0x3C];
+        expected.extend(vec![0; 0x3B1C - expected.len()]);
+        expected.push(0x07);
+        expected.extend(vec![0; 0x3EB4 - 0x3B1C - 1]);
+        expected.push(0x07);
+        
+        assert_eq!(Ok(expected), assembler.assemble());
+    }
+
+    #[test]
+    fn define_storage() {
+        let line = "DS 10H";
+        let expected: Vec<u8> = vec![0; 16];
+
+        assert_eq!(expected, convert_ds_statement(line));
+    }
+
+    #[test]
+    fn define_storage_assembled() {
+        let assembler = Assembler::new("HERE: DS 10\nEND");
+        let data: Vec<u8> = vec![0; 10];
+
+        assert_eq!(Ok(data), assembler.assemble());
     }
 
     #[test]
