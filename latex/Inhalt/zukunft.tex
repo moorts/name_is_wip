@@ -1,4 +1,4 @@
-\chapter{Zukunftsideen}
+\chapter{Ausblick}
 
 Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu. Dabei geht es sowohl um mögliche Erweiterungen der bestehenden Spezifikation, als auch Anpassungen die entsprechend dieser vorgenommen werden sollten, bzw. gemusst hätten, aber primär aus zeitlichen Gründen nicht mehr umzusetzen waren.
 
@@ -86,3 +86,36 @@ Die Struktur des Assemblers ist suboptimal. Zwar sind viele Funktionen in einzel
 In diesem Fall wurde sich dazu entschlossen den Fehler in Kauf zu nehmen. Begründet wird dies vor allem mit dem Verhältnis von Zeitaufwand und möglichem Gewinn: Zwar handelt es sich um einen kritischen Fehler, allerdings ist die Verwendung von Labels in konditionalen Anweisungen wenig sinnvoll. Schließlich ist nur das Label, das noch vor dem ersten Opcode steht, sofern es überhaupt existiert, null. In allen anderen Fällen sind Label ungleich null und damit konstante Werte, die die If-Bedingung erfüllen. Es erscheint, obwohl erlaubt, nur wenig sinnvoll Labels an einer solchen Stelle zu positionieren, weshalb der Fehler toleriert wird.
 
 Neben solchen, durch Eckfälle bedingte Fehler, bietet der Assembler auch Raum für Optimierung. Das gilt bezüglich der Zeit- sowie der Codekomplexität. An Stellen, an denen dies bereits zum Zeitpunkt des Arbeitsabschlusses ersichtlich war, wurde das bereits in Kapitel \ref{chap:impl-assembler} erwähnt. Vor allem die zeitliche Abfolge zum Auslesen und Ersetzen bestimmter Zeileninhalte ist verbesserbar. Allerdings ist die Performanz des Assemblers bisher mehr als ausreichend, weswegen der Fokus nicht auf solchen Verbesserungen lag.
+
+\section{Weitere Features für die Webanwendung}
+
+Die Webanwendung für den Emulator bietet noch reichlich Spielraum für weitere nützliche Features, die die Entwicklung von Programmen für den Intel 8080 vereinfachen würden.
+
+\subsection{Konfigurationsmenü}
+
+Die Anwendung hat bereits jetzt zahlreiche Optionen, wie beispielsweise die \ac{CPM}-Emulation, die Geschwindigkeit des Emulators oder die Startadresse, die vom User Interface aus nicht zugänglich sind, sondern lediglich im Code festgelegt werden. Durch Hinzufügen eines dedizierten Konfigurationsmenüs könnten diese Optionen dem Nutzer verfügbar gemacht werden.
+
+\subsection{Peripheriegeräte}
+
+Die Emulation des Prozessors umfasst unter anderem die IN und OUT Instruktionen, mit denen die CPU Daten mit externen Geräten austauschen kann. Für die Webanwendung wäre es denkbar, einige Peripheriegeräte hinzuzufügen. Beispiele wären:
+
+\begin{itemize}
+    \item Schalter
+    \item LED Displays, Matrizen, 7-Segment-Displays
+    \item Keypads
+    \item Datei-Interface
+    \item Audioausgabe
+    \item Logger
+\end{itemize}
+
+Um die Peripheriegeräte anzusteuern, wäre es notwendig, diese einem Port zuzuweisen. Hierfür müsste es ebenfalls die Möglichkeit geben, ein Mapping zu konfigurieren.
+
+\subsection{Breakpoints}
+
+Breakpoints sind ein Feature, das nahezu alle integrierten Entwicklungsumgebungen für klassische Programmiersprachen anbieten. Dabei wird die Ausführung des Programms automatisch angehalten, wenn der Prozessor bei einer mit einem Breakpoint markierten Instruktion angelangt. So können Nutzer bestimmte Codebereiche sehr einfach untersuchen und so mögliche Fehler finden.
+
+Die Implementierung würde dank der Monaco Editor Bibliothek vermutlich relativ simpel werden, da Visual Studio Code, was auf dem selben Editor basiert, dies auch unterstützt.
+
+\subsection{Interrupt Status}
+
+Aktuell wird der komplette Arbeitsspeicher des Prozessors und alle Register angezeigt. Lediglich der interne Status, ob aktuell Interrupts ausgelöst werden können, ist im User Interface nicht einsehbar. Hierfür könnte noch eine Anzeige hinzugefügt werden.
