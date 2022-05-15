@@ -63,7 +63,7 @@ Auch diese Funktionen geben häufig \rust{Result}s zurück, sofern die Ausführu
 \end{minted}
 
 Wenn Interrupts erlaubt sind, wird der übergebene Opcode ausgeführt und der Boolean geflipped, andernfalls wird eine Errormeldung zurückgegeben. \rust{interrupts_enabled} ist initial \rust{false} und muss durch die entsprechende Instruktion (\asm{EI}) gesetzt werden.
-Prinzipiell kann also jede 1 Byte große Instruktion (parameterlose Instruktion) als Interrupt ausgeführt werden, meistens wird jedoch eine der \asm{RST}-Instruktionen ausgeführt. Diese sind \asm{CALL}-Instruktionen, die zu einer fixen Speicheradresse springen. An diesen fixen Adressen kann der Programmierer die entsprechenden Interrupt-Routinen platzieren.
+Prinzipiell kann jede 1 Byte große Instruktion (parameterlose Instruktion) als Interrupt ausgeführt werden, meistens wird jedoch eine der \asm{RST}-Instruktionen ausgeführt. Diese sind \asm{CALL}-Instruktionen, die zu einer fixen Speicheradresse springen. An diesen fixen Adressen kann der Programmierer die entsprechenden Interrupt-Routinen platzieren.
 
 \section{Assembler}
 
