@@ -1,6 +1,43 @@
 \chapter{Auswertung}\label{chap:eval}
 
-\section{Testprogramme}
+\section{Testprogramme}\label{sec:tests}
 
 Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Um zu überprüfen, ob dies tatsächlich gelungen ist, müssen Tests durchgeführt werden. Hierfür kommen frei verfügbare \footnote[1]{\url{https://altairclone.com/downloads/cpu_tests/}} CPU Testprogramme zum Einsatz, die die Funktionsweise verschiedener Instruktionen überprüfen und mit Sollzuständen vergleichen.
 
+Die Ausgabe eines solchen Tests sieht wie folgt aus:
+
+\begin{minted}{text}
+8080 instruction exerciser
+
+dad <b,d,h,sp>................
+  PASS! crc is:
+14474ba6
+
+aluop nn......................
+  PASS! crc is:
+9e922f9e
+
+aluop <b,c,d,e,h,l,m,a>.......
+  PASS! crc is:
+cf762c86
+
+[...]
+
+stax <b,d>....................
+  PASS! crc is:
+2b0471e9
+
+Tests complete
+\end{minted}
+
+Es werden unterschiedliche Intruktionen, unter anderem alle \ac{ALU} Operationen, mit vielen verschiedenen Eingabewerten getestet. Der Zustand der \ac{CPU} wird nach jeder getesteten Instruktion mit einem laufenden \ac{CRC}-Wert verrechnet. Nach jeder Gruppe von Instruktionen wird diese Prüfsumme mit einem vorgegebenen Richtwert verglichen und wenn dieser übereinstimmt, ist der Test bestanden.
+
+Da der Emulator alle Tests erfolgreich besteht, ist davon auszugehen, dass die Spezifikation des Prozessors vollständig erfüllt wurde.
+
+\section{Benchmarks}
+
+Eine interessante Kennzahl zur Auswertung des Emulators ist außerdem die mögliche Performance bei der Ausführung von Programmen. Dabei ist einerseits ein Vergleich mit der realen \ac{CPU} von Interesse. Zusätzlich stellt sich die Frage, inwiefern die \ac{WASM}-Schnittstelle und die Ausführung des Codes im Browser einen Einfluss auf die Performance des Emulators hat.
+
+Als Benchmark-Programm kommen hier erneut die Testprogramme aus Kapitel \ref{sec:tests} zum Einsatz. Da die Tests teilweise mehrere Minuten für einen Durchlauf brauchen, lässt sich so ein guter Mittelwert für die Rechenzeit ausrechnen, der vergleichsweise frei von zufälligen Schwankungen ist.
+
+Die Ergebnisse der Tests werden in der folgenden Tabelle veranschaulicht.
