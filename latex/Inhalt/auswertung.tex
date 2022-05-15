@@ -1,1 +1,114 @@
 \chapter{Auswertung}\label{chap:eval}
+
+\section{Herausforderungen}
+
+Zum besseren Verständnis der nachfolgenden Bewertung der Ergebnisse werden noch einmal die Herausforderungen betrachtet. Dabei geht es um Schwierigkeiten und Probleme die während der Entwicklung aufgetreten sind. Sie sind maßgeblich für die Evaluierung des gewählten Vorgehens und sollen eventuelle Hindernisse für zukünftige Arbeiten auf diesem Gebiet aufzeigen.
+
+\subsection{Emulator}
+
+Der Großteil der Entwicklung des Emulators bildet die Implementierung der einzelnen Instruktionen. Diese sind alle relativ simpel und daher einfach umzusetzen. Jedoch ist es leicht möglich, dass sich kleine Fehler einschleichen, die von den Testfällen verpasst werden. Solche Fehler fallen ggf. erst zu einem deutlich späteren Zeitpunkt auf und können dann oft schwer auf konkrete Fehlerquellen zurückgeführt werden. Wie solche Fehler in unserem Emulator bemerkt und gefunden wurden wird in \cref{sec:errors} im Detail ausgeführt.
+
+\subsection{Assembler}
+
+Beim Assembler haben sich zwei Faktoren besonders bemerkbar gemacht. Der Erste ist, dass es sich um eine \textbf{Schnittstelle zum Benutzer} handelt. Sie ermöglicht es beinahe beliebigen Input in Form einer Texteingabe zu übermitteln. Typischerweise bergen Nutzereingaben vor allem in sicherheitskritischen Applikationen, bei denen Anwender möglicherweise unbefugt Daten abfangen oder manipulieren, ein erhöhtes Risiko. Weil der Emulator keine solcher Daten beinhaltet bleibt dieser Aspekt zwar aus, nichtsdestotrotz muss eine korrekte Übersetzung des vom Intel 8080 beschriebenen Assemblercodes in Maschinencode erfolgen.
+
+Grundsätzlich ist das auch möglich, aber es kommt zu möglichen Problemen, wenn es dem Anwender gestattet ist Formate zu benutzen, die zwar einer Form folgen, jedoch nicht eindeutig sind. Dazu gehören beispielsweise Namen von Variablen oder mathematische Ausdrücke. Es kann zweifelsfrei festgestellt werden, ob diese eine zugelassene Form besitzen, erschweren eine Feststellung der Korrektheit jedoch ungemein, worauf in Kapitel \ref{chap:macro:references} detailliert eingegangen wurde. Während hier die Verwendung von Regex' hilft, sind nicht alle Eck- und Kantenfälle direkt ersichtlich, die auf jeden Fall in Tests umgesetzt werden müssen, sobald sie identifiziert werden konnten.
+
+Neben dem schwierigen Umgang mit Nutzereingaben war die \textbf{Verarbeitung von Pseudo-Instruktionen} eine weitere Herausforderung bezüglich der Umsetzung. Nicht nur sind vor allem diese Grund für die Möglichkeit zur Verwendung von benutzerdefinierten Namen, auch die Reihenfolge der Abarbeitung ist entscheidend. Dabei stachen vor allem Makros heraus, was sich in deren großem Anteil an Kapitel \ref{chap:preprocessor} widerspiegelt. Aufwendig waren hier vor allem die Beachtung verschiedenen Gültigkeitsbereiche und das korrekte Bestimmen von Variablen zu bestimmten Zeitpunkten. Letzteres erschwerte die Modularisierung der Vorverarbeitung maßgeblich, weil mehrere Funktionalitäten, die zwar inhaltlich getrennt werden können, nicht losgelöst voneinander durchführbar sind.
+
+\subsection{WebAssembly-Interface}
+
+Bei der Implementierung des \ac{WASM}-Interfaces gab es einige Herausforderungen, die aufgrund fehlender Funktionalität der \textit{wasm-bindgen} Bibliothek entstanden. 
+
+\subsubsection*{Fehlende Union Types}
+
+Die Register der \ac{CPU} wurden im Rust Code mithilfe von Union Types implementiert, die dafür sorgen, dass die 16-Bit Register und die dazugehörigen 8-Bit Register im gleichen Speicherbereich liegen. Diese Union Types können nicht auf die \ac{WASM}-Bindings abgebildet werden
+
+\subsubsection*{Fehlende dynamische Trait Referenzen}
+
+Da der Arbeitsspeicher nur durch einen Trait definiert wird, wird die Referenz auf dieses Objekt in der Emulator Struktur durch eine dynamische Box repräsentiert. Diese Referenz kann ebenfalls nicht auf das \ac{WASM}-Binding abgebildet werden.
+
+\subsubsection*{Lösung}
+
+Beider Probleme konnten durch einen direkten Speicherzugriff im Browser gelöst werden. Mithilfe der \ts{WebAssembly.Memory} Klasse besteht die Möglichkeit, auf den gesamten allokierten Speicher einer \ac{WASM}-Instanz zuzugreifen. Über die \ac{WASM}-Schnittstelle werden nun lediglich Pointer übertragen, die auf die entsprechende Stelle der Register und des \ac{RAM} in diesem Speicher zeigen. Über manuell festgelegte Offsets kann nun der gewünschte Wert direkt aus dem Speicher gelesen werden.
+
+
+\subsection{Fehlersuche}\label{sec:errors}
+
+Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Fehler in der Implementierung von einzelnen Instruktionen zu finden hat sich als besonders schwierig herausgestellt, da diese häufig nur in besonderen Fällen auftreten und sich lediglich dadurch äußern, dass einzelne Flaggen des Prozessors einen falschen Wert haben.
+
+Um dennoch die Fehlerfreiheit zu garantieren, wurden alle Instruktionen mithilfe eines Testprogramms getestet und der Status der \ac{CPU} mit einem anderen, fehlerfreien Emulator \footnote[2]{\url{https://github.com/mohanson/i8080}} verglichen, der das gleiche Programm ausführt.
+Sobald der Zustand des Prozessors nach dem Ausführen einer Instruktion nicht mehr identisch ist, ist eine fehlerhafte Implementierung der jeweiligen Instruktion wahrscheinlich.
+
+\section{Prozessor Tests}\label{sec:tests}
+
+ Um zu überprüfen, ob die Implementierung der Spezifikation des Intel 8080  tatsächlich vollständig gelungen ist, müssen Tests durchgeführt werden. Hierfür kommen frei verfügbare \footnote[1]{\url{https://altairclone.com/downloads/cpu_tests/}} CPU Testprogramme zum Einsatz, die die Funktionsweise verschiedener Instruktionen überprüfen und mit Sollzuständen vergleichen.
+
+Die Ausgabe eines solchen Tests sieht wie folgt aus:
+
+\begin{minted}{text}
+8080 instruction exerciser
+
+dad <b,d,h,sp>................
+  PASS! crc is:
+14474ba6
+
+aluop nn......................
+  PASS! crc is:
+9e922f9e
+
+aluop <b,c,d,e,h,l,m,a>.......
+  PASS! crc is:
+cf762c86
+
+[...]
+
+stax <b,d>....................
+  PASS! crc is:
+2b0471e9
+
+Tests complete
+\end{minted}
+
+Es werden unterschiedliche Instruktionen, unter anderem alle \ac{ALU} Operationen, mit vielen verschiedenen Eingabewerten getestet. Der Zustand der \ac{CPU} wird nach jeder getesteten Instruktion mit einem laufenden \ac{CRC}-Wert verrechnet. Nach jeder Gruppe von Instruktionen wird diese Prüfsumme mit einem vorgegebenen Richtwert verglichen und wenn dieser übereinstimmt, ist der Test bestanden.
+
+Da der Emulator alle Tests erfolgreich besteht, ist davon auszugehen, dass die Spezifikation des Prozessors vollständig erfüllt wurde.
+
+\section{Benchmarks}
+
+Eine interessante Kennzahl zur Auswertung des Emulators ist außerdem die mögliche Performance bei der Ausführung von Programmen. Dabei ist einerseits ein Vergleich mit der realen \ac{CPU} von Interesse. Zusätzlich stellt sich die Frage, inwiefern die \ac{WASM}-Schnittstelle und die Ausführung des Codes im Browser einen Einfluss auf die Performance des Emulators hat.
+
+Als Benchmark-Programm kommen hier erneut die Testprogramme aus Kapitel \ref{sec:tests} zum Einsatz. Die Tests brauchen teilweise mehrere Minuten für einen Durchlauf, wodurch sich ein guter Mittelwert für die Rechenzeit ausrechnen lässt, der frei von zufälligen Schwankungen ist.
+
+Die Ergebnisse der Tests werden in der folgenden Tabelle veranschaulicht.
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| } 
+    \hline
+    Testprogramm & Nativ & Browser & Vergleich \\
+    \hline
+    8080EXM.COM & 314.5s & 593.9s & 188\% \\
+    8080PRE.COM & 0.17ms & 1.1ms & 647\% \\
+    CPUTEST.COM & 4.1s & 8.7s & 212\% \\
+    TST8080.COM & 0.14ms & 0.7ms & 500\% \\
+    \hline
+    Taktrate & 75MHz & 40MHz & 53\% \\
+    \hline
+\end{tabular}
+\end{center}
+
+Da die beiden Tests \texttt{8080PRE.COM} und \texttt{TST8080.COM} nur einige Tausend Instruktionen ausführen und demnach nur Bruchteile einer Millisekunde benötigen, sind die Tests hier vergleichsweise ungenau. Bei den anderen beiden Tests, die mehrere Sekunden bis Minuten laufen, ist der Wert allerdings deutlich aussagekräfter. Der Emulator braucht hier im Browser durchschnittlich doppelt so lange einen Test auszuführen wie der direkt auf dem Rechner ausgeführte Emulator.
+
+Mögliche Gründe hierfür könnte einerseits die geringere Effizienz von \ac{WASM} gegenüber nativem Maschinencode sein. Andererseits kann die Implementierung des Loops auf JavaScript-Ebene ein limitierender Faktor sein, da dadurch bei jeder Instruktion von JavaScript auf die \ac{WASM} Schnittstelle zugegriffen werden muss, was möglicherweise einen Overhead mit sich bringt.
+
+Die Taktraten des Emulators sind mit 75MHz, beziehungsweise 40MHz im Browser, deutlich schneller als die 2MHz, die der echte Intel 8080 leistet.
+
+Insgesamt kann man also sagen, dass die Performance des Emulators im Browser zwar nur halb so gut ist wie ein nativer Emulator sein könnte, allerdings trotzdem zufriedenstellend ist. Da die mögliche Taktrate von 40MHz immer noch weit über dem Wert des realen Prozessors liegt, ist eine realitätsnahe Emulation mit echter Geschwindigkeit sehr einfach möglich.
+
+\section{Fazit}
+
+Im Bezug auf die gesetzten Ziele, war das Projekt sehr erfolgreich. Bis auf Selektion verschiedener Peripherie-Geräte, wurden alle in \cref{goals} definierten Ziele erreicht. Das Endprodukt entspricht unseren anfänglich Erwartungen.
+
+Die Schwierigkeit der Implementierung des tatsächlichen Emulators wurde von uns überschätzt, denn dies lief relativ einfach ab. Hierzu gegensätzlich war es eine deutlich größere Herausforderung den Assembler vollständig umzusetzen, da die verschiedenen Pseudoinstructions viele Komplikationen mit sich brachten.
+
+Alles in allem war das Projekt ein Erfolg und wir sind zufrieden mit dem Endergebnis.

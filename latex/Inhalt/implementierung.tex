@@ -45,7 +45,7 @@ Diese Implementierung ist jedoch noch immer ungenügend, weil verschiedene Gerä
 
 Solange das Programm als einzelner Thread ausgeführt wird, kann nun jederzeit mit einer mutable (\textit{veränderbaren}) Referenz auf ein solches InputDevice gearbeitet werden. Außerdem dürfen beliebig viele non-mutable Referenzen existieren, sofern im aktuellen Scope keine mutable Referenz auf das Gerät existiert.
 
-\section{Assembler}
+\section{Assembler}\label{chap:impl-assembler}
 
 Die Implementierung des Assemblers besteht aus drei maßgeblichen Komponenten: Dem eigentlichen Assembler, dem im Code sogenannten \enquote{preprocessor} zur Vorverarbeitung und einem Parser für numerische Eingaben des Nutzers. In den folgenden Abschnitten wird auf verschiedene Besonderheiten und Herausforderungen der drei Komponenten eingegangen, was mittels Code-Beispielen illustriert wird. Generell gilt, dass der führende und schließende Whitespace einer Zeile des Programmcodes vor deren Behandlung durch die Methode \rust{.trim()} entfernt und die Zeile gegebenenfalls übergangen wird, sofern eine Leerzeile entsteht. Der Übersichtlichkeit halber ist dieser Teil des Codes an vielen Stellen ausgelassen.
 
@@ -273,7 +273,7 @@ Dabei wird eine Zeile, sofern sie das Schlüsselwort \glqq MACRO\grqq{} enthält
 
 Sowohl die Parameter, als auch der Code eines Makros werden, solange kein Ende gefunden wurde, in separaten Variablen, die nicht dem Rückgabewert der Methode entsprechen, gespeichert. Ihre Inhalte werden zum Endergebnis hinzugefügt und die Variablen geleert, sobald ein \asm{ENDM} aufkommt.
 
-\subsubsection{Referenzierungen}
+\subsubsection{Referenzierungen}\label{chap:macro:references}
 
 Nachdem der Assembler eine Liste aller existierenden Makros bestimmt hat und ihre Namen entsprechenden Parametern sowie einer Liste an Befehlen zuordnen kann, ist der nächste Schritt die Stellen, an denen ein Makro referenziert wird, durch das entsprechende Makro zu ersetzen. Außerdem kann nun der Code, mittels welchem die Makros als solche deklariert wurden, entfernt werden. Das Konzept des Entfernens entspricht dem der vorhergehenden Implementierung mittels boolscher Variable (Bestimmung ob in einer Makrodeklaration, wenn ja Zeile nicht an Ergebnis anheften), weshalb im Folgenden vor allem auf die Herausforderung, die Parameter ordentlich zu ersetzen, eingegangen wird.
 

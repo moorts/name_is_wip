@@ -1,0 +1,121 @@
+\chapter{Ausblick}
+
+Dieses Kapitel behandelt Ideen zur Erweiterung von \Emu. Dabei geht es sowohl um mögliche Erweiterungen der bestehenden Spezifikation, als auch Anpassungen, die entsprechend dieser vorgenommen werden sollten, bzw. gemusst hätten, aber primär aus zeitlichen Gründen nicht mehr umzusetzen waren.
+
+\section{Dynamic Recompilation}
+
+Bei Dynamic Recompilation handelt es sich um eine Optimierungsstrategie, bei der Maschinencode des emulierten Systems auf Maschinencode des ausführenden Systems übersetzt wird. In unserem Fall würde dabei Intel 8080 Maschinencode zu WebAssembly kompiliert werden. Diese Rekompilation findet zur Laufzeit statt.
+
+Das Ziel ist, Blöcke aus Intel 8080 Assembly zu Blöcken aus nativem Assembly (in unserem Fall wäre das WebAssembly Bytecode) zu kompilieren und diese Blöcke in einem Cache zu speichern. Dies sähe ungefähr so aus\footnote{Dieses Beispiel ist orientiert an folgendem Blogpost: \url{https://wiki.pcsx2.net/PCSX2_Documentation/Introduction_to_Dynamic_Recompilation}}:
+
+
+\begin{minted}{rust}
+fn run() {
+    let addr = getBlock(PC);
+    // Execute instructions at addr in memory
+    execute(addr);
+}
+
+fn getBlock(pc: u16) -> u64 {
+    match cache[pc] {
+        Some(addr) => addr,
+        None => {
+            let addr = recompileBlock(pc);
+            cache[pc] = Some(addr);
+            addr
+        }
+    }
+}
+
+fn recompileBlock(start_pc: u16) -> u64 {
+    // Memory location the block will be written to
+    let start_ptr = emitter.get_ptr();
+    let pc = start_pc;
+    loop {
+        match opcodes[pc] {
+            // Call emitter functions
+            // Branching instructions will break the loop
+        }
+    }
+    start_ptr
+}
+\end{minted}
+
+Um den obigen Code zu realisieren, werden 2 Komponenten benötigt: der Code-Emitter und der Cache.
+
+\subsection{Code-Emitter}
+
+Der Code-Emitter hat die Funktion, die entsprechenden nativen Instruktionen auf Grundlage der 8080 Opcodes zu generieren. Dafür speichert er eine Adresse (\rust{emitter.get_ptr()} im obigen Code), wobei es sich um die Speicheradresse handelt, an die die nächste Instruktion geschrieben wird.
+
+Der Emitter übersetzt im simpelsten Fall jeden Opcode in eine äquivalente Instruktion in nativen Assembly. Hier können allerdings auch Optimierungen stattfinden, die durch Verwendung eines moderneren Instruktionssatzes oder durch gesammelte Laufzeitinformationen möglich sind. Beispiele hierfür wären:
+
+\begin{itemize}
+    \item Zusammenfassung mehrerer 8/16-Bit Instruktionen als einzelne 32/64-Bit Instruktionen
+    \item Verwendung von Instruktionen, die komplexere Prozesse (bspw. Stringkopie) realisieren
+    \item Schleifenoptimierung
+\end{itemize}
+
+Der Emitter schreibt diese nativen Instruktionen an die gespeicherte Addresse, welche in den Cache zeigt.
+
+\subsection{Cache}
+
+Beim bereits erwähnten Cache handelt es sich lediglich um eine Speicherregion, die mit dem \ac{PC} indiziert werden kann und entweder \rust{None} zurückgibt, wenn der entsprechende Maschinencode noch nicht generiert wurde, oder die nächste Instruktion zurückgibt.
+
+
+\section{Intel Hex}
+
+Momentan gibt der Assembler einen Vektor aus Bytes zurück, welcher in den RAM des Emulators geladen wird, um ein Programm zu laden. Ein alternatives Format für die Assembler-Ausgabe wäre das Intel Hex-Format, ein Dateiformat um Binärdaten im ASCII-Format zu speichern. In Intel Hex repräsentiert jede Zeile einen Datensatz, der eine konsekutive Bytefolge enthält. Ein solcher Datensatz enthält 6 Felder:
+
+\begin{enumerate}
+\item Satzbeginn: ein ASCII Doppelpunkt am Anfang der Zeile
+\item Anzahl an Bytes: Wie viele Datenbytes enthalten sind
+\item Speicheradresse: 16-Bit Adresse im Speicher, an der der Datenblock beginnt
+\item Datensatztyp: 00..05
+\item Daten: n Bytes (als 2n Hex-Zeichen kodiert)
+\item Prüfsumme: 2 Hex-Zeichen große Prüfsumme über den Datensatz
+\end{enumerate}
+
+Dieses Format zu verwenden hat den Vorteil, leere Regionen zwischen Assembly Instruktionen nicht abspeichern zu müssen. Außerdem sind ROMs für den 8080 häufig in diesem Format vorliegend, daher wäre es sinnvoll solche Dateien einlesen zu können.
+
+\section{Optimierung und Restrukturierung des Assemblers}
+
+Die Entwicklung des Assemblers folgte einem iterativ, inkrementellen Ansatz. Dabei wurden schrittweise neue Funktionen hinzugefügt, wobei mit den einfachen Opcodes angefangen, dann zu Labels und später den Pseudo-Instruktionen übergegangen wurde. Was für die Entwicklung unproblematisch war, machte sich jedoch vor allem zum Ende der Implementierung und bei der Dokumentation der Arbeit bemerkbar:
+
+Die Struktur des Assemblers ist suboptimal. Zwar sind viele Funktionen in einzelnen Methoden gekapselt, allerdings gibt es potentielle Fehler in deren aktueller Anordnung. So ist es zum Zeitpunkt der Beendigung der Arbeit beispielsweise nicht möglich, ein Label als Bedingung für einen If-Block zu verwenden. Zwar könnte der Code assembled werden, allerdings schlägt das Mapping von Zeilen fehl, weil für diese Makros nicht ersetzt werden, was aber notwendig für die Bestimmung von Labels ist.
+
+In diesem Fall wurde sich dazu entschlossen den Fehler in Kauf zu nehmen. Begründet wird dies vor allem mit dem Verhältnis von Zeitaufwand und möglichem Gewinn: Zwar handelt es sich um einen kritischen Fehler, allerdings ist die Verwendung von Labels in konditionalen Anweisungen wenig sinnvoll. Schließlich ist nur das Label, das noch vor dem ersten Opcode steht, sofern es überhaupt existiert, null. In allen anderen Fällen sind Label ungleich null und damit konstante Werte, die die If-Bedingung erfüllen. Es erscheint, obwohl erlaubt, nur wenig sinnvoll Labels an einer solchen Stelle zu positionieren, weshalb der Fehler toleriert wird.
+
+Neben solchen, durch Eckfälle bedingte Fehler, bietet der Assembler auch Raum für Optimierung. Das gilt bezüglich der Zeit- sowie der Codekomplexität. An Stellen, an denen dies bereits zum Zeitpunkt des Arbeitsabschlusses ersichtlich war, wurde das bereits in Kapitel \ref{chap:impl-assembler} erwähnt. Vor allem die zeitliche Abfolge zum Auslesen und Ersetzen bestimmter Zeileninhalte ist verbesserbar. Allerdings ist die Performanz des Assemblers bisher mehr als ausreichend, weswegen der Fokus nicht auf solchen Verbesserungen lag.
+
+\section{Weitere Features für die Webanwendung}
+
+Die Webanwendung für den Emulator bietet noch reichlich Spielraum für weitere nützliche Features, die die Entwicklung von Programmen für den Intel 8080 vereinfachen würden.
+
+\subsection{Konfigurationsmenü}
+
+Die Anwendung hat bereits jetzt zahlreiche Optionen, wie beispielsweise die \ac{CPM}-Emulation, die Geschwindigkeit des Emulators oder die Startadresse, die vom User Interface aus nicht zugänglich sind, sondern lediglich im Code festgelegt werden. Durch Hinzufügen eines dedizierten Konfigurationsmenüs könnten diese Optionen dem Nutzer verfügbar gemacht werden.
+
+\subsection{Peripheriegeräte}
+
+Die Emulation des Prozessors umfasst unter anderem die \asm{IN} und \asm{OUT} Instruktionen, mit denen die CPU Daten mit externen Geräten austauschen kann. Für die Webanwendung wäre es denkbar, einige Peripheriegeräte hinzuzufügen. Beispiele wären:
+
+\begin{itemize}
+    \item Schalter
+    \item LED Displays, Matrizen, 7-Segment-Displays
+    \item Keypads
+    \item Datei-Interface
+    \item Audioausgabe
+    \item Logger
+\end{itemize}
+
+Um die Peripheriegeräte anzusteuern, wäre es notwendig, diese einem Port zuzuweisen. Hierfür müsste es die Möglichkeit geben, ein Mapping zu konfigurieren.
+
+\subsection{Breakpoints}
+
+Breakpoints sind ein Feature, das nahezu alle integrierten Entwicklungsumgebungen für klassische Programmiersprachen anbieten. Dabei wird die Ausführung des Programms automatisch angehalten, wenn der Prozessor bei einer mit einem Breakpoint markierten Instruktion angelangt. So können Nutzer bestimmte Codebereiche sehr einfach untersuchen und so mögliche Fehler finden.
+
+Die Implementierung würde dank der Monaco Editor Bibliothek vermutlich relativ simpel werden, da Visual Studio Code, was auf dem selben Editor basiert, dies auch unterstützt.
+
+\subsection{Interrupt Status}
+
+Aktuell wird der komplette Arbeitsspeicher des Prozessors und alle Register angezeigt. Lediglich der interne Status, ob aktuell Interrupts ausgelöst werden können, ist im User Interface nicht einsehbar. Hierfür könnte noch eine Anzeige hinzugefügt werden.
