@@ -79,8 +79,8 @@ pub fn assemble(&self) -> Result<Vec<u8>, &'static str> {
     Ok(byte_code)
 }
 \end{minted}
-\label{lst:assemble}
 \caption{Grundlegender Aufbau der Methode \rust{assemble}}
+\label{lst:assemble}
 \end{listing}
 
 Diese Implementierung erzeugt aus dem, dem Assembler bei Initialisierung übergebenen Code, einen Vektor von positiven 8-Bit-Werten. Da es sich beim ursprünglichen Code um Nutzereingaben handelt, besteht die Gefahr, dass Syntaxfehler eine Übersetzung fehlschlagen lassen. Deshalb ist die Rückgabe vom Typ \rust{Result}, womit bei einem Fehlschlag eine entsprechende Fehlermeldung zurückgegeben werden kann, anstatt dass das Programm abstürzt.
@@ -169,8 +169,8 @@ for line in code {
 }
 has_end
 \end{minted}
-\label{lst:end}
 \caption{Überprüfung auf ein \asm{END}-Statement}
+\label{lst:end}
 \end{listing}
 
 Der \cref{lst:end} zeigt die Implementierung der Überprüfung nach dem \asm{END}. Es sind drei Fälle zu beachten, in denen das Programm inkorrekt ist und der vorliegende Code mit einem \rust{false} antworten muss. Der einfachste Fall ist die Abwesenheit des Befehls, wobei die entsprechende Variable nie \rust{true} wird und als solche zurückgegeben wird. Im zweiten Fall folgt auf das \asm{END} eine nicht-leere Zeile, was vom letzten If-Statement gedeckt wird, welches ein \rust{false} zurückgibt, sobald ein \asm{END} gefunden wurde, eine danach folgende Zeile allerdings nicht leer ist. Der letzte Fall ist das Vorhandensein mehrerer \asm{END}s, was mit einer verschachtelten If-Klausel in Zeile 6 abgedeckt wird.
@@ -194,8 +194,8 @@ if line.contains(" SET ") {
     );
 }
 \end{minted}
-\label{lst:var-replacement}
 \caption{Bestimmen und Ersetzen von mittels \asm{SET} deklarierter Variablen}
+\label{lst:var-replacement}
 \end{listing}
 
 Die genaue Funktionsweise der Methode \rust{replace_names} aus Zeile 2 im \cref{lst:param-replace} näher beschrieben. Letztlich beläuft sie sich darauf, die Vorkommnisse der Schlüssel der angegebenen Map in einem String mit den entsprechenden Werten zu ersetzen.
@@ -265,8 +265,8 @@ for par in split[1].split(",") {
     }
 }
 \end{minted}
-\label{lst:split}
 \caption{Auftrennen einer Definition eines Makros}
+\label{lst:split}
 \end{listing}
 
 Dabei wird eine Zeile, sofern sie das Schlüsselwort \glqq MACRO\grqq{} enthält, an eben diesem aufgetrennt. Das Ergebnis ist der Einfachheit halber ein Vektor, dessen erstes Element der Name des Makros ist, das zweite eine mögliche Liste von Parametern als String. Darauf aufbauend kann der Name (an dieser Stelle vereinfacht) validiert werden und der String der Parameter mittels einem wiederholten Auftrennen in einen Vektor aus den einzelnen Parameternamen überführt werden.
@@ -293,8 +293,8 @@ for (index, parameter) in params.iter().enumerate() {
     input_map.insert(parameter.to_string(), value);
 }
 \end{minted}
-\label{lst:var-map}
 \caption{Mapping von Nutzereingaben auf Parameter}
+\label{lst:var-map}
 \end{listing}
 
 Dazu wird über die entsprechende Menge von Parametern, die für das Makro definiert wurden, iteriert. An dieser Stelle ist wichtig, dass über eine Aufzählung der eigentlichen Werte iteriert wird, weil der Index der Parameter über die Zuordnung bestimmt. Das ist in Zeile 6 ersichtlich, in der der beim Makroaufruf angegebene Wert ausgelesen wird. Gemäß der Spezifikation des Assemblers ist es zulässig nicht alle definierten Parameter anzugeben. In dem Fall muss der Assembler davon ausgehen, dass nur die ersten Parameter (links beginnend) übergeben wurden und ersetzt die übrigen Werte mit einem leeren String. Im Code wird dies durch einen Vergleich zwischen Index und Anzahl aller beim Aufruf übergebenen Parameter realisiert, wobei eben jene Parameter fehlen, für die es keinen Index gibt.
@@ -318,8 +318,8 @@ line.replace_range(start..end - 1, value_string);
 // identischer Ablauf für letztes Aufkommen eines Namens
 line.replace(replacement_protection, "").trim().to_string()
 \end{minted}
-\label{lst:param-replace}
 \caption{Ersetzung von Variablen in Makros einer einzelnen Instruktion (vereinfacht)}
+\label{lst:param-replace}
 \end{listing}
 
 Der Quellcode basiert auf den Regex \rust{var_regex} und \rust{end_regex}, die mit den Strings 
@@ -401,8 +401,8 @@ loop {
     *generated_label_count += 1;
 }
 \end{minted}
-\label{lst:name-generation}
 \caption{Schleife zur Generierung synthetischer Namen}
+\label{lst:name-generation}
 \end{listing}
 
 Das Generieren eines Namens geschieht nach dem Ablauf, der im \cref{lst:name-generation} zu sehen ist. Er basiert auf einem Vektor vergebener Namen (\rust{taken_names}) und einer Anzahl bereits generierter Namen (\rust{generated_label_count}), die als Methodenparameter übergeben werden. Bei der Implementierung wurde sich dafür entschieden Namen zu generieren, die (gemäß Spezifikation) mit einem Großbuchstaben, bzw. dem \glqq A\grqq{} beginnen und von einer bis zu vierstelligen Zahl gefolgt werden.
@@ -438,8 +438,8 @@ let operand: &str = if line.contains(" ") {
     &line
 };
 \end{minted}
-\label{lst:opcode}
 \caption{Bedingte Zuweisung}
+\label{lst:opcode}
 \end{listing}
 
 Anschließend wird geprüft, ob der Inhalt der Variable \rust{operand} in einem von drei Vektoren vorhanden ist. Diese Vektoren beinhalten alle Opcodes des Intel 8080, sortiert nach deren Anzahl Bytes. Zeilen, die keinen Opcode beinhalten, werden durch diese Implementierung automatisch gefiltert: Beispielweise wird \asm{var SET 5} zu \glqq var\grqq, was keinem Opcode entspricht und somit übergangen wird.
@@ -501,8 +501,8 @@ pub enum UnOp {
     Minus, Not
 }
 \end{minted}
-\label{lst:token-enum}
 \caption{Token- und Operator-Enums}
+\label{lst:token-enum}
 \end{listing}
 
 Für die Operatoren ist eine Funktion implementiert, die die entsprechende Präzedenz zurückgibt und eine Funktion, die den Operator auf 2 Parameter anwendet.
@@ -681,8 +681,9 @@ Relevant für die Programme, die zum Testen genutzt werden, sind lediglich die S
 
 Beim Start eines Programms, was im \ac{CPM} Modus ausgeführt wird, wird der Speicher an der Stelle 5 mit einer Return-Instruktion überschrieben. Das sorgt dafür, dass das Programm bei jedem Syscall sofort wieder an die ursprüngliche Stelle zurückspringt. Zusätzlich wird der Program Counter beim Start direkt auf 0x100 gesetzt, da \ac{CPM} davon ausgeht, dass Nutzerprogramme an dieser Stelle beginnen.
 
-Im \ts{cpuStep()} wird nun folgender Code ausgeführt:
+Im \ts{cpuStep()} wird der Code in \cref{lst:abcdefgichkanndasganzealphabet} ausgeführt.
 
+\begin{listing}[ht]
 \begin{minted}{typescript}
     if (this.emulator.pc == 0x05) {
         // Emulate CP/M BDOS syscalls
@@ -710,5 +711,8 @@ Im \ts{cpuStep()} wird nun folgender Code ausgeführt:
         }
     }
 \end{minted}
+\caption{CP/M Syscall Emulation}
+\label{lst:abcdefgichkanndasganzealphabet}
+\end{listing}
 
 Sobald der Program Counter den Wert 5 hat, das Programm also an die Syscall Adresse gesprungen ist, wird der entsprechende Syscall emuliert. Beim Syscall 2 wird das Zeichen, was sich in Register E befindet, ausgegeben. Syscall 9 gibt den String, der sich an der Speicheradresse aus Register DE befindet, so lange aus, bis das Zeichen \enquote{\$} auftritt.
