@@ -309,7 +309,7 @@ So kann bspw. ein Display an den 8080 angeschlossen werden, dem über eine Inter
 
 \section{Angular}
 
-Angular ist ein quelloffenes TypeScript Framework zur Entwicklung von Single-Page-Applikationen im Web. Eine sogenannte SPA ist eine Webanwendung, die nur aus einer einzigen Webseite besteht und mithilfe von JavaScript-Code Navigation ermöglicht und interaktive Bedienelemente anbietet. Nachfolgend werden einige Aspekte von Angular erläutert, die für die Entwicklung des Emulators von Bedeutung sind.
+Angular ist ein quelloffenes TypeScript Framework zur Entwicklung von \acp{SPA} im Web. Eine \ac{SPA} ist eine Webanwendung, die nur aus einer einzigen Webseite besteht und mithilfe von JavaScript Code Navigation ermöglicht und interaktive Bedienelemente anbietet. Nachfolgend werden einige Aspekte von Angular erläutert, die für die Entwicklung der Weboberfläche des Emulators von Bedeutung sind.
 
 \subsection{Components}
 
@@ -329,9 +329,9 @@ Einer der Hauptbestandteile von Angular sind die \textit{Components}. Components
     }
 \end{minted}
 
-In diesem Codeabschnitt wird eine Beispiel-Component mithilfe von TypeScript definiert. Eine Component besteht aus einer Klasse, die mit der \ts{@Component} Annotation versehen wird. Die Annotation verlangt einige Parameter: Der \ts{selector} bestimmt wie das HTML-Element heißt, durch das die Komponente am Ende auf der Webseite eingefügt werden kann. Die Eigenschaft \ts{templateUrl} gibt den Pfad zu einer HTML-Vorlage an, die bestimmt, wie die Component schließlich auf der Webseite dargestellt wird. Innerhalb der Klasse wird im Beispiel eine öffentliche Variable mit dem Namen \ts{heading} definiert, die den Wert \ts{'Hello World'} hat. Außerdem wird eine öffentliche Methode mit dem Namen \ts{onButtonClicked()} definiert, die eine Nachricht in der Konsole des Browsers ausgibt.
+In diesem Codeabschnitt wird eine Beispiel-Komponente mithilfe von TypeScript definiert. Eine Komponente besteht aus einer Klasse, die mit der \ts{@Component} Annotation versehen wird. Die Annotation verlangt einige Parameter: Der \ts{selector} bestimmt wie das HTML-Element heißt, durch das die Komponente am Ende auf der Webseite eingefügt werden kann. Die Eigenschaft \ts{templateUrl} gibt den Pfad zu einer HTML-Vorlage an, die bestimmt, wie die Komponente schließlich auf der Webseite dargestellt wird. Innerhalb der Klasse wird im Beispiel eine öffentliche Variable mit dem Namen \ts{heading} definiert, die den Wert \ts{'Hello World'} hat. Außerdem wird eine öffentliche Methode mit dem Namen \ts{onButtonClicked()} definiert, die eine Nachricht in der Konsole des Browsers ausgibt.
 
-Das Template der Component sieht folgendermaßen aus:
+Das Template der Komponente sieht folgendermaßen aus:
 
 \begin{minted}{html}
     <div>
@@ -340,11 +340,11 @@ Das Template der Component sieht folgendermaßen aus:
     </div>
 \end{minted}
 
-Dargestellt wird die Component als HTML-Block. Innerhalb des Blocks befindet sich eine Überschrift. Im \code{<h1>}-Tag sieht man nun ein weiteres Feature von Angular. Hier wird eine sogenannte \textbf{Text interpolation} definiert, die dafür sorgt, dass der Wert der Variable \ts{heading} auf der Webseite angezeigt wird. Unterhalb der Überschrift wird nun ein \code{<button>} angezeigt. Auch hier kommt ein Feature von Angular zum Einsatz, ein sogenanntes \textbf{Event binding}. An das \code{click} Event des Knopfes wird die in der Klasse der Component definierte Methode \ts{onButtonClicked()} gebunden, die nun bei jedem Klick auf den Knopf aufgerufen wird.
+Dargestellt wird die Komponente als HTML-Block. Innerhalb des Blocks befindet sich eine Überschrift. Im \code{<h1>}-Tag sieht man nun ein weiteres Feature von Angular. Hier wird eine sogenannte \textbf{Text interpolation} definiert, die dafür sorgt, dass der Wert der Variable \ts{heading} auf der Webseite angezeigt wird. Unterhalb der Überschrift wird nun ein \code{<button>} angezeigt. Auch hier kommt ein Feature von Angular zum Einsatz, ein sogenanntes \textbf{Event binding}. An das \code{click} Event des Knopfes wird die in der Klasse der Komponente definierte Methode \ts{onButtonClicked()} gebunden, die nun bei jedem Klick auf den Knopf aufgerufen wird.
 
 \subsection{Services}
 
-Viele Komponenten einer Anwendung greifen auf gemeinsame Daten und Funktionen zu. Für diesen Anwendungsfall stellt Angular \textit{Services} zur Verfügung. Das sind TypeScript Klassen, die mithilfe von Dependency Injection in anderen Services oder auch Components genutzt werden können, um beispielsweise auf ein geteiltes Datenrepository zuzugreifen.
+Viele Komponenten einer Anwendung greifen auf gemeinsame Daten und Funktionen zu. Für diesen Anwendungsfall stellt Angular \textit{Services} zur Verfügung. Das sind TypeScript Klassen, die mithilfe von Dependency Injection in anderen Services oder auch Komponenten genutzt werden können, um beispielsweise auf ein geteiltes Datenrepository zuzugreifen.
 
 \begin{minted}{typescript}
     @Injectable({
@@ -363,9 +363,9 @@ Viele Komponenten einer Anwendung greifen auf gemeinsame Daten und Funktionen zu
     }
 \end{minted}
 
-In diesem Codebeispiel sieht man wie ein Service aufgebaut ist. Er besteht lediglich aus einer TypeScript Klasse, die mit der \ts{@Injectable}-Annotation versehen ist. Die Eigenschaft \ts{providedIn: 'root'} gibt hier an, dass der Service als Singleton zur Verfügung gestellt wird und sich schließlich alle Components, die den Service nutzen, die selbe Instanz teilen.
+In diesem Codebeispiel sieht man wie ein Service aufgebaut ist. Er besteht lediglich aus einer TypeScript Klasse, die mit der \ts{@Injectable}-Annotation versehen ist. Die Eigenschaft \ts{providedIn: 'root'} gibt hier an, dass der Service als Singleton zur Verfügung gestellt wird und sich schließlich alle Komponenten, die den Service nutzen, die selbe Instanz teilen.
 
-Um den Service zu nutzen muss eine Component diesen einfach nur in dessen Konstruktor anfordern:
+Um den Service zu nutzen muss eine Komponente diesen einfach nur in dessen Konstruktor anfordern:
 
 \begin{minted}{typescript}
     @Component({
@@ -386,4 +386,4 @@ Um den Service zu nutzen muss eine Component diesen einfach nur in dessen Konstr
     }
 \end{minted}
 
-Das Dependency Injection Framework von Angular sorgt nun bei der Erstellung der Component dafür, dass der Service korrekt injiziert wird.
+Das Dependency Injection Framework von Angular sorgt nun bei der Erstellung der Komponente dafür, dass der Service korrekt injiziert wird.
