@@ -37,7 +37,7 @@ Der Beispielcode zeigt, dass sich in der Definition des Structs \rust{Example} k
 
 Bei ihrer Implementierung sind Methoden implizit von privatem Scope, können also nur innerhalb der \rust{.rs}-Datei genutzt werden, in der sie beschrieben sind. Das Schlüsselwort \rust{pub} erlaubt es auch in anderen Dateien entsprechende Methoden zu verwenden. Methoden die innerhalb eines mit \rust{impl} geöffneten Blocks stehen beziehen sich immer auf einen Struct und können mittels dem \rust{&self}-Objekt auf die entsprechende Instanz und deren Felder zugreifen.
 
-\subsection{Traits}
+\subsection{Traits}\label{chap:traits}
 
 Mithilfe von Traits lässt sich in Rust das Verhalten von Structs (oder allgemeiner: Typen) definieren. Die Analogie zu herkömmlichen Sprachen ist das \textit{Interface}. Genau wie diese definieren Traits eine oder mehrere Funktionalitäten, die der Compiler bei einem Objekt erwarten kann. Ihre Definition sieht ebenfalls ähnlich der von Interfaces aus:
 
