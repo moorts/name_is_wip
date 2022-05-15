@@ -1,5 +1,7 @@
 \chapter{Grundlagen}\label{chap:prereqs}
 
+Bevor die konkrete Arbeit beschrieben wird, gilt es eine theoretische Grundlage zu schaffen. Das folgende Kapitel bietet einen Überblick über die Sprache Rust, verwendete Frameworks sowie den Intel 8080 und \ac{WASM}. Alle der Informationen wurden im Hinblick auf das fundamentale Gerüst der Arbeit zusammengetragen und sollen sowohl den Einstieg in die Thematik erleichtern, als auch ein tieferes Verständnis ermöglichen.
+
 \section{WebAssembly}
 
 Laut Rust definiert sich \ac{WASM} wie folgt: "\ac{WASM} is a safe, portable, low-level code format designed for efficient execution and compact representation"\cite{WebAssemblyCoreSpecification}. Im Endeffekt handelt es sich bei \ac{WASM} also um eine Low-Level Bytecode-Sprache, die von Browsern ausgeführt werden kann. Diese Sprache soll ähnlich performant sein, wie die Ausführung von naivem Maschinen-Code. Das Paper, in dem \ac{WASM} eingeführt wird, berichtet eine 10\%ige Diskrepanz bei der Performanz zwischen \ac{WASM} und naivem Assembly\cite{10.1145/3062341.3062363}. Durch Kompilation nach \ac{WASM} ist es möglich Programme auf Seite des Clienten laufen zu lassen, die sonst vom Server ausgeführt werden müssten.
