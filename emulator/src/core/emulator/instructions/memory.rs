@@ -25,7 +25,7 @@ impl Emulator {
     }
 
     pub fn pop(&mut self) -> EResult<u16> {
-        if self.sp + 2 > self.ram.size() as u16 {
+        if self.sp as u32 + 2 > self.ram.size() as u32 {
             return Err("POP: No return address on the stack");
         }
         let low = self.ram[self.sp] as u16;
@@ -103,12 +103,12 @@ mod tests {
     fn push_pop() {
         let mut emu = Emulator::new();
 
-        emu.sp = 0x3fff;
+        emu.sp = 0xffff;
         emu.push(0xabcd).expect("Push failed");
 
-        assert_eq!(emu.sp, 0x3ffd);
+        assert_eq!(emu.sp, 0xfffd);
         assert_eq!(0xabcd, emu.pop().expect("Fuck"));
-        assert_eq!(emu.sp, 0x3fff);
+        assert_eq!(emu.sp, 0xffff);
         assert_eq!(emu.pop(), Err("POP: No return address on the stack"));
 
         emu.sp = 0x1;

@@ -1,0 +1,19 @@
+<div>
+  <label for="rominput">Select a ROM for benchmarking: </label>
+  <input type="file" id="rominput" (change)="onFileSelected($event)" />
+</div>
+<button (click)="startBenchmark()" id="startbutton" [disabled]="running || !fileSelected">Start Benchmark</button>
+<div>
+  <textarea #log readonly style="width: 100%; height: 80vh;"></textarea>
+</div>
+<ng-container *ngIf="finished">
+  <div>
+    Milliseconds: {{ totalTime }}
+  </div>
+  <div>
+    Cycles: {{ totalCycles }}
+  </div>
+  <div>
+    Frequency: {{ totalMHz }} MHz
+  </div>
+</ng-container>
