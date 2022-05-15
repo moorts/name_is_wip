@@ -1,5 +1,32 @@
 \chapter{Auswertung}\label{chap:eval}
 
+\section{Herausforderungen}
+
+Zum besseren Verständnis der nachfolgenden Bewertung der Ergebnisse werden noch einmal die Herausforderungen betrachtet. Dabei geht es um Schwierigkeiten und Probleme die während der Entwicklung aufgetreten sind. Sie sind maßgeblich für die Evaluierung des gewählten Vorgehens und sollen eventuelle Hindernisse für zukünftige Arbeiten auf diesem Gebiet aufzeigen.
+
+\subsection{Emulator}
+
+Der Großteil der Entwicklung des Emulators bildet die Implementierung der einzelnen Instruktionen. Diese sind alle relativ simpel und daher einfach umzusetzen. Jedoch ist es leicht möglich, dass sich kleine Fehler einschleichen, die von den Testfällen verpasst werden. Solche Fehler fallen ggf. erst zu einem deutlich späteren Zeitpunkt auf und können dann oft schwer auf konkrete Fehlerquellen zurückgeführt werden. Wie solche Fehler in unserem Emulator bemerkt und gefunden wurden wird in \cref{sec:errors} im Detail ausgeführt.
+
+\subsection{Assembler}
+
+Beim Assembler haben sich zwei Faktoren besonders bemerkbar gemacht. Der Erste ist, dass es sich um eine \textbf{Schnittstelle zum Benutzer} handelt. Sie ermöglicht es beinahe beliebigen Input in Form einer Texteingabe zu übermitteln. Typischerweise bergen Nutzereingaben vor allem in sicherheitskritischen Applikationen, bei denen Anwender möglicherweise unbefugt Daten abfangen oder manipulieren, ein erhöhtes Risiko. Weil der Emulator keine solcher Daten beinhaltet bleibt dieser Aspekt zwar aus, nichtsdestotrotz muss eine korrekte Übersetzung des vom Intel 8080 beschriebenen Assemblercodes in Maschinencode erfolgen.
+
+Grundsätzlich ist das auch möglich, aber es kommt zu möglichen Problemen, wenn es dem Anwender gestattet ist Formate zu benutzen, die zwar einer Form folgen, jedoch nicht eindeutig sind. Dazu gehören beispielsweise Namen von Variablen oder mathematische Ausdrücke. Es kann zweifelsfrei festgestellt werden, ob diese eine zugelassene Form besitzen, erschweren eine Feststellung der Korrektheit jedoch ungemein, worauf in Kapitel \ref{chap:macro:references} detailliert eingegangen wurde. Während hier die Verwendung von Regex' hilft, sind nicht alle Eck- und Kantenfälle direkt ersichtlich, die auf jeden Fall in Tests umgesetzt werden müssen, sobald sie identifiziert werden konnten.
+
+Neben dem schwierigen Umgang mit Nutzereingaben war die \textbf{Verarbeitung von Pseudo-Instruktionen} eine weitere Herausforderung bezüglich der Umsetzung. Nicht nur sind vor allem diese Grund für die Möglichkeit zur Verwendung von benutzerdefinierten Namen, auch die Reihenfolge der Abarbeitung ist entscheidend. Dabei stachen vor allem Makros heraus, was sich in deren großem Anteil an Kapitel \ref{chap:preprocessor} widerspiegelt. Aufwendig waren hier vor allem die Beachtung verschiedenen Gültigkeitsbereiche und das korrekte Bestimmen von Variablen zu bestimmten Zeitpunkten. Letzteres erschwerte die Modularisierung der Vorverarbeitung maßgeblich, weil mehrere Funktionalitäten, die zwar inhaltlich getrennt werden können, nicht losgelöst voneinander durchführbar sind.
+
+\subsection{\ac{WASM}-Interface}
+
+
+
+\subsection{Fehlersuche}\label{sec:errors}
+
+
+
+\section{Bewertung}
+
+
 \section{Prozessor Tests}\label{sec:tests}
 
 Ziel dieser Arbeit ist es, die komplette Spezifikation des Intel 8080 zu implementieren. Um zu überprüfen, ob dies tatsächlich gelungen ist, müssen Tests durchgeführt werden. Hierfür kommen frei verfügbare \footnote[1]{\url{https://altairclone.com/downloads/cpu_tests/}} CPU Testprogramme zum Einsatz, die die Funktionsweise verschiedener Instruktionen überprüfen und mit Sollzuständen vergleichen.
@@ -64,3 +91,5 @@ Mögliche Gründe hierfür könnte einerseits die geringere Effizienz von \ac{WA
 Die Taktraten des Emulators sind mit 75MHz, beziehungsweise 40MHz im Browser, deutlich schneller als die 2MHz, die der echte Intel 8080 leistet.
 
 Insgesamt kann man also sagen, dass die Performance des Emulators im Browser zwar nur halb so gut ist wie ein nativer Emulator sein könnte, allerdings trotzdem zufriedenstellend ist. Da die mögliche Taktrate von 40MHz immer noch weit über dem Wert des realen Prozessors liegt, ist eine realitätsnahe Emulation mit echter Geschwindigkeit sehr einfach möglich.
+
+\section{Fazit}
